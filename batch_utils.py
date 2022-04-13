@@ -64,13 +64,6 @@ class PathsDataFrameExtension(BasePaths):
         BasePaths.__init__(self)
 
 
-@pd.api.extensions.register_series_accessor("paths")
-class PathsSeriesExtension(BasePaths):
-    def __init__(self, series: pd.Series):
-        self._series = series
-        BasePaths.__init__(self)
-
-
 def set_parent_data_path(path: Union[Path, str]) -> Path:
     """
     Set the global `PARENT_DATA_PATH`
