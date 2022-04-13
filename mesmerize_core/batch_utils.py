@@ -19,16 +19,24 @@ ALGO_MODULES = \
         'cnmfe': cnmfe,
     }
 
+try:
+    import PyQt5
+    HAS_PYQT = True
+except ImportError:
+    HAS_PYQT = False
+
 COMPUTE_BACKEND_QPROCESS = 'qprocess'  #: QProcess backend for use in napari
 COMPUTE_BACKEND_SUBPROCESS = 'subprocess'  #: subprocess backend, for use output a Qt application such as a notebook
 COMPUTE_BACKEND_SLURM = 'slurm'  #: SLURM backend, not yet implemented
 
 COMPUTE_BACKENDS =\
 [
-    COMPUTE_BACKEND_QPROCESS,
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_SLURM
 ]
+
+if HAS_PYQT:
+    COMPUTE_BACKENDS += [COMPUTE_BACKEND_QPROCESS]
 
 DATAFRAME_COLUMNS = ['algo', 'name', 'input_movie_path', 'params', 'outputs', 'uuid']
 

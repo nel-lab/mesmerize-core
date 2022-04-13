@@ -7,11 +7,13 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pandas as pd
-from PyQt5 import QtCore
 
 from ..batch_utils import get_full_data_path, COMPUTE_BACKENDS, \
-    ALGO_MODULES, get_parent_data_path, PathsDataFrameExtension
+    ALGO_MODULES, get_parent_data_path, PathsDataFrameExtension, HAS_PYQT
 from ..utils import validate_path, IS_WINDOWS, make_runfile
+
+if HAS_PYQT:
+    from PyQt5 import QtCore
 
 
 def validate(algo: str = None):
@@ -200,7 +202,7 @@ class CaimanSeriesExtensions:
             callback function to pipe the stdout
         """
         if backend not in COMPUTE_BACKENDS:
-            raise KeyError(f'Invalid `backend`, choose from the following backends:\n'
+            raise KeyError(f'Invalid or unavailable `backend`, choose from the following backends:\n'
                            f'{COMPUTE_BACKENDS}')
 
         # Get the dir that contains the input movie

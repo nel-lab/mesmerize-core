@@ -9,4 +9,3 @@ QtPy
 matplotlib
 click
 psutil
-PyQt5
