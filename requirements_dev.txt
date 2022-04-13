@@ -1,0 +1,12 @@
+pandas
+pytest
+requests
+tqdm
+setuptools
+wheel
+numpy
+QtPy
+matplotlib
+click
+psutil
+PyQt5
