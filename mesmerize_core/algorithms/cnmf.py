@@ -1,5 +1,4 @@
 """Performs CNMF in a separate process"""
-import pathlib
 import click
 import caiman as cm
 from caiman.source_extraction.cnmf import cnmf as cnmf

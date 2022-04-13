@@ -1,4 +1,3 @@
-import pathlib
 import click
 import numpy as np
 import caiman as cm
@@ -6,9 +5,7 @@ from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 import psutil
 import pandas as pd
-import pickle
 import traceback
-from napari.viewer import Viewer
 from pathlib import Path
 
 if __name__ == '__main__':
