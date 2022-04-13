@@ -12,7 +12,7 @@ from napari.viewer import Viewer
 from pathlib import Path
 
 if __name__ == '__main__':
-    from mesmerize_napari.core import set_parent_data_path, get_full_data_path
+    from mesmerize_core import set_parent_data_path, get_full_data_path
 
 @click.command()
 @click.option('--batch-path', type=str)
