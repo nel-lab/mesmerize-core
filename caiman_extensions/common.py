@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 from PyQt5 import QtCore
 
-from ..batch_utils import get_full_data_path, COMPUTE_BACKENDS, ALGO_MODULES, get_parent_data_path,\
-    PathsSeriesExtension, PathsDataFrameExtension
+from ..batch_utils import get_full_data_path, COMPUTE_BACKENDS, \
+    ALGO_MODULES, get_parent_data_path, PathsDataFrameExtension
 from ..utils import validate_path, IS_WINDOWS, make_runfile
 
 
