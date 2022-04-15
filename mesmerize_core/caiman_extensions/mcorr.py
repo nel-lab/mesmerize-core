@@ -42,3 +42,12 @@ class MCorrExtensions:
         Yr, dims, T = load_memmap(str(path))
         mc_movie = np.reshape(Yr.T, [T] + list(dims), order='F')
         return mc_movie
+
+    def get_shifts(self) -> Path:
+        path = get_full_data_path(self._series['outputs']['shifts'])
+        return np.load(str(path))
+
+    @validate('mcorr')
+    def get_shifts_array(self) -> np.ndarray:
+        if self._series['params']['mcorr_kwargs']['pw_rigid']:
+            x_shifts, y_shifts = self._series.get_shifts()
