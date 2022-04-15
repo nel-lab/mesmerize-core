@@ -43,11 +43,24 @@ class MCorrExtensions:
         mc_movie = np.reshape(Yr.T, [T] + list(dims), order='F')
         return mc_movie
 
+    @validate('mcorr')
     def get_shifts(self) -> Path:
         path = get_full_data_path(self._series['outputs']['shifts'])
         return np.load(str(path))
 
     @validate('mcorr')
-    def get_shifts_array(self) -> np.ndarray:
-        if self._series['params']['mcorr_kwargs']['pw_rigid']:
-            x_shifts, y_shifts = self._series.get_shifts()
+    def get_shifts_array(self, pw_rigid=True) -> np.ndarray:
+        if pw_rigid:
+            x_shifts, y_shifts = self.get_shifts()
+        else:
+            shifts = self.get_shifts()
+            n_pts = shifts.shape[0]
+            n_lines = shifts.shape[1]
+            xs = [np.linspace(0, n_pts, n_pts)]
+            ys = []
+
+            for i in range(n_lines):
+                ys.append(shifts[:, i])
+        return xs, ys
+
+
