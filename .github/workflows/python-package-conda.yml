@@ -21,18 +21,20 @@ jobs:
         
     - name: Install mamba
       run: |
-        conda install -c conda-forge mamba
-        conda clean -a
+        conda install mamba -n base -c conda-forge
         
     - name: install caiman
       run: |
-        mamba install -c conda-forge caiman
+        mamba create -n caiman -c conda-forge caiman
+        conda activate caiman
         
     - name: install mesmerize-core
       run: |
+        conda activate caiman
         pip install .
         
     - name: Test with pytest
       run: |
+        conda activate caiman
         mamba install pytest
         pytest
