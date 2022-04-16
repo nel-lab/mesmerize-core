@@ -359,6 +359,19 @@ def make_runfile(module_path: str, args_str: Optional[str] = None, filename: Opt
     return sh_file
 
 
+def quick_min_max(data: np.ndarray) -> Tuple[float, float]:
+    # from pyqtgraph.ImageView
+    # Estimate the min/max values of *data* by subsampling.
+    # Returns [(min, max), ...] with one item per channel
+    while data.size > 1e6:
+        ax = np.argmax(data.shape)
+        sl = [slice(None)] * data.ndim
+        sl[ax] = slice(None, None, 2)
+        data = data[tuple(sl)]
+
+    return float(np.nanmin(data)), float(np.nanmax(data))
+
+
 def _organize_coordinates(contour: dict):
     coors = contour['coordinates']
     coors = coors[~np.isnan(coors).any(axis=1)]
