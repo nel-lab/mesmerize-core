@@ -6,6 +6,7 @@ from caiman import load_memmap
 
 from ..batch_utils import get_full_data_path
 from .common import validate
+from typing import *
 
 
 @pd.api.extensions.register_series_accessor("mcorr")
@@ -44,16 +45,32 @@ class MCorrExtensions:
         return mc_movie
 
     @validate('mcorr')
-    def get_shifts(self) -> Path:
-        path = get_full_data_path(self._series['outputs']['shifts'])
-        return np.load(str(path))
+    def get_shifts(self, output_type: str, pw_rigid: bool = True) -> Union[np.ndarray, Tuple[List[np.ndarray], List[np.ndarray]]]:
+        """
+        Get x & y shifts
+        
+        Parameters
+        ----------
+        output_type: str
+            one of 'matplotlib' or 'napari-1d'.
+            'matplotlib' returns ``np.ndarray`` of shape ``[xs, ys]``
+            
+        pw_rigid: bool
+            if True, return pw_ridid shifts
 
-    @validate('mcorr')
-    def get_shifts_array(self, pw_rigid=True) -> np.ndarray:
+        Returns
+        -------
+
+        """
+        path = get_full_data_path(self._series['outputs']['shifts'])
+        shifts = np.load(str(path))
+        
+        if output_type == 'matplotlib':
+            return shifts
+
         if pw_rigid:
-            x_shifts, y_shifts = self.get_shifts()
+            x_shifts, y_shifts = shifts
         else:
-            shifts = self.get_shifts()
             n_pts = shifts.shape[0]
             n_lines = shifts.shape[1]
             xs = [np.linspace(0, n_pts, n_pts)]
