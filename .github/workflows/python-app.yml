@@ -24,12 +24,11 @@ jobs:
       with:
         python-version: "3.9"
         
-    - name: Install mesmerize-core
+    - name: Install deps
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        pip install -r requirements.txt
-        pip install pytest
-        pip install .
+        echo "*************** Path during install deps ***************"
+        echo $PWD
         
     - name: install caiman
       run: |
@@ -38,6 +37,17 @@ jobs:
         git checkout mcorr-basename-prefix
         pip install -r requirements.txt
         pip install .
+        echo "*************** Path during install caiman ***************"
+        echo $PWD
+        
+    - name: Install mesmerize-core
+      run: |
+        cd ..
+        echo "*************** Path during install mesmerize ***************"
+        echo $PWD
+        pip install -r requirements.txt
+        pip install pytest
+        pip install .        
         
     - name: Test with pytest
       run: |
