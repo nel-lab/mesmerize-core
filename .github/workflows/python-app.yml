@@ -33,10 +33,10 @@ jobs:
         cd CaImAn
         git checkout mcorr-basename-prefix
         pip install -r requirements.txt
-        pip install -e .
+        pip install .
     - name: install mesmerize-core
       run: |
-        cd ..
+        cd ../..
         pip install -r requirements.txt
         pip install .
     - name: Test with pytest
