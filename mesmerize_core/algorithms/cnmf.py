@@ -124,6 +124,9 @@ def main(batch_path, uuid, data_path: str = None):
 
     except:
         d = {"success": False, "traceback": traceback.format_exc()}
+    
+    print(f"Final output dict:\n{d}")
+    
     # Add dictionary to output column of series
     df.loc[df['uuid'] == uuid, 'outputs'] = [d]
     # save dataframe to disc
