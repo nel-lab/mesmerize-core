@@ -30,11 +30,9 @@ jobs:
         
     - name: install mesmerize-core
       run: |
-        mamba activate caiman
         pip install .
         
     - name: Test with pytest
       run: |
-        mamba activate caiman
         mamba install pytest
         pytest
