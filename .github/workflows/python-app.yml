@@ -23,13 +23,14 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.9"
-    - name: Install dependencies
+        
+    - name: Install mesmerize-core
       run: |
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
         pip install pytest
-        export ROOT_PATH=$PWD
-        echo $PWD
+        pip install .
+        
     - name: install caiman
       run: |
         git clone https://github.com/kushalkolar/CaImAn.git
@@ -37,10 +38,7 @@ jobs:
         git checkout mcorr-basename-prefix
         pip install -r requirements.txt
         pip install .
-    - name: install mesmerize-core
-      run: |
-        cd $ROOT_PATH
-        pip install .
+        
     - name: Test with pytest
       run: |
         pytest .
