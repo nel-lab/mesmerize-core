@@ -28,6 +28,8 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
         pip install pytest
+        export ROOT_PATH=$PWD
+        echo $PWD
     - name: install caiman
       run: |
         git clone https://github.com/kushalkolar/CaImAn.git
@@ -37,7 +39,7 @@ jobs:
         pip install .
     - name: install mesmerize-core
       run: |
-        cd ..
+        cd $ROOT_PATH
         pip install .
     - name: Test with pytest
       run: |
