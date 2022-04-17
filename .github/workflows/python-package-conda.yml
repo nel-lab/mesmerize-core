@@ -23,6 +23,7 @@ jobs:
       run: |
         conda install mamba -n base -c conda-forge
         conda clean -a
+        mamba init
         
     - name: install caiman
       run: |
