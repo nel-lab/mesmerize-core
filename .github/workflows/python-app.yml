@@ -32,6 +32,7 @@ jobs:
         
     - name: install caiman
       run: |
+        cd ..
         git clone https://github.com/kushalkolar/CaImAn.git
         cd CaImAn
         git checkout mcorr-basename-prefix
@@ -42,7 +43,6 @@ jobs:
         
     - name: Install mesmerize-core
       run: |
-        cd ..
         echo "*************** Path during install mesmerize ***************"
         echo $PWD
         pip install -r requirements.txt
