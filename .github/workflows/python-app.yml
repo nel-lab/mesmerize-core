@@ -38,6 +38,7 @@ jobs:
         git checkout mcorr-basename-prefix
         pip install -r requirements.txt
         pip install .
+        caimanmanager.py install
         echo "*************** Path during install caiman ***************"
         echo $PWD
         
