@@ -166,11 +166,14 @@ class CNMFExtensions:
         contours = self.get_spatial_contours(ixs_components)
 
         coordinates = []
+        centres_of_mass = []
         for contour in contours:
             coors = contour['coordinates']
             coordinates.append(coors[~np.isnan(coors).any(axis=1)])
+            com = contour['CoM']
+            centres_of_mass.append(com)
 
-        return coordinates
+        return coordinates, centres_of_mass
 
     @validate('cnmf')
     def get_temporal_components(self, ixs_components: np.ndarray = None, add_background: bool = True) -> np.ndarray:
