@@ -58,12 +58,18 @@ def main(batch_path, uuid, data_path: str = None):
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-        mean_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_mean_projection.npy'))
-        std_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_std_projection.npy'))
-        max_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_max_projection.npy'))
-        np.save(mean_projection_path, np.mean(images, axis=0))
-        np.save(std_projection_path, np.std(images, axis=0))
-        np.save(max_projection_path, np.max(images, axis=0))
+        paths = []
+        for proj_type in ['mean', 'std', 'max']:
+            p_img = getattr(np, f'nan{proj_type}')(images, axis=0)
+            np.save(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')), p_img)
+            paths.append(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')))
+
+        #mean_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_mean_projection.npy'))
+        #std_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_std_projection.npy'))
+        #max_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_max_projection.npy'))
+        #np.save(mean_projection_path, np.mean(images, axis=0))
+        #np.save(std_projection_path, np.std(images, axis=0))
+        #np.save(max_projection_path, np.max(images, axis=0))
         # in fname new load in memmap order C
 
         cm.stop_server(dview=dview)
@@ -114,9 +120,9 @@ def main(batch_path, uuid, data_path: str = None):
                 "cnmf-hdf5-path": cnmf_hdf5_path,
                 "cnmf-memmap-path": cnmf_memmap_path,
                 "corr-img-path": corr_img_path,
-                "mean-projection-path": mean_projection_path,
-                "std-projection-path": std_projection_path,
-                "max-projection-path": max_projection_path,
+                "mean-projection-path": paths[0],
+                "std-projection-path": paths[1],
+                "max-projection-path": paths[2],
                 "success": True,
                 "traceback": None
             }
