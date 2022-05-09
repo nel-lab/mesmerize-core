@@ -64,12 +64,7 @@ def main(batch_path, uuid, data_path: str = None):
             np.save(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')), p_img)
             paths.append(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')))
 
-        #mean_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_mean_projection.npy'))
-        #std_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_std_projection.npy'))
-        #max_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_max_projection.npy'))
-        #np.save(mean_projection_path, np.mean(images, axis=0))
-        #np.save(std_projection_path, np.std(images, axis=0))
-        #np.save(max_projection_path, np.max(images, axis=0))
+
         # in fname new load in memmap order C
 
         cm.stop_server(dview=dview)

@@ -49,12 +49,13 @@ def main(batch_path, uuid, data_path: str = None):
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-        mean_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_mean_projection.npy'))
-        std_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_std_projection.npy'))
-        max_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_max_projection.npy'))
-        np.save(mean_projection_path, np.mean(images, axis=0))
-        np.save(std_projection_path, np.std(images, axis=0))
-        np.save(max_projection_path, np.max(images, axis=0))
+        paths = []
+        for proj_type in ['mean', 'std', 'max']:
+            p_img = getattr(np, f'nan{proj_type}')(images, axis=0)
+            np.save(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')), p_img)
+            paths.append(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')))
+
+
 
         downsample_ratio = params['downsample_ratio']
         # in fname new load in memmap order C
@@ -118,9 +119,9 @@ def main(batch_path, uuid, data_path: str = None):
                 "cnmf-memmap-path": cnmfe_memmap_path,
                 "corr-img-path": cn_output_path,
                 "pnr-image-path": pnr_output_path,
-                "mean-projection-path": mean_projection_path,
-                "std-projection-path": std_projection_path,
-                "max-projection-path": max_projection_path,
+                "mean-projection-path": paths[0],
+                "std-projection-path": paths[1],
+                "max-projection-path": paths[2],
                 "success": True,
                 "traceback": None
             }
