@@ -8,6 +8,7 @@ from caiman import load_memmap
 from caiman.source_extraction.cnmf import CNMF
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from caiman.utils.visualization import get_contours as caiman_get_contours
+from caiman.base.rois import com
 
 from ..batch_utils import get_full_data_path
 from .common import validate
@@ -134,8 +135,12 @@ class CNMFExtensions:
             dims,
             swap_dim=True
         )
-
-        return contours
+        COM = com(
+            cnmf_obj.estimates.A,
+            d1 = dims[1],
+            d2 = dims[0]
+        )
+        return contours, COM
 
     @validate('cnmf')
     def get_spatial_contours(self, ixs_components: np.ndarray) -> List[dict]:
@@ -152,26 +157,27 @@ class CNMFExtensions:
 
         """
         cnmf_obj = self.get_output()
-        contours = self._get_spatial_contour_coors(cnmf_obj)
+        contours, COM = self._get_spatial_contour_coors(cnmf_obj)
 
         contours_selection = list()
         for i in range(len(contours)):
             if i in ixs_components:
                 contours_selection.append(contours[i])
 
-        return contours_selection
+        return contours_selection, COM
 
     @validate('cnmf')
     def get_spatial_contour_coors(self, ixs_components: np.ndarray) -> List[np.ndarray]:
-        contours = self.get_spatial_contours(ixs_components)
+        contours, centres_of_mass = self.get_spatial_contours(ixs_components)
+
 
         coordinates = []
-        centres_of_mass = []
+        #centres_of_mass = []
         for contour in contours:
             coors = contour['coordinates']
             coordinates.append(coors[~np.isnan(coors).any(axis=1)])
-            com = contour['CoM']
-            centres_of_mass.append(com)
+            #com = contour['CoM']
+            #centres_of_mass.append(com_)
 
         return coordinates, centres_of_mass
 
