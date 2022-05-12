@@ -135,11 +135,9 @@ class CNMFExtensions:
             dims,
             swap_dim=True
         )
-        COM = com(
-            cnmf_obj.estimates.A,
-            d1 = dims[1],
-            d2 = dims[0]
-        )
+
+        COM = com(cnmf_obj.estimates.A, d1=dims[1], d2=dims[0])
+
         return contours, COM
 
     @validate('cnmf')
@@ -169,15 +167,11 @@ class CNMFExtensions:
     @validate('cnmf')
     def get_spatial_contour_coors(self, ixs_components: np.ndarray) -> List[np.ndarray]:
         contours, centres_of_mass = self.get_spatial_contours(ixs_components)
-
-
         coordinates = []
-        #centres_of_mass = []
         for contour in contours:
             coors = contour['coordinates']
             coordinates.append(coors[~np.isnan(coors).any(axis=1)])
-            #com = contour['CoM']
-            #centres_of_mass.append(com_)
+
 
         return coordinates, centres_of_mass
 
