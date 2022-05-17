@@ -221,8 +221,11 @@ class CaimanSeriesExtensions:
             filename=runfile_path,  # path to create runfile
             args_str=args_str
         )
-
-        self.process = getattr(self, f"_run_{backend}")(runfile, callbacks_finished, callback_std_out)
+        try:
+            self.process = getattr(self, f"_run_{backend}")(runfile, callbacks_finished, callback_std_out)
+        except:
+            with open(runfile_path, 'r') as f:
+                raise ValueError(f.read())
 
         return self.process
 
