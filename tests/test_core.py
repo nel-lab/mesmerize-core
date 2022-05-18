@@ -133,16 +133,6 @@ def test_mcorr():
     print(df.iloc[-1]['outputs']['traceback'])
     assert df.iloc[-1]['outputs']['success'] is True
     assert df.iloc[-1]['outputs']['traceback'] is None
-    # assert vid_dir.joinpath(df.iloc[-1]['outputs']['mcorr-output-path']
-    #                     ) == \
-    #     vid_dir.joinpath(
-    #     f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap')
-
-    # parentdir + df_output_name = get_full_data_path(df_output_name) = parentdir+manual_output_name
-    # Expected name = uuid+_mean.npy
-
-    #projections
-    #correlations
 
     # test to check mmap output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['mcorr-output-path']
@@ -156,19 +146,19 @@ def test_mcorr():
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['mean-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['mean-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_mean.npy')
+            f'{df.iloc[-1]["uuid"]}_mean_projection.npy')
 
     # test to check std-projection output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['std-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['std-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_std.npy')
+            f'{df.iloc[-1]["uuid"]}_std_projection.npy')
 
     # test to check max-projection output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['max-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['max-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_max.npy') 
+            f'{df.iloc[-1]["uuid"]}_max_projection.npy')
 
     # test to check correlation image output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['corr-img-path']) == \
@@ -272,19 +262,19 @@ def test_cnmf():
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['mean-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['mean-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_mean.npy')
+            f'{df.iloc[-1]["uuid"]}_mean_projection.npy')
 
     # test to check std-projection output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['std-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['std-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_std.npy')
+            f'{df.iloc[-1]["uuid"]}_std_projection.npy')
 
     # test to check max-projection output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['max-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['max-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_max.npy') 
+            f'{df.iloc[-1]["uuid"]}_max_projection.npy')
 
     # test to check correlation image output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['corr-img-path']) == \
@@ -381,7 +371,7 @@ def test_cnmfe():
     
     # test to check mmap output path
     assert vid_dir.joinpath(
-        f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_60_d2_80_d3_1_order_C_frames_2000_.mmap') == \
+        f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000_.mmap') == \
            get_full_data_path(df.iloc[-1]['outputs']['cnmf-memmap-path']) == \
           vid_dir.joinpath(df.iloc[-1]['outputs']['cnmf-memmap-path']
                        )
@@ -390,19 +380,19 @@ def test_cnmfe():
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['mean-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['mean-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_mean.npy')
+            f'{df.iloc[-1]["uuid"]}_mean_projection.npy')
 
     # test to check std-projection output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['std-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['std-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_std.npy')
+            f'{df.iloc[-1]["uuid"]}_std_projection.npy')
 
     # test to check max-projection output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['max-projection-path']) == \
         get_full_data_path(df.iloc[-1]['outputs']['max-projection-path']) == \
         vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}_max.npy') 
+            f'{df.iloc[-1]["uuid"]}_max_projection.npy')
 
     # test to check correlation image output path
     assert vid_dir.joinpath(df.iloc[-1]['outputs']['corr-img-path']) == \
