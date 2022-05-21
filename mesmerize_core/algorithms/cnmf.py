@@ -58,12 +58,12 @@ def main(batch_path, uuid, data_path: str = None):
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-        mean_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_mean_projection.npy'))
-        std_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_std_projection.npy'))
-        max_projection_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_max_projection.npy'))
-        np.save(mean_projection_path, np.mean(images, axis=0))
-        np.save(std_projection_path, np.std(images, axis=0))
-        np.save(max_projection_path, np.max(images, axis=0))
+        mean_projection_path = Path(input_movie_path).parent.joinpath(f'{uuid}_mean_projection.npy')
+        std_projection_path = Path(input_movie_path).parent.joinpath(f'{uuid}_std_projection.npy')
+        max_projection_path = Path(input_movie_path).parent.joinpath(f'{uuid}_max_projection.npy')
+        np.save(str(mean_projection_path), np.mean(images, axis=0))
+        np.save(str(std_projection_path), np.std(images, axis=0))
+        np.save(str(max_projection_path), np.max(images, axis=0))
         # in fname new load in memmap order C
 
         cm.stop_server(dview=dview)
@@ -104,6 +104,9 @@ def main(batch_path, uuid, data_path: str = None):
             cnmf_hdf5_path = Path(output_path).relative_to(data_path)
             cnmf_memmap_path = Path(fname_new).relative_to(data_path)
             corr_img_path = corr_img_path.relative_to(data_path)
+            mean_projection_path = mean_projection_path.relative_to(data_path)
+            std_projection_path = std_projection_path.relative_to(data_path)
+            max_projection_path = max_projection_path.relative_to(data_path)
         else:
             cnmf_hdf5_path = output_path
             cnmf_memmap_path = fname_new
