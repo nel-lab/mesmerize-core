@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Tuple
+from typing import *
 
 import numpy as np
 import pandas as pd
@@ -121,7 +121,10 @@ class CNMFExtensions:
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @staticmethod
     @lru_cache(5)
-    def _get_spatial_contour_coors(cnmf_obj: CNMF):
+    def _get_spatial_contours(cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None):
+        if ixs_components is None:
+            ixs_components = cnmf_obj.estimates.idx_components
+
         dims = cnmf_obj.dims
         if dims is None:  # I think that one of these is `None` if loaded from an hdf5 file
             dims = cnmf_obj.estimates.dims
@@ -130,7 +133,7 @@ class CNMFExtensions:
         dims = dims[1], dims[0]
 
         contours = caiman_get_contours(
-            cnmf_obj.estimates.A,
+            cnmf_obj.estimates.A[:, ixs_components],
             dims,
             swap_dim=True
         )
@@ -138,39 +141,38 @@ class CNMFExtensions:
         return contours
 
     @validate('cnmf')
-    def get_spatial_contours(self, ixs_components: np.ndarray) -> List[dict]:
+    def get_spatial_contours(
+            self,
+            ixs_components: Optional[np.ndarray] = None
+    ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
-        Get the contours for the spatial footprints
+        Get the contour and center of mass for each spatial footprint
 
         Parameters
         ----------
         ixs_components: np.ndarray
-            indices for which to return spatial contours
+            indices for which to return spatial contours.
+            if `None` just returns according to cnmf.estimates.idx_components
 
         Returns
         -------
 
         """
         cnmf_obj = self.get_output()
-        contours = self._get_spatial_contour_coors(cnmf_obj)
+        contours = self._get_spatial_contours(cnmf_obj, ixs_components)
 
-        contours_selection = list()
-        for i in range(len(contours)):
-            if i in ixs_components:
-                contours_selection.append(contours[i])
+        coordinates = list()
+        coms = list()
 
-        return contours_selection
-
-    @validate('cnmf')
-    def get_spatial_contour_coors(self, ixs_components: np.ndarray) -> List[np.ndarray]:
-        contours = self.get_spatial_contours(ixs_components)
-
-        coordinates = []
         for contour in contours:
             coors = contour['coordinates']
-            coordinates.append(coors[~np.isnan(coors).any(axis=1)])
+            coors = coors[~np.isnan(coors).any(axis=1)]
+            coordinates.append(coors)
 
-        return coordinates
+            com = coors.mean(axis=0)
+            coms.append(com)
+
+        return coordinates, coms
 
     @validate('cnmf')
     def get_temporal_components(self, ixs_components: np.ndarray = None, add_background: bool = False) -> np.ndarray:
