@@ -69,7 +69,7 @@ class MCorrExtensions:
             return shifts
 
         if pw_rigid:
-            x_shifts, y_shifts = shifts
+            return shifts
         else:
             n_pts = shifts.shape[0]
             n_lines = shifts.shape[1]
@@ -78,6 +78,4 @@ class MCorrExtensions:
 
             for i in range(n_lines):
                 ys.append(shifts[:, i])
-        return xs, ys
-
-
+            return xs, ys
