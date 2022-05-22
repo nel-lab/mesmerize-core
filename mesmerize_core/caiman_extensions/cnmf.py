@@ -18,6 +18,7 @@ class CNMFExtensions:
     """
     Extensions for managing CNMF output data
     """
+
     def __init__(self, s: pd.Series):
         self._series = s
 
@@ -30,10 +31,10 @@ class CNMFExtensions:
         np.ndarray
             numpy memmap array used for CNMF
         """
-        path = get_full_data_path(self._series['outputs']['cnmf-memmap-path'])
+        path = get_full_data_path(self._series["outputs"]["cnmf-memmap-path"])
         # Get order f images
         Yr, dims, T = load_memmap(str(path))
-        images = np.reshape(Yr.T, [T] + list(dims), order='F')
+        images = np.reshape(Yr.T, [T] + list(dims), order="F")
         return images
 
     def get_input_memmap(self) -> np.ndarray:
@@ -47,16 +48,18 @@ class CNMFExtensions:
             numpy memmap array of the input
         """
         movie_path = str(self._series.caiman.get_input_movie_path())
-        if movie_path.endswith('mmap'):
+        if movie_path.endswith("mmap"):
             Yr, dims, T = load_memmap(movie_path)
-            images = np.reshape(Yr.T, [T] + list(dims), order='F')
+            images = np.reshape(Yr.T, [T] + list(dims), order="F")
             return images
         else:
-            raise TypeError(f"Input movie for CNMF was not a memmap, path to input movie is:\n"
-                            f"{movie_path}")
+            raise TypeError(
+                f"Input movie for CNMF was not a memmap, path to input movie is:\n"
+                f"{movie_path}"
+            )
 
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
-    @validate('cnmf')
+    @validate("cnmf")
     def get_output_path(self) -> Path:
         """
         Returns
@@ -64,10 +67,10 @@ class CNMFExtensions:
         Path
             Path to the Caiman CNMF hdf5 output file
         """
-        return get_full_data_path(self._series['outputs']['cnmf-hdf5-path'])
+        return get_full_data_path(self._series["outputs"]["cnmf-hdf5-path"])
 
-    #@lru_cache(MESMERIZE_LRU_CACHE)
-    @validate('cnmf')
+    # @lru_cache(MESMERIZE_LRU_CACHE)
+    @validate("cnmf")
     def get_output(self) -> CNMF:
         """
         Returns
@@ -80,11 +83,9 @@ class CNMFExtensions:
         return load_CNMF(self.get_output_path())
 
     # TODO: Make the ``ixs`` parameter for spatial stuff optional
-    @validate('cnmf')
+    @validate("cnmf")
     def get_spatial_masks(
-            self,
-            ixs_components: Optional[np.ndarray] = None,
-            threshold: float = 0.01
+        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01
     ) -> np.ndarray:
         """
         Get binary masks of the spatial components at the given `ixs`
@@ -129,29 +130,29 @@ class CNMFExtensions:
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @staticmethod
     @lru_cache(5)
-    def _get_spatial_contours(cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None):
+    def _get_spatial_contours(
+        cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
+    ):
         if ixs_components is None:
             ixs_components = cnmf_obj.estimates.idx_components
 
         dims = cnmf_obj.dims
-        if dims is None:  # I think that one of these is `None` if loaded from an hdf5 file
+        if dims is None:
+            # I think that one of these is `None` if loaded from an hdf5 file
             dims = cnmf_obj.estimates.dims
 
         # need to transpose these
         dims = dims[1], dims[0]
 
         contours = caiman_get_contours(
-            cnmf_obj.estimates.A[:, ixs_components],
-            dims,
-            swap_dim=True
+            cnmf_obj.estimates.A[:, ixs_components], dims, swap_dim=True
         )
 
         return contours
 
-    @validate('cnmf')
+    @validate("cnmf")
     def get_spatial_contours(
-            self,
-            ixs_components: Optional[np.ndarray] = None
+        self, ixs_components: Optional[np.ndarray] = None
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
@@ -173,7 +174,7 @@ class CNMFExtensions:
         coms = list()
 
         for contour in contours:
-            coors = contour['coordinates']
+            coors = contour["coordinates"]
             coors = coors[~np.isnan(coors).any(axis=1)]
             coordinates.append(coors)
 
@@ -182,11 +183,9 @@ class CNMFExtensions:
 
         return coordinates, coms
 
-    @validate('cnmf')
+    @validate("cnmf")
     def get_temporal_components(
-            self,
-            ixs_components: Optional[np.ndarray] = None,
-            add_background: bool = False
+        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False
     ) -> np.ndarray:
         """
         Get the temporal components for this CNMF item
@@ -218,8 +217,10 @@ class CNMFExtensions:
             return C
 
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
-    @validate('cnmf')
-    def get_reconstructed_movie(self, ixs_frames: Tuple[int, int] = None, add_background: bool = True) -> np.ndarray:
+    @validate("cnmf")
+    def get_reconstructed_movie(
+        self, ixs_frames: Tuple[int, int] = None, add_background: bool = True
+    ) -> np.ndarray:
         """
         Return the reconstructed movie, (A * C) + (b * f)
 
@@ -242,8 +243,12 @@ class CNMFExtensions:
         if ixs_frames is None:
             ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
 
-        dn = (cnmf_obj.estimates.A.dot(cnmf_obj.estimates.C[:, ixs_frames[0]:ixs_frames[1]]))
+        dn = cnmf_obj.estimates.A.dot(
+            cnmf_obj.estimates.C[:, ixs_frames[0] : ixs_frames[1]]
+        )
 
         if add_background:
-            dn += (cnmf_obj.estimates.b.dot(cnmf_obj.estimates.f[:, ixs_frames[0]:ixs_frames[1]]))
-        return dn.reshape(cnmf_obj.dims + (-1,), order='F').transpose([2, 0, 1])
+            dn += cnmf_obj.estimates.b.dot(
+                cnmf_obj.estimates.f[:, ixs_frames[0] : ixs_frames[1]]
+            )
+        return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
