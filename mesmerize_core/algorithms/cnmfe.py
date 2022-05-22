@@ -49,13 +49,11 @@ def main(batch_path, uuid, data_path: str = None):
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-        paths = []
+        proj_paths = dict()
         for proj_type in ['mean', 'std', 'max']:
             p_img = getattr(np, f'nan{proj_type}')(images, axis=0)
-            np.save(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')), p_img)
-            paths.append(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')))
-
-
+            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')
+            np.save(str(proj_paths[proj_type]), p_img)
 
         downsample_ratio = params['downsample_ratio']
         # in fname new load in memmap order C
@@ -64,11 +62,11 @@ def main(batch_path, uuid, data_path: str = None):
             images[::downsample_ratio], swap_dim=False, gSig=gSig
         )
 
-        pnr_output_path = str(Path(input_movie_path).parent.joinpath(f"{uuid}_pn.npy").resolve())
-        cn_output_path = str(Path(input_movie_path).parent.joinpath(f"{uuid}_cn.npy").resolve())
+        pnr_output_path = Path(input_movie_path).parent.joinpath(f"{uuid}_pn.npy").resolve()
+        cn_output_path = Path(input_movie_path).parent.joinpath(f"{uuid}_cn.npy").resolve()
 
-        np.save(str(cn_output_path), cn_filter, allow_pickle=False)
         np.save(str(pnr_output_path), pnr, allow_pickle=False)
+        np.save(str(cn_output_path), cn_filter, allow_pickle=False)
 
         d = dict()  # for output
 
@@ -93,13 +91,17 @@ def main(batch_path, uuid, data_path: str = None):
             print("evaluating components")
             cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
-            output_path = str(Path(input_movie_path).parent.joinpath(f"{uuid}.hdf5").resolve())
-            cnm.save(output_path)
+            output_path = Path(input_movie_path).parent.joinpath(f"{uuid}.hdf5").resolve()
+            cnm.save(str(output_path))
 
             if data_path is not None:
                 cnmf_hdf5_path = Path(output_path).relative_to(data_path)
+                for proj_type in proj_paths.keys():
+                    d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(data_path)
             else:
                 cnmf_hdf5_path = output_path
+                for proj_type in proj_paths.keys():
+                    d[f"{proj_type}-projection-path"] = proj_paths[proj_type]
 
             d.update(
                 {
@@ -109,8 +111,8 @@ def main(batch_path, uuid, data_path: str = None):
 
         if data_path is not None:
             cnmfe_memmap_path = Path(fname_new).relative_to(data_path)
-            cn_output_path = Path(cn_output_path).relative_to(data_path)
-            pnr_output_path = Path(pnr_output_path).relative_to(data_path)
+            cn_output_path = cn_output_path.relative_to(data_path)
+            pnr_output_path = pnr_output_path.relative_to(data_path)
         else:
             cnmfe_memmap_path = fname_new
 
@@ -119,15 +121,12 @@ def main(batch_path, uuid, data_path: str = None):
                 "cnmf-memmap-path": cnmfe_memmap_path,
                 "corr-img-path": cn_output_path,
                 "pnr-image-path": pnr_output_path,
-                "mean-projection-path": paths[0],
-                "std-projection-path": paths[1],
-                "max-projection-path": paths[2],
                 "success": True,
                 "traceback": None
             }
         )
 
-        print(d)
+        print(f"Final output dict:\n{d}")
 
     except:
         d = {"success": False, "traceback": traceback.format_exc()}

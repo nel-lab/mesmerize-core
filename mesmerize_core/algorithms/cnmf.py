@@ -58,15 +58,13 @@ def main(batch_path, uuid, data_path: str = None):
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-        paths = []
+        proj_paths = dict()
         for proj_type in ['mean', 'std', 'max']:
             p_img = getattr(np, f'nan{proj_type}')(images, axis=0)
-            np.save(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')), p_img)
-            paths.append(str(Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')))
-
+            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')
+            np.save(str(proj_paths[proj_type]), p_img)
 
         # in fname new load in memmap order C
-
         cm.stop_server(dview=dview)
         c, dview, n_processes = cm.cluster.setup_cluster(
             backend='local',
@@ -91,9 +89,9 @@ def main(batch_path, uuid, data_path: str = None):
         print("Eval")
         cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
-        output_path = str(get_full_data_path(input_movie_path).parent.joinpath(f"{uuid}.hdf5").resolve())
+        output_path = get_full_data_path(input_movie_path).parent.joinpath(f"{uuid}.hdf5").resolve()
 
-        cnm.save(output_path)
+        cnm.save(str(output_path))
 
         Cn = cm.local_correlations(images.transpose(1, 2, 0))
         Cn[np.isnan(Cn)] = 0
@@ -101,23 +99,26 @@ def main(batch_path, uuid, data_path: str = None):
         corr_img_path = Path(input_movie_path).parent.joinpath(f'{uuid}_cn.npy').resolve()
         np.save(str(corr_img_path), Cn, allow_pickle=False)
 
-        if data_path is not None:
-            cnmf_hdf5_path = Path(output_path).relative_to(data_path)
+        # output dict for dataframe row (pd.Series)
+        d = dict()
+
+        if data_path is not None:  # relative paths
+            cnmf_hdf5_path = output_path.relative_to(data_path)
             cnmf_memmap_path = Path(fname_new).relative_to(data_path)
             corr_img_path = corr_img_path.relative_to(data_path)
-        else:
+            for proj_type in proj_paths.keys():
+                d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(data_path)
+        else:  # absolute paths
             cnmf_hdf5_path = output_path
             cnmf_memmap_path = fname_new
+            for proj_type in proj_paths.keys():
+                d[f"{proj_type}-projection-path"] = proj_paths[proj_type]
 
-        d = dict()
         d.update(
             {
                 "cnmf-hdf5-path": cnmf_hdf5_path,
                 "cnmf-memmap-path": cnmf_memmap_path,
                 "corr-img-path": corr_img_path,
-                "mean-projection-path": paths[0],
-                "std-projection-path": paths[1],
-                "max-projection-path": paths[2],
                 "success": True,
                 "traceback": None
             }

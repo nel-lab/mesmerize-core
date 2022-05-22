@@ -68,12 +68,11 @@ def main(batch_path, uuid, data_path: str = None):
         Yr, dims, T = cm.load_memmap(str(get_full_data_path(output_path)))
         images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-        paths=[]
+        proj_paths = dict()
         for proj_type in ['mean', 'std', 'max']:
-            p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
-            np.save(str(Path(input_movie_path).parent.joinpath(f"{uuid}_{proj_type}.npy")), p_img)
-            paths.append(str(Path(input_movie_path).parent.joinpath(f"{uuid}_{proj_type}.npy")))
-
+            p_img = getattr(np, f'nan{proj_type}')(images, axis=0)
+            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')
+            np.save(str(proj_paths[proj_type]), p_img)
 
         print("Computing correlation image")
         Cns = local_correlations_movie_offline([mc.mmap_file[0]],
@@ -82,11 +81,11 @@ def main(batch_path, uuid, data_path: str = None):
                                                dview=dview)
         Cn = Cns.max(axis=0)
         Cn[np.isnan(Cn)] = 0
-        cn_path = str(Path(input_movie_path).parent.joinpath(f'{uuid}_cn.npy'))
-        np.save(cn_path, Cn, allow_pickle=False)
+        cn_path = Path(input_movie_path).parent.joinpath(f'{uuid}_cn.npy')
+        np.save(str(cn_path), Cn, allow_pickle=False)
 
-        if data_path is not None:
-            cn_path = Path(cn_path).relative_to(data_path)
+        # output dict for pandas series for dataframe row
+        d = dict()
 
         print("finished computing correlation image")
 
@@ -95,26 +94,34 @@ def main(batch_path, uuid, data_path: str = None):
             x_shifts = mc.x_shifts_els
             y_shifts = mc.y_shifts_els
             shifts = [x_shifts, y_shifts]
-            shift_path = str(Path(input_movie_path).parent.joinpath(f"{uuid}_shifts.npy"))
-            np.save(shift_path, shifts)
+            shift_path = Path(input_movie_path).parent.joinpath(f"{uuid}_shifts.npy")
+            np.save(str(shift_path), shifts)
         else:
             shifts = mc.shifts_rig
-            shift_path = str(Path(input_movie_path).parent.joinpath(f"{uuid}_shifts.npy"))
-            np.save(shift_path, shifts)
+            shift_path = Path(input_movie_path).parent.joinpath(f"{uuid}_shifts.npy")
+            np.save(str(shift_path), shifts)
 
-        d = dict()
+        if data_path is not None:
+            cn_path = cn_path.relative_to(data_path)
+            output_path = get_full_data_path(output_path).relative_to(data_path)
+            shift_path = shift_path.relative_to(data_path)
+            for proj_type in proj_paths.keys():
+                d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(data_path)
+        else:
+            cn_path = cn_path
+            output_path = get_full_data_path(output_path)
+            shift_path = shift_path.resolve()
+
         d.update(
             {
                 "mcorr-output-path": output_path,
                 "corr-img-path": cn_path,
-                "mean-projection-path": paths[0],
-                "std-projection-path": paths[1],
-                "max-projection-path": paths[2],
                 "shifts": shift_path,
                 "success": True,
                 "traceback": None
             }
         )
+
     except:
         d = {"success": False, "traceback": traceback.format_exc()}
         print("mc failed, stored traceback in output")
