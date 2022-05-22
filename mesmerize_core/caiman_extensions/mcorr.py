@@ -45,34 +45,31 @@ class MCorrExtensions:
         mc_movie = np.reshape(Yr.T, [T] + list(dims), order="F")
         return mc_movie
 
-    @validate("mcorr")
-    def get_shifts(
-        self, output_type: str, pw_rigid: bool = True
-    ) -> Union[np.ndarray, Tuple[List[np.ndarray], List[np.ndarray]]]:
+    def shifts_handler(
+            self, shifts: np.ndarray, pw_rigid: bool
+    ):
         """
-        Get x & y shifts
+        Handler function for processing shifts array
 
-        Parameters
-        ----------
-        output_type: str
-            one of 'matplotlib' or 'napari-1d'.
-            'matplotlib' returns ``np.ndarray`` of shape ``[xs, ys]``
+        Parameters:
+        -----------
+        shifts: np.ndarray of shifts from .npy file
+        pw_rigid: bool - flag for whether shifts are for rigid or nonrigid motion correction
 
-        pw_rigid: bool
-            if True, return pw_ridid shifts
-
-        Returns
-        -------
-
+        Returns:
+        --------
+        processed shifts results
         """
-        path = get_full_data_path(self._series["outputs"]["shifts"])
-        shifts = np.load(str(path))
-
-        if output_type == "matplotlib":
-            return shifts
-
         if pw_rigid:
-            return shifts
+            n_pts = shifts.shape[1]
+            n_lines = shifts.shape[2]
+            xs = [np.linspace(0, n_pts, n_pts)]
+            ys = []
+
+            for i in range(shifts.shape[0]):
+                for j in range(n_lines):
+                    ys.append(shifts[i,:,j])
+            return xs, ys
         else:
             n_pts = shifts.shape[0]
             n_lines = shifts.shape[1]
@@ -82,3 +79,18 @@ class MCorrExtensions:
             for i in range(n_lines):
                 ys.append(shifts[:, i])
             return xs, ys
+
+    @validate("mcorr")
+    def get_shifts(self) -> np.ndarray:
+        """
+        Get x & y shifts
+
+        Returns
+        -------
+        shifts: array of x and y shifts
+            for piecewise MC, x and y shifts for all blocks
+            for rigid MC, one pair of shifts for entire movie
+        """
+        path = get_full_data_path(self._series["outputs"]["shifts"])
+        shifts = np.load(str(path))
+        return shifts
