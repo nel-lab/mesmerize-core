@@ -8,96 +8,99 @@ import pandas as pd
 import traceback
 from pathlib import Path
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from mesmerize_core import set_parent_data_path, get_full_data_path
 
+
 @click.command()
-@click.option('--batch-path', type=str)
-@click.option('--uuid', type=str)
-@click.option('--data-path')
+@click.option("--batch-path", type=str)
+@click.option("--uuid", type=str)
+@click.option("--data-path")
 def main(batch_path, uuid, data_path: str = None):
     df = pd.read_pickle(batch_path)
-    item = df[df['uuid'] == uuid].squeeze()
+    item = df[df["uuid"] == uuid].squeeze()
 
-    input_movie_path = item['input_movie_path']
+    input_movie_path = item["input_movie_path"]
     set_parent_data_path(data_path)
     input_movie_path = str(get_full_data_path(input_movie_path))
 
-    params = item['params']
+    params = item["params"]
     print("cnmfe params:", params)
 
-    #adapted from current demo notebook
+    # adapted from current demo notebook
     n_processes = psutil.cpu_count() - 1
     # Start cluster for parallel processing
     c, dview, n_processes = cm.cluster.setup_cluster(
-        backend='local',
-        n_processes=n_processes,
-        single_thread=False
-     )
+        backend="local", n_processes=n_processes, single_thread=False
+    )
 
     try:
         fname_new = cm.save_memmap(
-            [input_movie_path],
-            base_name=f'{uuid}_cnmf-memmap_',
-            order='C',
-            dview=dview
+            [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
         )
 
-        print('making memmap')
-        gSig = params['cnmfe_kwargs']['gSig'][0]
+        print("making memmap")
+        gSig = params["cnmfe_kwargs"]["gSig"][0]
 
         Yr, dims, T = cm.load_memmap(fname_new)
-        images = np.reshape(Yr.T, [T] + list(dims), order='F')
+        images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
         proj_paths = dict()
-        for proj_type in ['mean', 'std', 'max']:
-            p_img = getattr(np, f'nan{proj_type}')(images, axis=0)
-            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}_projection.npy')
+        for proj_type in ["mean", "std", "max"]:
+            p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
+            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(
+                f"{uuid}_{proj_type}_projection.npy"
+            )
             np.save(str(proj_paths[proj_type]), p_img)
 
-        downsample_ratio = params['downsample_ratio']
+        downsample_ratio = params["downsample_ratio"]
         # in fname new load in memmap order C
 
         cn_filter, pnr = cm.summary_images.correlation_pnr(
             images[::downsample_ratio], swap_dim=False, gSig=gSig
         )
 
-        pnr_output_path = Path(input_movie_path).parent.joinpath(f"{uuid}_pn.npy").resolve()
-        cn_output_path = Path(input_movie_path).parent.joinpath(f"{uuid}_cn.npy").resolve()
+        pnr_output_path = (
+            Path(input_movie_path).parent.joinpath(f"{uuid}_pn.npy").resolve()
+        )
+        cn_output_path = (
+            Path(input_movie_path).parent.joinpath(f"{uuid}_cn.npy").resolve()
+        )
 
         np.save(str(pnr_output_path), pnr, allow_pickle=False)
         np.save(str(cn_output_path), cn_filter, allow_pickle=False)
 
         d = dict()  # for output
 
-        if params['do_cnmfe']:
-            cnmfe_params_dict = \
-                {
-                    "method_init": 'corr_pnr',
-                    "n_processes": n_processes,
-                    "only_init": True,    # for 1p
-                    "center_psf": True,         # for 1p
-                    "normalize_init": False     # for 1p
-                }
-            tot = {**cnmfe_params_dict, **params['cnmfe_kwargs']}
+        if params["do_cnmfe"]:
+            cnmfe_params_dict = {
+                "method_init": "corr_pnr",
+                "n_processes": n_processes,
+                "only_init": True,  # for 1p
+                "center_psf": True,  # for 1p
+                "normalize_init": False,  # for 1p
+            }
+            tot = {**cnmfe_params_dict, **params["cnmfe_kwargs"]}
             cnmfe_params_dict = CNMFParams(params_dict=tot)
             cnm = cnmf.CNMF(
-                n_processes=n_processes,
-                dview=dview,
-                params=cnmfe_params_dict
+                n_processes=n_processes, dview=dview, params=cnmfe_params_dict
             )
             print("Performing CNMFE")
             cnm = cnm.fit(images)
             print("evaluating components")
             cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
-            output_path = Path(input_movie_path).parent.joinpath(f"{uuid}.hdf5").resolve()
+            output_path = (
+                Path(input_movie_path).parent.joinpath(f"{uuid}.hdf5").resolve()
+            )
             cnm.save(str(output_path))
 
             if data_path is not None:
                 cnmf_hdf5_path = Path(output_path).relative_to(data_path)
                 for proj_type in proj_paths.keys():
-                    d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(data_path)
+                    d[f"{proj_type}-projection-path"] = proj_paths[
+                        proj_type
+                    ].relative_to(data_path)
             else:
                 cnmf_hdf5_path = output_path
                 for proj_type in proj_paths.keys():
@@ -122,7 +125,7 @@ def main(batch_path, uuid, data_path: str = None):
                 "corr-img-path": cn_output_path,
                 "pnr-image-path": pnr_output_path,
                 "success": True,
-                "traceback": None
+                "traceback": None,
             }
         )
 
@@ -132,7 +135,7 @@ def main(batch_path, uuid, data_path: str = None):
         d = {"success": False, "traceback": traceback.format_exc()}
 
     # Add dictionary to output column of series
-    df.loc[df['uuid'] == uuid, 'outputs'] = [d]
+    df.loc[df["uuid"] == uuid, "outputs"] = [d]
     # save dataframe to disc
     df.to_pickle(batch_path)
 

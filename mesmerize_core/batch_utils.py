@@ -12,33 +12,29 @@ from .utils import validate_path
 CURRENT_BATCH_PATH: pathlib.Path = None  # only one batch at a time
 PARENT_DATA_PATH: pathlib.Path = None
 
-ALGO_MODULES = \
-    {
-        'cnmf': cnmf,
-        'mcorr': mcorr,
-        'cnmfe': cnmfe,
-    }
+ALGO_MODULES = {
+    "cnmf": cnmf,
+    "mcorr": mcorr,
+    "cnmfe": cnmfe,
+}
 
 try:
     import PyQt5
+
     HAS_PYQT = True
 except ImportError:
     HAS_PYQT = False
 
-COMPUTE_BACKEND_QPROCESS = 'qprocess'  #: QProcess backend for use in napari
-COMPUTE_BACKEND_SUBPROCESS = 'subprocess'  #: subprocess backend, for use output a Qt application such as a notebook
-COMPUTE_BACKEND_SLURM = 'slurm'  #: SLURM backend, not yet implemented
+COMPUTE_BACKEND_QPROCESS = "qprocess"  #: QProcess backend for use in napari
+COMPUTE_BACKEND_SUBPROCESS = "subprocess"  #: subprocess backend, for use output a Qt application such as a notebook
+COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend, not yet implemented
 
-COMPUTE_BACKENDS =\
-[
-    COMPUTE_BACKEND_SUBPROCESS,
-    COMPUTE_BACKEND_SLURM
-]
+COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM]
 
 if HAS_PYQT:
     COMPUTE_BACKENDS += [COMPUTE_BACKEND_QPROCESS]
 
-DATAFRAME_COLUMNS = ['algo', 'name', 'input_movie_path', 'params', 'outputs', 'uuid']
+DATAFRAME_COLUMNS = ["algo", "name", "input_movie_path", "params", "outputs", "uuid"]
 
 
 class BasePaths:
@@ -53,7 +49,7 @@ class BasePaths:
         if self._batch_path is not None:
             return self._batch_path
         else:
-            raise ValueError('Batch path is not set')
+            raise ValueError("Batch path is not set")
 
     def set_parent_path(self, path: Union[str, Path]):
         self._parent_path = path
@@ -62,7 +58,7 @@ class BasePaths:
         if self._parent_path is not None:
             return self._parent_path
         else:
-            raise ValueError('Parent path is not set')
+            raise ValueError("Parent path is not set")
 
 
 @pd.api.extensions.register_dataframe_accessor("paths")
@@ -116,9 +112,7 @@ def load_batch(batch_file: Union[str, pathlib.Path]) -> pd.DataFrame:
     # global CURRENT_BATCH_PATH
     batch_file = validate_path(batch_file)
 
-    df = pd.read_pickle(
-        pathlib.Path(batch_file)
-    )
+    df = pd.read_pickle(pathlib.Path(batch_file))
 
     # CURRENT_BATCH_PATH = pathlib.Path(batch_file)
 
@@ -153,7 +147,7 @@ def create_batch(path: str = None, remove_existing: bool = False) -> pd.DataFram
             os.remove(path)
         else:
             raise FileExistsError(
-                f'Batch file already exists at specified location: {path}'
+                f"Batch file already exists at specified location: {path}"
             )
 
     if not Path(path).parent.is_dir():
@@ -177,5 +171,3 @@ def get_full_data_path(path: Union[Path, str]) -> Path:
         return PARENT_DATA_PATH.joinpath(path)
 
     return path
-
-
