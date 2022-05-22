@@ -81,7 +81,11 @@ class CNMFExtensions:
 
     # TODO: Make the ``ixs`` parameter for spatial stuff optional
     @validate('cnmf')
-    def get_spatial_masks(self, ixs_components: np.ndarray, threshold: float = 0.01) -> np.ndarray:
+    def get_spatial_masks(
+            self,
+            ixs_components: Optional[np.ndarray] = None,
+            threshold: float = 0.01
+    ) -> np.ndarray:
         """
         Get binary masks of the spatial components at the given `ixs`
 
@@ -90,7 +94,8 @@ class CNMFExtensions:
         Parameters
         ----------
         ixs_components: np.ndarray
-            numpy array containing integer indices for which you want spatial masks
+            numpy array containing integer indices for which you want spatial masks.
+            if `None` uses cnmf.estimates.idx_components
 
         threshold: float
             threshold
@@ -106,6 +111,9 @@ class CNMFExtensions:
         dims = cnmf_obj.dims
         if dims is None:
             dims = cnmf_obj.estimates.dims
+
+        if ixs_components is None:
+            ixs_components = cnmf_obj.estimates.idx_components
 
         masks = np.zeros(shape=(dims[0], dims[1], len(ixs_components)), dtype=bool)
 
@@ -152,7 +160,7 @@ class CNMFExtensions:
         ----------
         ixs_components: np.ndarray
             indices for which to return spatial contours.
-            if `None` just returns according to cnmf.estimates.idx_components
+            if `None` uses cnmf.estimates.idx_components
 
         Returns
         -------
@@ -175,14 +183,19 @@ class CNMFExtensions:
         return coordinates, coms
 
     @validate('cnmf')
-    def get_temporal_components(self, ixs_components: np.ndarray = None, add_background: bool = False) -> np.ndarray:
+    def get_temporal_components(
+            self,
+            ixs_components: Optional[np.ndarray] = None,
+            add_background: bool = False
+    ) -> np.ndarray:
         """
         Get the temporal components for this CNMF item
 
         Parameters
         ----------
         ixs_components: np.ndarray
-            indices for which to return temporal components, ``cnmf.estimates.C``
+            indices for which to return temporal components, ``cnmf.estimates.C``.
+            if `None` uses cnmf.estimates.idx_components
 
         add_background: bool
             if ``True``, add the temporal background, basically ``cnmf.estimates.C + cnmf.estimates.f``
@@ -194,7 +207,7 @@ class CNMFExtensions:
         cnmf_obj = self.get_output()
 
         if ixs_components is None:
-            ixs_components = np.arange(0, cnmf_obj.estimates.C.shape[0])
+            ixs_components = cnmf_obj.estimates.idx_components
 
         C = cnmf_obj.estimates.C[ixs_components]
         f = cnmf_obj.estimates.f
