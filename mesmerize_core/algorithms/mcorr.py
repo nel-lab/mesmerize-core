@@ -71,7 +71,7 @@ def main(batch_path, uuid, data_path: str = None):
         proj_paths = dict()
         for proj_type in ['mean', 'std', 'max']:
             p_img = getattr(np, f'nan{proj_type}')(images, axis=0)
-            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}.npy')
+            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(f'{uuid}_{proj_type}_projection.npy')
             np.save(str(proj_paths[proj_type]), p_img)
 
         print("Computing correlation image")
