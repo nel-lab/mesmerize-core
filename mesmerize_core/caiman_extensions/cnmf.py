@@ -175,7 +175,7 @@ class CNMFExtensions:
         return coordinates, coms
 
     @validate('cnmf')
-    def get_temporal_components(self, ixs_components: np.ndarray = None, add_background: bool = True) -> np.ndarray:
+    def get_temporal_components(self, ixs_components: np.ndarray = None, add_background: bool = False) -> np.ndarray:
         """
         Get the temporal components for this CNMF item
 
