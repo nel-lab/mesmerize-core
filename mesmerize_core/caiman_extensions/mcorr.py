@@ -6,6 +6,7 @@ from caiman import load_memmap
 
 from ..batch_utils import get_full_data_path
 from .common import validate
+from matplotlib import pyplot as plt
 from typing import *
 
 
@@ -46,7 +47,7 @@ class MCorrExtensions:
         return mc_movie
 
     def shifts_handler(
-            self, shifts: np.ndarray, pw_rigid: bool
+            self, shifts: np.ndarray, pw_rigid: bool=False
     ):
         """
         Handler function for processing shifts array
@@ -54,6 +55,7 @@ class MCorrExtensions:
         Parameters:
         -----------
         shifts: np.ndarray of shifts from .npy file
+        plot_type: str - napari-1d or matplotlib - determines how process shifts array
         pw_rigid: bool - flag for whether shifts are for rigid or nonrigid motion correction
 
         Returns:
