@@ -321,11 +321,26 @@ def test_cnmf():
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
 
-    #tests to check cnmf extensions
-        #get_cnmf_memmap
-        #get_input_memmap
-        #get_output_path
-        #get_output
+    # test to check get_cnmf_memmap()
+    cnmf_mmap_output = df.iloc[1].cnmf.get_cnmf_memmap()
+    cnmf_mmap_output_actual = numpy.load('cnmf_output_mmap.npy')
+    numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
+
+    # test to check get_input_memmap()
+    cnmf_input_mmap = df.iloc[1].cnmf.get_input_memmap()
+    cnmf_input_mmap_actual = numpy.load('cnmf_input_mmap.npy')
+    numpy.testing.assert_array_equal(cnmf_input_mmap, cnmf_input_mmap_actual)
+    # cnmf input memmap from mcorr output should also equal mcorr output
+    mcorr_output = df.iloc[0].mcorr.get_output()
+    numpy.testing.assert_array_equal(cnmf_input_mmap, mcorr_output)
+
+    # test to check get_output_path()
+    assert (df.iloc[1].cnmf.get_output_path() ==
+            vid_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"]))
+
+    # test to check get_output()
+
+
         #get_spatial_masks
         #get_spatial_contours
         #get_temporal_components
