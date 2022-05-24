@@ -1,4 +1,6 @@
 import os
+
+import numpy.testing
 import pandas as pd
 from mesmerize_core import (
     create_batch,
@@ -181,6 +183,18 @@ def test_mcorr():
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
 
+    # test to check mcorr get_output_path()
+    assert df.iloc[0].mcorr.get_output_path() == \
+           vid_dir.joinpath(
+            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
+        )
+
+    # test to check mcorr get_output()
+    mcorr_output = df.iloc[0].mcorr.get_output()
+    mcorr_output_actual = numpy.load('mcorr_output.npy')
+    numpy.testing.assert_array_equal(mcorr_output, mcorr_output_actual)
+
+
 
 def test_cnmf():
     set_parent_data_path(vid_dir)
@@ -306,6 +320,30 @@ def test_cnmf():
         == get_full_data_path(df.iloc[-1]["outputs"]["corr-img-path"])
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
+
+    #tests to check cnmf extensions
+        #get_cnmf_memmap
+        #get_input_memmap
+        #get_output_path
+        #get_output
+        #get_spatial_masks
+        #get_spatial_contours
+        #get_temporal_components
+        #get_reconstructed_movie
+
+    #tests for caiman extensions
+        #uloc
+        #add_item
+        #remove_item
+        #run_qprocess
+        #run_subprocess
+        #run_slurm
+        #run
+        #get_input_movie_path
+        #get_correlation_img
+        #get_pnr_image
+        #get_projection
+
 
 
 def test_cnmfe():
@@ -508,3 +546,5 @@ def test_remove_item():
     assert df.isin([f"test-{algo}"]).any().any() == False
     assert df.isin([f"test1-{algo}"]).any().any() == False
     assert df.empty == True
+
+
