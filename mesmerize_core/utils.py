@@ -16,31 +16,49 @@ from pathlib import Path
 
 # to use powershell to run the CNMF process using QProcess
 # napari's built in @thread_worker locks up the entire application
-if os.name == 'nt':
+if os.name == "nt":
     IS_WINDOWS = True
-    HOME = 'USERPROFILE'
+    HOME = "USERPROFILE"
 else:
     IS_WINDOWS = False
-    HOME = 'HOME'
+    HOME = "HOME"
 
-if 'MESMERIZE_LRU_CACHE' in os.environ.keys():
-    MESMERIZE_LRU_CACHE = os.environ['MESMERIZE_LRU_CACHE']
+if "MESMERIZE_LRU_CACHE" in os.environ.keys():
+    MESMERIZE_LRU_CACHE = os.environ["MESMERIZE_LRU_CACHE"]
 else:
     MESMERIZE_LRU_CACHE = 10
 
 
-qualitative_colormaps = ['Pastel1', 'Pastel2', 'Paired', 'Accent', 'Dark2', 'Set1',
-              'Set2', 'Set3', 'tab10', 'tab20', 'tab20b', 'tab20c']
+qualitative_colormaps = [
+    "Pastel1",
+    "Pastel2",
+    "Paired",
+    "Accent",
+    "Dark2",
+    "Set1",
+    "Set2",
+    "Set3",
+    "tab10",
+    "tab20",
+    "tab20b",
+    "tab20c",
+]
 
 
 def validate_path(path: Union[str, Path]):
     if not regex.match("^[A-Za-z0-9@\/\\:._-]*$", str(path)):
-        raise ValueError("Paths must only contain alphanumeric characters, "
-                         "hyphens ( - ), underscores ( _ ) or periods ( . )")
+        raise ValueError(
+            "Paths must only contain alphanumeric characters, "
+            "hyphens ( - ), underscores ( _ ) or periods ( . )"
+        )
     return path
 
 
-def use_open_file_dialog(title: str = 'Choose file', start_dir: Union[str, None] = None, exts: List[str] = None):
+def use_open_file_dialog(
+    title: str = "Choose file",
+    start_dir: Union[str, None] = None,
+    exts: List[str] = None,
+):
     """
     Use to pass a file path, for opening, into the decorated function using QFileDialog.getOpenFileName
 
@@ -48,12 +66,12 @@ def use_open_file_dialog(title: str = 'Choose file', start_dir: Union[str, None]
     :param start_dir:   Directory that is first shown in the dialog box.
     :param exts:        List of file extensions to set the filter in the dialog box
     """
-    def wrapper(func):
 
+    def wrapper(func):
         @wraps(func)
         def fn(self, *args, **kwargs):
-            if 'qdialog' in kwargs.keys():
-                if not kwargs['qdialog']:
+            if "qdialog" in kwargs.keys():
+                if not kwargs["qdialog"]:
                     func(self, *args, **kwargs)
                     return fn
 
@@ -67,16 +85,22 @@ def use_open_file_dialog(title: str = 'Choose file', start_dir: Union[str, None]
             else:
                 parent = None
 
-            path = QFileDialog.getOpenFileName(parent, title, os.environ['HOME'], f'({" ".join(e)})')
+            path = QFileDialog.getOpenFileName(
+                parent, title, os.environ["HOME"], f'({" ".join(e)})'
+            )
             if not path[0]:
                 return
             path = path[0]
             func(self, path, *args, **kwargs)
+
         return fn
+
     return wrapper
 
 
-def use_save_file_dialog(title: str = 'Save file', start_dir: Union[str, None] = None, ext: str = None):
+def use_save_file_dialog(
+    title: str = "Save file", start_dir: Union[str, None] = None, ext: str = None
+):
     """
     Use to pass a file path, for saving, into the decorated function using QFileDialog.getSaveFileName
 
@@ -84,12 +108,13 @@ def use_save_file_dialog(title: str = 'Save file', start_dir: Union[str, None] =
     :param start_dir:   Directory that is first shown in the dialog box.
     :param exts:        List of file extensions to set the filter in the dialog box
     """
+
     def wrapper(func):
         @wraps(func)
         def fn(self, *args, **kwargs):
             if ext is None:
-                raise ValueError('Must specify extension')
-            if ext.startswith('*'):
+                raise ValueError("Must specify extension")
+            if ext.startswith("*"):
                 ex = ext[1:]
             else:
                 ex = ext
@@ -99,22 +124,25 @@ def use_save_file_dialog(title: str = 'Save file', start_dir: Union[str, None] =
             else:
                 parent = None
 
-            path = QFileDialog.getSaveFileName(parent, title, start_dir, f'(*{ex})')
+            path = QFileDialog.getSaveFileName(parent, title, start_dir, f"(*{ex})")
             if not path[0]:
                 return
             path = path[0]
             if not path.endswith(ex):
-                path = f'{path}{ex}'
+                path = f"{path}{ex}"
 
             path = validate_path(path)
 
             func(self, path, *args, **kwargs)
 
         return fn
+
     return wrapper
 
 
-def use_open_dir_dialog(title: str = 'Open directory', start_dir: Union[str, None] = None):
+def use_open_dir_dialog(
+    title: str = "Open directory", start_dir: Union[str, None] = None
+):
     """
     Use to pass a dir path, to open, into the decorated function using QFileDialog.getExistingDirectory
     :param title:       Title of the dialog box
@@ -125,6 +153,7 @@ def use_open_dir_dialog(title: str = 'Open directory', start_dir: Union[str, Non
         def load_data(self, path, *args, **kwargs):
             my_func_to_do_stuff_and_load_data(path)
     """
+
     def wrapper(func):
         @wraps(func)
         def fn(self, *args, **kwargs):
@@ -137,11 +166,15 @@ def use_open_dir_dialog(title: str = 'Open directory', start_dir: Union[str, Non
             if not path:
                 return
             func(self, path, *args, **kwargs)
+
         return fn
+
     return wrapper
 
 
-def present_exceptions(title: str = 'error', msg: str = 'The following error occurred.'):
+def present_exceptions(
+    title: str = "error", msg: str = "The following error occurred."
+):
     """
     Use to catch exceptions and present them to the user in a QMessageBox warning dialog.
     The traceback from the exception is also shown.
@@ -177,10 +210,7 @@ def present_exceptions(title: str = 'error', msg: str = 'The following error occ
                 mb.setText(msg)
                 mb.setInformativeText(f"{e.__class__.__name__}: {e}")
                 mb.setDetailedText(tb)
-                mb.setStandardButtons(
-                    QMessageBox.Ok | QMessageBox.Help
-                )
-
+                mb.setStandardButtons(QMessageBox.Ok | QMessageBox.Help)
 
                 # getLogger().info(
                 #     f"{e.__class__.__name__}: {e}\n"
@@ -193,13 +223,12 @@ def present_exceptions(title: str = 'error', msg: str = 'The following error occ
 
 
 def auto_colormap(
-        n_colors: int,
-        cmap: str = 'hsv',
-        output: str = 'mpl',
-        spacing: str = 'uniform',
-        alpha: float = 1.0
-    ) \
-        -> List[Union[QtGui.QColor, np.ndarray, str]]:
+    n_colors: int,
+    cmap: str = "hsv",
+    output: str = "mpl",
+    spacing: str = "uniform",
+    alpha: float = 1.0,
+) -> List[Union[QtGui.QColor, np.ndarray, str]]:
     """
     If non-qualitative map: returns list of colors evenly spread through the chosen colormap.
     If qualitative map: returns subsequent colors from the chosen colormap
@@ -218,36 +247,36 @@ def auto_colormap(
     :return:         List of colors as either ``QColor``, ``numpy.ndarray``, or hex ``str`` with length ``n_colors``
     """
 
-    valid = ['mpl', 'pyqt', 'bokeh']
+    valid = ["mpl", "pyqt", "bokeh"]
     if output not in valid:
-        raise ValueError(f'output must be one {valid}')
+        raise ValueError(f"output must be one {valid}")
 
-    valid = ['uniform', 'subsequent']
+    valid = ["uniform", "subsequent"]
     if spacing not in valid:
-        raise ValueError(f'spacing must be one of either {valid}')
+        raise ValueError(f"spacing must be one of either {valid}")
 
     if alpha < 0.0 or alpha > 1.0:
-        raise ValueError('alpha must be within 0.0 and 1.0')
+        raise ValueError("alpha must be within 0.0 and 1.0")
 
     cm = matplotlib_color_map.get_cmap(cmap)
     cm._init()
 
-    if output == 'pyqt':
+    if output == "pyqt":
         lut = (cm._lut * 255).view(np.ndarray)
     else:
         lut = (cm._lut).view(np.ndarray)
 
     lut[:, 3] *= alpha
 
-    if spacing == 'uniform':
+    if spacing == "uniform":
         if not cmap in qualitative_colormaps:
-            if cmap =='hsv':
+            if cmap == "hsv":
                 cm_ixs = np.linspace(30, 210, n_colors, dtype=int)
             else:
                 cm_ixs = np.linspace(0, 210, n_colors, dtype=int)
         else:
             if n_colors > len(lut):
-                raise ValueError('Too many colors requested for the chosen cmap')
+                raise ValueError("Too many colors requested for the chosen cmap")
             cm_ixs = np.arange(0, len(lut), dtype=int)
     else:
         cm_ixs = range(n_colors)
@@ -256,9 +285,9 @@ def auto_colormap(
     for ix in range(n_colors):
         c = lut[cm_ixs[ix]]
 
-        if output == 'bokeh':
+        if output == "bokeh":
             c = tuple(c[:3] * 255)
-            hc = '#%02x%02x%02x' % tuple(map(int, c))
+            hc = "#%02x%02x%02x" % tuple(map(int, c))
             colors.append(hc)
 
         else:  # mpl
@@ -267,7 +296,9 @@ def auto_colormap(
     return colors
 
 
-def make_runfile(module_path: str, args_str: Optional[str] = None, filename: Optional[str] = None) -> str:
+def make_runfile(
+    module_path: str, args_str: Optional[str] = None, filename: Optional[str] = None
+) -> str:
     """
     Make an executable bash script. Used for running python scripts in external processes.
 
@@ -295,64 +326,63 @@ def make_runfile(module_path: str, args_str: Optional[str] = None, filename: Opt
 
     if filename is None:
         if IS_WINDOWS:
-            sh_file = os.path.join(os.environ[HOME], 'run.ps1')
+            sh_file = os.path.join(os.environ[HOME], "run.ps1")
         else:
-            sh_file = os.path.join(os.environ[HOME], 'run.sh')
+            sh_file = os.path.join(os.environ[HOME], "run.sh")
     else:
         if IS_WINDOWS:
-            if not filename.endswith('.ps1'):
-                filename = filename + '.ps1'
+            if not filename.endswith(".ps1"):
+                filename = filename + ".ps1"
 
     sh_file = filename
 
     if args_str is None:
-        args_str = ''
+        args_str = ""
 
     if not IS_WINDOWS:
-        with open(sh_file, 'w') as f:
-            
-            f.write(f'#!/bin/bash\n')
-            
-            if 'CONDA_PREFIX' in os.environ.keys():
+        with open(sh_file, "w") as f:
+
+            f.write(f"#!/bin/bash\n")
+
+            if "CONDA_PREFIX" in os.environ.keys():
                 f.write(
                     f'export CONDA_PREFIX={os.environ["CONDA_PREFIX"]}\n'
                     f'export CONDA_PYTHON_EXE={os.environ["CONDA_PYTHON_EXE"]}\n'
                     f'export CONDA_PREFIX_1={os.environ["CONDA_PREFIX_1"]}\n'
                 )
 
-            elif 'VIRTUAL_ENV' in os.environ.keys():
+            elif "VIRTUAL_ENV" in os.environ.keys():
                 f.write(
                     f'export PATH={os.environ["PATH"]}\n'
                     f'export VIRTUAL_ENV={os.environ["VIRTUAL_ENV"]}\n'
                     f'export LD_LIBRARY_PATH={os.environ["LD_LIBRARY_PATH"]}\n'
                 )
 
-            if 'PYTHONPATH' in os.environ.keys():
+            if "PYTHONPATH" in os.environ.keys():
                 f.write(f'export PYTHONPATH={os.environ["PYTHONPATH"]}\n')
 
             # for k, v in os.environ.items():  # copy the current environment
             #     if '\n' in v:
             #         continue
             #
-                # f.write(f'export {k}="{v}"\n')
+            # f.write(f'export {k}="{v}"\n')
 
             # User-setable n-processes
-            if 'MESMERIZE_N_PROCESSES' in os.environ.keys():
-                f.write(f'export MESMERIZE_N_PROCESSES={os.environ["MESMERIZE_N_PROCESSES"]}\n')
+            if "MESMERIZE_N_PROCESSES" in os.environ.keys():
+                f.write(
+                    f'export MESMERIZE_N_PROCESSES={os.environ["MESMERIZE_N_PROCESSES"]}\n'
+                )
 
-            f.write(
-                f'export OPENBLAS_NUM_THREADS=1\n'
-                f'export MKL_NUM_THREADS=1\n'
-            )
+            f.write(f"export OPENBLAS_NUM_THREADS=1\n" f"export MKL_NUM_THREADS=1\n")
 
-            f.write(f'python {module_path} {args_str}')  # call the script to run
+            f.write(f"python {module_path} {args_str}")  # call the script to run
 
     else:
-        with open(sh_file, 'w') as f:
+        with open(sh_file, "w") as f:
             for k, v in os.environ.items():  # copy the current environment
                 f.write(f'$env:{k}="{v}";\n')
 
-            f.write(f'python {module_path} {args_str}')
+            f.write(f"python {module_path} {args_str}")
 
     st = os.stat(sh_file)
     os.chmod(sh_file, st.st_mode | S_IEXEC)
@@ -374,8 +404,7 @@ def quick_min_max(data: np.ndarray) -> Tuple[float, float]:
 
 
 def _organize_coordinates(contour: dict):
-    coors = contour['coordinates']
+    coors = contour["coordinates"]
     coors = coors[~np.isnan(coors).any(axis=1)]
 
     return coors
-

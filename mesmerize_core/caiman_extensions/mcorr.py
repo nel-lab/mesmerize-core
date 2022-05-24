@@ -14,10 +14,11 @@ class MCorrExtensions:
     """
     Extensions for managing motion correction outputs
     """
+
     def __init__(self, s: pd.Series):
         self._series = s
 
-    @validate('mcorr')
+    @validate("mcorr")
     def get_output_path(self) -> Path:
         """
         Get the path to the motion corrected output memmap file
@@ -27,9 +28,9 @@ class MCorrExtensions:
         Path
             path to the motion correction output memmap file
         """
-        return get_full_data_path(self._series['outputs']['mcorr-output-path'])
+        return get_full_data_path(self._series["outputs"]["mcorr-output-path"])
 
-    @validate('mcorr')
+    @validate("mcorr")
     def get_output(self) -> np.ndarray:
         """
         Get the motion corrected output as a memmaped numpy array, allows fast random-access scrolling.
@@ -41,20 +42,22 @@ class MCorrExtensions:
         """
         path = self.get_output_path()
         Yr, dims, T = load_memmap(str(path))
-        mc_movie = np.reshape(Yr.T, [T] + list(dims), order='F')
+        mc_movie = np.reshape(Yr.T, [T] + list(dims), order="F")
         return mc_movie
 
-    @validate('mcorr')
-    def get_shifts(self, output_type: str, pw_rigid: bool = True) -> Union[np.ndarray, Tuple[List[np.ndarray], List[np.ndarray]]]:
+    @validate("mcorr")
+    def get_shifts(
+        self, output_type: str, pw_rigid: bool = True
+    ) -> Union[np.ndarray, Tuple[List[np.ndarray], List[np.ndarray]]]:
         """
         Get x & y shifts
-        
+
         Parameters
         ----------
         output_type: str
             one of 'matplotlib' or 'napari-1d'.
             'matplotlib' returns ``np.ndarray`` of shape ``[xs, ys]``
-            
+
         pw_rigid: bool
             if True, return pw_ridid shifts
 
@@ -62,10 +65,10 @@ class MCorrExtensions:
         -------
 
         """
-        path = get_full_data_path(self._series['outputs']['shifts'])
+        path = get_full_data_path(self._series["outputs"]["shifts"])
         shifts = np.load(str(path))
-        
-        if output_type == 'matplotlib':
+
+        if output_type == "matplotlib":
             return shifts
 
         if pw_rigid:
