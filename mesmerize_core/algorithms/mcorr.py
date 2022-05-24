@@ -9,6 +9,7 @@ import pandas as pd
 import os
 from pathlib import Path
 import numpy as np
+from shutil import move as move_file
 
 
 # prevent circular import
@@ -28,6 +29,13 @@ def main(batch_path, uuid, data_path: str = None):
 
     set_parent_data_path(data_path)
     input_movie_path = str(get_full_data_path(input_movie_path))
+
+    # because caiman doesn't let you specify filename to save memmap files
+    # create dir with uuid as the dir name
+    caiman_temp_dir = str(Path(input_movie_path).parent.joinpath(str(uuid)))
+    os.makedirs(caiman_temp_dir, exist_ok=True)
+    os.environ["CAIMAN_TEMP"] = caiman_temp_dir
+    os.environ["CAIMAN_NEW_TEMPFILE"] = "True"
 
     params = item['params']
 
@@ -55,7 +63,7 @@ def main(batch_path, uuid, data_path: str = None):
         # Run MC
         fnames = [input_movie_path]
         mc = MotionCorrect(fnames, dview=dview, **opts.get_group('motion'))
-        mc.motion_correct(save_movie=True, base_name_prefix=uuid)
+        mc.motion_correct(save_movie=True)
 
         # Find path to mmap file
         output_path = Path(mc.mmap_file[0])
@@ -101,20 +109,29 @@ def main(batch_path, uuid, data_path: str = None):
             shift_path = Path(input_movie_path).parent.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
 
+        # filename to move the output back to data dir
+        mcorr_memmap = Path(input_movie_path).parent.joinpath(
+            f"{uuid}_{output_path.stem}.mmap"
+        )
+
+        # move the output file
+        move_file(get_full_data_path(output_path), mcorr_memmap)
+        os.removedirs(caiman_temp_dir)
+
         if data_path is not None:
             cn_path = cn_path.relative_to(data_path)
-            output_path = get_full_data_path(output_path).relative_to(data_path)
+            mcorr_memmap = get_full_data_path(mcorr_memmap).relative_to(data_path)
             shift_path = shift_path.relative_to(data_path)
             for proj_type in proj_paths.keys():
                 d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(data_path)
         else:
             cn_path = cn_path
-            output_path = get_full_data_path(output_path)
+            mcorr_memmap = get_full_data_path(mcorr_memmap)
             shift_path = shift_path.resolve()
 
         d.update(
             {
-                "mcorr-output-path": output_path,
+                "mcorr-output-path": mcorr_memmap,
                 "corr-img-path": cn_path,
                 "shifts": shift_path,
                 "success": True,
