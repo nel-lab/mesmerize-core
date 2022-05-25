@@ -4,8 +4,6 @@
 name: Python application
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -33,9 +31,8 @@ jobs:
     - name: install caiman
       run: |
         cd ..
-        git clone https://github.com/kushalkolar/CaImAn.git
+        git clone https://github.com/flatironinstitute/CaImAn.git
         cd CaImAn
-        git checkout mcorr-basename-prefix
         pip install -r requirements.txt
         pip install .
         caimanmanager.py install
@@ -53,3 +50,4 @@ jobs:
     - name: Test with pytest
       run: |
         pytest .
+
