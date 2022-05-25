@@ -191,7 +191,7 @@ def test_mcorr():
 
     # test to check mcorr get_output()
     mcorr_output = df.iloc[0].mcorr.get_output()
-    mcorr_output_actual = numpy.load('mcorr_output.npy')
+    mcorr_output_actual = numpy.load('ground_truths/mcorr_output.npy')
     numpy.testing.assert_array_equal(mcorr_output, mcorr_output_actual)
 
 
@@ -323,12 +323,12 @@ def test_cnmf():
 
     # test to check get_cnmf_memmap()
     cnmf_mmap_output = df.iloc[1].cnmf.get_cnmf_memmap()
-    cnmf_mmap_output_actual = numpy.load('cnmf_output_mmap.npy')
+    cnmf_mmap_output_actual = numpy.load('ground_truths/cnmf_output_mmap.npy')
     numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
 
     # test to check get_input_memmap()
     cnmf_input_mmap = df.iloc[1].cnmf.get_input_memmap()
-    cnmf_input_mmap_actual = numpy.load('cnmf_input_mmap.npy')
+    cnmf_input_mmap_actual = numpy.load('ground_truths/cnmf_input_mmap.npy')
     numpy.testing.assert_array_equal(cnmf_input_mmap, cnmf_input_mmap_actual)
     # cnmf input memmap from mcorr output should also equal mcorr output
     mcorr_output = df.iloc[0].mcorr.get_output()
