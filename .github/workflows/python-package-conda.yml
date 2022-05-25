@@ -10,10 +10,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python '3.9'
+    - name: Set up Python '3.10'
       uses: actions/setup-python@v3
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
@@ -24,15 +24,17 @@ jobs:
         conda install -c conda-forge mamba
         conda clean -a
         
-    - name: install caiman
-      run: |
-        mamba install -c conda-forge caiman
+        #   - name: install caiman
+        #     run: |
+        #       mamba install -c conda-forge caiman
         
     - name: install mesmerize-core
       run: |
+        mamba env update --file environment.yml
         pip install .
         
     - name: Test with pytest
       run: |
         mamba install pytest
         pytest
+
