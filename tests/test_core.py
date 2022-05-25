@@ -1,5 +1,6 @@
 import os
 
+import caiman.utils.utils
 import numpy.testing
 import pandas as pd
 from mesmerize_core import (
@@ -21,7 +22,6 @@ from .params import test_params
 from uuid import UUID
 from pathlib import Path
 import shutil
-
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
@@ -339,26 +339,42 @@ def test_cnmf():
             vid_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"]))
 
     # test to check get_output()
+    # assert isinstance(df.iloc[1].cnmf.get_output(), caiman.source_extraction.cnmf.cnmf)
+    # assert (df.iloc[1].cnmf.get_output() ==
+    #         caiman.utils.utils.load_dict_from_hdf5(df.iloc[1].cnmf.get_output_path()))
 
+    # test to check get_spatial_masks()
+    cnmf_spatial_masks = df.iloc[1].cnmf.get_spatial_masks()
+    cnmf_spatial_masks_actual = numpy.load('ground_truths/spatial_masks.npy')
+    numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
 
-        #get_spatial_masks
-        #get_spatial_contours
-        #get_temporal_components
-        #get_reconstructed_movie
+    # test to check get_spatial_contours()
+    # cnmf_spatial_contours = df.iloc[1].cnmf.get_spatial_contours()
+    # cnmf_spatial_contours_actual = numpy.load('ground_truths/spatial_contours.npy', allow_pickle=True)
+    # numpy.testing.assert_allclose(cnmf_spatial_contours, cnmf_spatial_contours_actual, rtol=1e-2, atol=1e-10)
 
-    #tests for caiman extensions
-        #uloc
-        #add_item
-        #remove_item
-        #run_qprocess
-        #run_subprocess
-        #run_slurm
-        #run
-        #get_input_movie_path
-        #get_correlation_img
-        #get_pnr_image
-        #get_projection
+    # test to check get_temporal_components()
+    cnmf_temporal_components = df.iloc[1].cnmf.get_temporal_components()
+    cnmf_temporal_components_actual = numpy.load('ground_truths/temporal_components.npy')
+    numpy.testing.assert_allclose(cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10)
 
+    # test to check get_reconstructed_movie()
+    cnmf_reconstructed_movie = df.iloc[1].cnmf.get_reconstructed_movie()
+    cnmf_reconstructed_movie_actual = numpy.load('ground_truths/reconstructed_movie.npy')
+    numpy.testing.assert_allclose(cnmf_reconstructed_movie, cnmf_reconstructed_movie_actual, rtol=1e-2, atol=1e-10)
+
+    # tests for caiman extensions
+    # uloc
+    # add_item
+    # remove_item
+    # run_qprocess
+    # run_subprocess
+    # run_slurm
+    # run
+    # get_input_movie_path
+    # get_correlation_img
+    # get_pnr_image
+    # get_projection
 
 
 def test_cnmfe():
