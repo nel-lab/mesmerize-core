@@ -33,6 +33,7 @@ jobs:
     - name: install mesmerize-core
       run: |
         mamba env update -n base --file environment.yml
+        caimanmanager.py install
         pip install .
         
     - name: Test with pytest
