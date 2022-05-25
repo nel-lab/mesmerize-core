@@ -116,7 +116,7 @@ def main(batch_path, uuid, data_path: str = None):
 
         # filename to move the output back to data dir
         mcorr_memmap = Path(input_movie_path).parent.joinpath(
-            f"{uuid}_{output_path.stem}.mmap"
+            f"{uuid}-{output_path.stem}.mmap"
         )
 
         # move the output file
