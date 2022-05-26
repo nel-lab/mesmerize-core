@@ -9,23 +9,72 @@ Required by `mesmerize-napari`. Can also be used standalone, such as in notebook
 
 # Installation
 
+## For development
+
+### conda
+
 ```bash
-# create a new env, can be the same env that you use for `mesmerize-napari`
-# you can also use conda instead of venv
-python3 -m venv ~/python-venvs/mesmerize-napari
+# create an env, can be same env you use for mesmerize-napari or another viz tool like fastplotlib
+conda create --name mesmerize-core python=3.10
+
+# install mamba
+conda install -c conda-forge mamba
+conda clean -a
 
 # activate env
-source ~/python-venvs/mesmerize-napari/bin/activate
-
-pip install --upgrade setuptools wheel pip
+conda activate mesmerize-core
 
 # clone this repo
-cd ~/repos
 git clone https://github.com/nel-lab/mesmerize-core.git
 cd mesmerize-core
 
+# update env with environment file
+mamba env update -n mesmerize-core --file environment.yml
+
+# install caimanmanager
+caimanmanager.py install
+
 # install mesmerize-core
 pip install -e .
+
+# install pytest and run tests
+mamba install pytest
+MESMERIZE_KEEP_TEST_DATA=1 pytest -s .
+```
+
+### python venvs
+```bash
+# create a new env, can be the same env that you use for mesmerize-napari or another viz tool like fastplotlib
+python3.10 -m venv ~/python-venvs/mesmerize-core
+source ~/python-venvs/mesmerize-napari/bin/activate
+
+# get latest pip setuptools and wheel
+pip install --upgrade setuptools wheel pip
+
+# cd into or make a dir that has your repos
+cd ~/repos
+
+# install caiman
+git clone https://github.com/flatironinstitute/CaImAn.git
+cd CaImAn
+pip install -r requirements.txt
+pip install .
+caimanmanager.py install
+
+# clone this repo
+cd ..
+git clone https://github.com/nel-lab/mesmerize-core.git
+cd mesmerize-core
+
+# get dependencies
+pip install -r requirements.txt
+
+# install mesmerize-core
+pip install -e .
+
+# install pytest and run tests
+pip install pytest
+MESMERIZE_KEEP_TEST_DATA=1 pytest -s .
 ```
 
 # Examples
