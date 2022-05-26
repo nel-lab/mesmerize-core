@@ -6,7 +6,6 @@ from caiman import load_memmap
 
 from ..batch_utils import get_full_data_path
 from .common import validate
-from matplotlib import pyplot as plt
 from typing import *
 
 
