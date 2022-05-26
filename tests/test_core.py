@@ -1,6 +1,7 @@
 import os
 
-import caiman.utils.utils
+from caiman.utils.utils import load_dict_from_hdf5
+from caiman.source_extraction.cnmf import cnmf
 import numpy.testing
 import pandas as pd
 from mesmerize_core import (
@@ -339,9 +340,9 @@ def test_cnmf():
             vid_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"]))
 
     # test to check get_output()
-    # assert isinstance(df.iloc[1].cnmf.get_output(), caiman.source_extraction.cnmf.cnmf)
-    # assert (df.iloc[1].cnmf.get_output() ==
-    #         caiman.utils.utils.load_dict_from_hdf5(df.iloc[1].cnmf.get_output_path()))
+    assert isinstance(df.iloc[1].cnmf.get_output(), cnmf)
+    assert (df.iloc[1].cnmf.get_output() ==
+            load_dict_from_hdf5(df.iloc[1].cnmf.get_output_path()))
 
     # test to check get_spatial_masks()
     cnmf_spatial_masks = df.iloc[1].cnmf.get_spatial_masks()
