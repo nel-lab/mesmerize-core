@@ -50,17 +50,18 @@ class MCorrExtensions:
             self, pw_rigid: bool = False
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
-        Handler function for processing shifts array
+        Gets file path to shifts array (.npy file) for item, processes shifts array
+        into a list of x and y shifts based on whether rigid or nonrigid
+        motion correction was performed.
 
         Parameters:
         -----------
-        shifts: np.ndarray of shifts from .npy file
-        plot_type: str - napari-1d or matplotlib - determines how process shifts array
         pw_rigid: bool - flag for whether shifts are for rigid or nonrigid motion correction
-
+            True = Nonrigid (elastic/piecewise)
+            False = Rigid
         Returns:
         --------
-        processed shifts results
+        List of Processed X and Y shifts arrays
         """
         path = get_full_data_path(self._series["outputs"]["shifts"])
         shifts = np.load(str(path))
