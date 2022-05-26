@@ -47,32 +47,34 @@ class MCorrExtensions:
 
     @validate("mcorr")
     def get_shifts(
-        self, output_type: str, pw_rigid: bool = True
-    ) -> Union[np.ndarray, Tuple[List[np.ndarray], List[np.ndarray]]]:
+            self, pw_rigid: bool = False
+    ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
-        Get x & y shifts
+        Gets file path to shifts array (.npy file) for item, processes shifts array
+        into a list of x and y shifts based on whether rigid or nonrigid
+        motion correction was performed.
 
-        Parameters
-        ----------
-        output_type: str
-            one of 'matplotlib' or 'napari-1d'.
-            'matplotlib' returns ``np.ndarray`` of shape ``[xs, ys]``
-
-        pw_rigid: bool
-            if True, return pw_ridid shifts
-
-        Returns
-        -------
-
+        Parameters:
+        -----------
+        pw_rigid: bool - flag for whether shifts are for rigid or nonrigid motion correction
+            True = Nonrigid (elastic/piecewise)
+            False = Rigid
+        Returns:
+        --------
+        List of Processed X and Y shifts arrays
         """
         path = get_full_data_path(self._series["outputs"]["shifts"])
         shifts = np.load(str(path))
 
-        if output_type == "matplotlib":
-            return shifts
-
         if pw_rigid:
-            return shifts
+            n_pts = shifts.shape[1]
+            n_lines = shifts.shape[2]
+            xs = [np.linspace(0, n_pts, n_pts)]
+            ys = []
+
+            for i in range(shifts.shape[0]):
+                for j in range(n_lines):
+                    ys.append(shifts[i,:,j])
         else:
             n_pts = shifts.shape[0]
             n_lines = shifts.shape[1]
@@ -81,4 +83,4 @@ class MCorrExtensions:
 
             for i in range(n_lines):
                 ys.append(shifts[:, i])
-            return xs, ys
+        return xs, ys
