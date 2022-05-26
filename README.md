@@ -46,7 +46,7 @@ MESMERIZE_KEEP_TEST_DATA=1 pytest -s .
 ```bash
 # create a new env, can be the same env that you use for mesmerize-napari or another viz tool like fastplotlib
 python3.10 -m venv ~/python-venvs/mesmerize-core
-source ~/python-venvs/mesmerize-napari/bin/activate
+source ~/python-venvs/mesmerize-core/bin/activate
 
 # get latest pip setuptools and wheel
 pip install --upgrade setuptools wheel pip
