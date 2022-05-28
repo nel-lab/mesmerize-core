@@ -1,4 +1,8 @@
 import os
+
+from caiman.utils.utils import load_dict_from_hdf5
+from caiman.source_extraction.cnmf import cnmf
+import numpy.testing
 import pandas as pd
 from mesmerize_core import (
     create_batch,
@@ -19,7 +23,6 @@ from .params import test_params
 from uuid import UUID
 from pathlib import Path
 import shutil
-
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
@@ -181,6 +184,40 @@ def test_mcorr():
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
 
+    # test to check mcorr get_output_path()
+    assert df.iloc[-1].mcorr.get_output_path() == \
+           vid_dir.joinpath(
+            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
+        )
+
+    # test to check mcorr get_output()
+    mcorr_output = df.iloc[-1].mcorr.get_output()
+    mcorr_output_actual = numpy.load('ground_truths/mcorr/mcorr_output.npy')
+    numpy.testing.assert_array_equal(mcorr_output, mcorr_output_actual)
+
+    # test to check caiman get_input_movie_path()
+    assert df.iloc[-1].caiman.get_input_movie_path() == get_full_data_path(df.iloc[0]["input_movie_path"])
+
+    # test to check caiman get_correlation_img()
+    mcorr_corr_img = df.iloc[-1].caiman.get_correlation_image()
+    mcorr_corr_img_actual = numpy.load('ground_truths/mcorr/mcorr_correlation_img.npy')
+    numpy.testing.assert_array_equal(mcorr_corr_img, mcorr_corr_img_actual)
+
+    # test to check caiman get_projection("mean")
+    mcorr_mean = df.iloc[-1].caiman.get_projection("mean")
+    mcorr_mean_actual = numpy.load('ground_truths/mcorr/mcorr_mean.npy')
+    numpy.testing.assert_array_equal(mcorr_mean, mcorr_mean_actual)
+
+    # test to check caiman get_projection("std")
+    mcorr_std = df.iloc[-1].caiman.get_projection("std")
+    mcorr_std_actual = numpy.load('ground_truths/mcorr/mcorr_std.npy')
+    numpy.testing.assert_array_equal(mcorr_std, mcorr_std_actual)
+
+    # test to check caiman get_projection("max")
+    mcorr_max = df.iloc[-1].caiman.get_projection("max")
+    mcorr_max_actual = numpy.load('ground_truths/mcorr/mcorr_max.npy')
+    numpy.testing.assert_array_equal(mcorr_max,mcorr_max_actual)
+
 
 def test_cnmf():
     set_parent_data_path(vid_dir)
@@ -306,6 +343,71 @@ def test_cnmf():
         == get_full_data_path(df.iloc[-1]["outputs"]["corr-img-path"])
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
+
+    # test to check cnmf get_cnmf_memmap()
+    cnmf_mmap_output = df.iloc[-1].cnmf.get_cnmf_memmap()
+    cnmf_mmap_output_actual = numpy.load('ground_truths/cnmf/cnmf_output_mmap.npy')
+    numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
+
+    # test to check cnmf get_input_memmap()
+    cnmf_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
+    cnmf_input_mmap_actual = numpy.load('ground_truths/cnmf/cnmf_input_mmap.npy')
+    numpy.testing.assert_array_equal(cnmf_input_mmap, cnmf_input_mmap_actual)
+    # cnmf input memmap from mcorr output should also equal mcorr output
+    mcorr_output = df.iloc[-2].mcorr.get_output()
+    numpy.testing.assert_array_equal(cnmf_input_mmap, mcorr_output)
+
+    # test to check cnmf get_output_path()
+    assert (df.iloc[-1].cnmf.get_output_path() ==
+            vid_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"]))
+
+    # test to check cnmf get_output()
+    # assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
+    # assert (df.iloc[1].cnmf.get_output() ==
+    #         load_dict_from_hdf5(df.iloc[-1].cnmf.get_output_path()))
+
+    # test to check cnmf get_spatial_masks()
+    cnmf_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks()
+    cnmf_spatial_masks_actual = numpy.load('ground_truths/cnmf/spatial_masks.npy')
+    numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
+
+    # test to check get_spatial_contours()
+    # cnmf_spatial_contours = df.iloc[-1].cnmf.get_spatial_contours()
+    # cnmf_spatial_contours_actual = numpy.load('ground_truths/cnmf/spatial_contours.npy', allow_pickle=True)
+    # numpy.testing.assert_allclose(cnmf_spatial_contours, cnmf_spatial_contours_actual, rtol=1e-2, atol=1e-10)
+
+    # test to check get_temporal_components()
+    cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal_components()
+    cnmf_temporal_components_actual = numpy.load('ground_truths/cnmf/temporal_components.npy')
+    numpy.testing.assert_allclose(cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10)
+
+    # test to check get_reconstructed_movie()
+    cnmf_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie()
+    cnmf_reconstructed_movie_actual = numpy.load('ground_truths/cnmf/reconstructed_movie.npy')
+    numpy.testing.assert_allclose(cnmf_reconstructed_movie, cnmf_reconstructed_movie_actual, rtol=1e-2, atol=1e-10)
+
+    # test to check caiman get_input_movie_path()
+    assert df.iloc[-1].caiman.get_input_movie_path() == get_full_data_path(df.iloc[-1]["input_movie_path"])
+
+    # test to check caiman get_correlation_img()
+    cnmf_corr_img = df.iloc[-1].caiman.get_correlation_image()
+    cnmf_corr_img_actual = numpy.load('ground_truths/cnmf/cnmf_correlation_img.npy')
+    numpy.testing.assert_array_equal(cnmf_corr_img, cnmf_corr_img_actual)
+
+    # test to check caiman get_projection("mean")
+    cnmf_mean = df.iloc[-1].caiman.get_projection("mean")
+    cnmf_mean_actual = numpy.load('ground_truths/cnmf/cnmf_mean.npy')
+    numpy.testing.assert_array_equal(cnmf_mean, cnmf_mean_actual)
+
+    # test to check caiman get_projection("std")
+    cnmf_std = df.iloc[-1].caiman.get_projection("std")
+    cnmf_std_actual = numpy.load('ground_truths/cnmf/cnmf_std.npy')
+    numpy.testing.assert_array_equal(cnmf_std, cnmf_std_actual)
+
+    # test to check caiman get_projection("max")
+    cnmf_max = df.iloc[-1].caiman.get_projection("std")
+    cnmf_max_actual = numpy.load('ground_truths/cnmf/cnmf_std.npy')
+    numpy.testing.assert_array_equal(cnmf_max, cnmf_max_actual)
 
 
 def test_cnmfe():
@@ -445,6 +547,10 @@ def test_cnmfe():
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_pn.npy')
     )
 
+    # extension tests - partial
+
+    # extension tests - full
+
 
 def test_remove_item():
     set_parent_data_path(vid_dir)
@@ -508,3 +614,5 @@ def test_remove_item():
     assert df.isin([f"test-{algo}"]).any().any() == False
     assert df.isin([f"test1-{algo}"]).any().any() == False
     assert df.empty == True
+
+
