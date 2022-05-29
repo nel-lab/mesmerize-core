@@ -223,7 +223,7 @@ def test_mcorr():
 
     # test to check mcorr get_output()
     mcorr_output = df.iloc[-1].mcorr.get_output()
-    mcorr_output_actual = numpy.load('ground_truths/mcorr/mcorr_output.npy')
+    mcorr_output_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_output.npy'))
     numpy.testing.assert_array_equal(mcorr_output, mcorr_output_actual)
 
     # test to check caiman get_input_movie_path()
@@ -231,23 +231,23 @@ def test_mcorr():
 
     # test to check caiman get_correlation_img()
     mcorr_corr_img = df.iloc[-1].caiman.get_correlation_image()
-    mcorr_corr_img_actual = numpy.load('ground_truths/mcorr/mcorr_correlation_img.npy')
+    mcorr_corr_img_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_correlation_img.npy'))
     numpy.testing.assert_array_equal(mcorr_corr_img, mcorr_corr_img_actual)
 
     # test to check caiman get_projection("mean")
     mcorr_mean = df.iloc[-1].caiman.get_projection("mean")
-    mcorr_mean_actual = numpy.load('ground_truths/mcorr/mcorr_mean.npy')
+    mcorr_mean_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_mean.npy'))
     numpy.testing.assert_array_equal(mcorr_mean, mcorr_mean_actual)
 
     # test to check caiman get_projection("std")
     mcorr_std = df.iloc[-1].caiman.get_projection("std")
-    mcorr_std_actual = numpy.load('ground_truths/mcorr/mcorr_std.npy')
+    mcorr_std_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_std.npy'))
     numpy.testing.assert_array_equal(mcorr_std, mcorr_std_actual)
 
     # test to check caiman get_projection("max")
     mcorr_max = df.iloc[-1].caiman.get_projection("max")
-    mcorr_max_actual = numpy.load('ground_truths/mcorr/mcorr_max.npy')
-    numpy.testing.assert_array_equal(mcorr_max,mcorr_max_actual)
+    mcorr_max_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_max.npy'))
+    numpy.testing.assert_array_equal(mcorr_max, mcorr_max_actual)
 
 
 def test_cnmf():
@@ -378,13 +378,13 @@ def test_cnmf():
     print("testing cnmf.get_cnmf_memmap()")
     # test to check cnmf get_cnmf_memmap()
     cnmf_mmap_output = df.iloc[-1].cnmf.get_cnmf_memmap()
-    cnmf_mmap_output_actual = numpy.load('ground_truths/cnmf/cnmf_output_mmap.npy')
+    cnmf_mmap_output_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_output_mmap.npy'))
     numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
 
     print("testing cnmf.get_input_memmap()")
     # test to check cnmf get_input_memmap()
     cnmf_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
-    cnmf_input_mmap_actual = numpy.load('ground_truths/cnmf/cnmf_input_mmap.npy')
+    cnmf_input_mmap_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_input_mmap.npy'))
     numpy.testing.assert_array_equal(cnmf_input_mmap, cnmf_input_mmap_actual)
     # cnmf input memmap from mcorr output should also equal mcorr output
     mcorr_output = df.iloc[-2].mcorr.get_output()
@@ -401,22 +401,22 @@ def test_cnmf():
 
     # test to check cnmf get_spatial_masks()
     cnmf_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks()
-    cnmf_spatial_masks_actual = numpy.load('ground_truths/cnmf/spatial_masks.npy')
+    cnmf_spatial_masks_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_masks.npy'))
     numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
 
     # test to check get_spatial_contours()
     # cnmf_spatial_contours = df.iloc[-1].cnmf.get_spatial_contours()
-    # cnmf_spatial_contours_actual = numpy.load('ground_truths/cnmf/spatial_contours.npy', allow_pickle=True)
+    # cnmf_spatial_contours_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_contours.npy'), allow_pickle=True)
     # numpy.testing.assert_allclose(cnmf_spatial_contours, cnmf_spatial_contours_actual, rtol=1e-2, atol=1e-10)
 
     # test to check get_temporal_components()
     cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal_components()
-    cnmf_temporal_components_actual = numpy.load('ground_truths/cnmf/temporal_components.npy')
+    cnmf_temporal_components_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'temporal_components.npy'))
     numpy.testing.assert_allclose(cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10)
 
     # test to check get_reconstructed_movie()
     cnmf_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie()
-    cnmf_reconstructed_movie_actual = numpy.load('ground_truths/cnmf/reconstructed_movie.npy')
+    cnmf_reconstructed_movie_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'reconstructed_movie.npy'))
     numpy.testing.assert_allclose(cnmf_reconstructed_movie, cnmf_reconstructed_movie_actual, rtol=1e-2, atol=1e-10)
 
     # test to check caiman get_input_movie_path()
@@ -424,22 +424,22 @@ def test_cnmf():
 
     # test to check caiman get_correlation_img()
     cnmf_corr_img = df.iloc[-1].caiman.get_correlation_image()
-    cnmf_corr_img_actual = numpy.load('ground_truths/cnmf/cnmf_correlation_img.npy')
+    cnmf_corr_img_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_correlation_img.npy'))
     numpy.testing.assert_array_equal(cnmf_corr_img, cnmf_corr_img_actual)
 
     # test to check caiman get_projection("mean")
     cnmf_mean = df.iloc[-1].caiman.get_projection("mean")
-    cnmf_mean_actual = numpy.load('ground_truths/cnmf/cnmf_mean.npy')
+    cnmf_mean_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_mean.npy'))
     numpy.testing.assert_array_equal(cnmf_mean, cnmf_mean_actual)
 
     # test to check caiman get_projection("std")
     cnmf_std = df.iloc[-1].caiman.get_projection("std")
-    cnmf_std_actual = numpy.load('ground_truths/cnmf/cnmf_std.npy')
+    cnmf_std_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_std.npy'))
     numpy.testing.assert_array_equal(cnmf_std, cnmf_std_actual)
 
     # test to check caiman get_projection("max")
     cnmf_max = df.iloc[-1].caiman.get_projection("std")
-    cnmf_max_actual = numpy.load('ground_truths/cnmf/cnmf_std.npy')
+    cnmf_max_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_std.npy'))
     numpy.testing.assert_array_equal(cnmf_max, cnmf_max_actual)
 
 
