@@ -23,12 +23,35 @@ from .params import test_params
 from uuid import UUID
 from pathlib import Path
 import shutil
+from zipfile import ZipFile
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
+ground_truths_dir = Path(os.path.dirname(os.path.abspath(__file__)), "ground_truths")
+ground_truths_file = Path(os.path.dirname(os.path.abspath(__file__)), "ground_truths.zip")
 
 os.makedirs(tmp_dir, exist_ok=True)
 os.makedirs(vid_dir, exist_ok=True)
+os.makedirs(ground_truths_dir, exist_ok=True)
+
+
+if len(list(ground_truths_dir.iterdir())) == 0:
+    print(f'Downloading ground truths')
+    url = f'https://zenodo.org/record/6590661/files/ground_truths.zip'
+
+    # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
+    response = requests.get(url, stream=True)
+    total_size_in_bytes = int(response.headers.get('content-length', 0))
+    block_size = 1024  # 1 Kibibyte
+    progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
+
+    with open(ground_truths_file, 'wb') as file:
+        for data in response.iter_content(block_size):
+            progress_bar.update(len(data))
+            file.write(data)
+    progress_bar.close()
+
+    ZipFile(ground_truths_file).extractall(ground_truths_dir.parent)
 
 
 def get_tmp_filename():
@@ -344,11 +367,13 @@ def test_cnmf():
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
 
+    print("testing cnmf.get_cnmf_memmap()")
     # test to check cnmf get_cnmf_memmap()
     cnmf_mmap_output = df.iloc[-1].cnmf.get_cnmf_memmap()
     cnmf_mmap_output_actual = numpy.load('ground_truths/cnmf/cnmf_output_mmap.npy')
     numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
 
+    print("testing cnmf.get_input_memmap()")
     # test to check cnmf get_input_memmap()
     cnmf_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
     cnmf_input_mmap_actual = numpy.load('ground_truths/cnmf/cnmf_input_mmap.npy')
