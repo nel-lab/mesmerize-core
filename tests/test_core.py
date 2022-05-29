@@ -35,7 +35,7 @@ os.makedirs(vid_dir, exist_ok=True)
 os.makedirs(ground_truths_dir, exist_ok=True)
 
 
-if len(list(ground_truths_dir.iterdir())) == 0:
+def _download_ground_truths():
     print(f'Downloading ground truths')
     url = f'https://zenodo.org/record/6590661/files/ground_truths.zip'
 
@@ -52,6 +52,14 @@ if len(list(ground_truths_dir.iterdir())) == 0:
     progress_bar.close()
 
     ZipFile(ground_truths_file).extractall(ground_truths_dir.parent)
+
+
+if len(list(ground_truths_dir.iterdir())) == "bah":
+    _download_ground_truths()
+
+elif "DOWNLOAD_GROUND_TRUTHS" in os.environ.keys():
+    if os.environ["DOWNLOAD_GROUND_TRUTHS"] == "1":
+        _download_ground_truths()
 
 
 def get_tmp_filename():
