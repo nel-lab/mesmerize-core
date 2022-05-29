@@ -39,5 +39,5 @@ jobs:
     - name: Test with pytest
       run: |
         mamba install pytest
-        pytest
+        DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
