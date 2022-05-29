@@ -55,7 +55,7 @@ def _download_ground_truths():
     ZipFile(ground_truths_file).extractall(ground_truths_dir.parent)
 
 
-if len(list(ground_truths_dir.iterdir())) == "bah":
+if len(list(ground_truths_dir.iterdir())) == 0:
     _download_ground_truths()
 
 elif "DOWNLOAD_GROUND_TRUTHS" in os.environ.keys():
