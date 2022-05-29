@@ -24,6 +24,7 @@ from uuid import UUID
 from pathlib import Path
 import shutil
 from zipfile import ZipFile
+from hashlib import sha1
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
@@ -395,9 +396,10 @@ def test_cnmf():
             vid_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"]))
 
     # test to check cnmf get_output()
-    # assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
-    # assert (df.iloc[1].cnmf.get_output() ==
-    #         load_dict_from_hdf5(df.iloc[-1].cnmf.get_output_path()))
+    assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
+    # this doesn't work because some keys in the hdf5 file are
+    # not always identical, like the path to the mmap file
+    # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
 
     # test to check cnmf get_spatial_masks()
     cnmf_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks()
