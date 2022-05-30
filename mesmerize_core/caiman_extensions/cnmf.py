@@ -129,7 +129,7 @@ class CNMFExtensions:
 
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @staticmethod
-    @lru_cache(5)
+    # @lru_cache(5)
     def _get_spatial_contours(
         cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
     ):
