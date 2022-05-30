@@ -617,7 +617,7 @@ def test_cnmfe():
     # test to check caiman get_pnr_image()
     pnr_image = df.iloc[-1].caiman.get_pnr_image()
     pnr_image_actual = numpy.load(ground_truths_dir.joinpath('cnmfe_partial', 'cnmfe_partial_pnr_img.npy'))
-    numpy.testing.assert_array_equal(pnr_image, pnr_image_actual)
+    numpy.testing.assert_allclose(pnr_image, pnr_image_actual, rtol=1e-4, atol=1e-10)
 
     # extension tests - full
 
