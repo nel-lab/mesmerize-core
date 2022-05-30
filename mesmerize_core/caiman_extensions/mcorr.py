@@ -47,7 +47,7 @@ class MCorrExtensions:
 
     @validate("mcorr")
     def get_shifts(
-            self, pw_rigid: bool = False
+        self, pw_rigid: bool = False
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Gets file path to shifts array (.npy file) for item, processes shifts array
@@ -74,7 +74,7 @@ class MCorrExtensions:
 
             for i in range(shifts.shape[0]):
                 for j in range(n_lines):
-                    ys.append(shifts[i,:,j])
+                    ys.append(shifts[i, :, j])
         else:
             n_pts = shifts.shape[0]
             n_lines = shifts.shape[1]
