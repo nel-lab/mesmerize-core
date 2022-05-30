@@ -5,6 +5,10 @@ name: Python application
 
 on:
   pull_request:
+    branches:
+      - master
+      - dev
+  push:
     branches: [ master ]
 
 permissions:

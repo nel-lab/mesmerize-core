@@ -2,6 +2,10 @@ name: Python Package using Conda
 
 on:
   pull_request:
+    branches:
+      - master
+      - dev
+  push:
     branches: [ master ]
 
 jobs:
