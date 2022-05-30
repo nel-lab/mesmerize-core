@@ -37,7 +37,7 @@ def main(batch_path, uuid, data_path: str = None):
     os.environ["CAIMAN_TEMP"] = caiman_temp_dir
     os.environ["CAIMAN_NEW_TEMPFILE"] = "True"
 
-    params = item['params']
+    params = item["params"]
 
     # adapted from current demo notebook
     if "MESMERIZE_N_PROCESSES" in os.environ.keys():
@@ -60,7 +60,7 @@ def main(batch_path, uuid, data_path: str = None):
     try:
         # Run MC
         fnames = [input_movie_path]
-        mc = MotionCorrect(fnames, dview=dview, **opts.get_group('motion'))
+        mc = MotionCorrect(fnames, dview=dview, **opts.get_group("motion"))
         mc.motion_correct(save_movie=True)
 
         # Find path to mmap file

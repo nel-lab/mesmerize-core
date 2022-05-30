@@ -29,7 +29,9 @@ from hashlib import sha1
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
 ground_truths_dir = Path(os.path.dirname(os.path.abspath(__file__)), "ground_truths")
-ground_truths_file = Path(os.path.dirname(os.path.abspath(__file__)), "ground_truths.zip")
+ground_truths_file = Path(
+    os.path.dirname(os.path.abspath(__file__)), "ground_truths.zip"
+)
 
 os.makedirs(tmp_dir, exist_ok=True)
 os.makedirs(vid_dir, exist_ok=True)
@@ -37,16 +39,16 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 
 def _download_ground_truths():
-    print(f'Downloading ground truths')
-    url = f'https://zenodo.org/record/6592084/files/ground_truths.zip'
+    print(f"Downloading ground truths")
+    url = f"https://zenodo.org/record/6592084/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
-    total_size_in_bytes = int(response.headers.get('content-length', 0))
+    total_size_in_bytes = int(response.headers.get("content-length", 0))
     block_size = 1024  # 1 Kibibyte
-    progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
+    progress_bar = tqdm(total=total_size_in_bytes, unit="iB", unit_scale=True)
 
-    with open(ground_truths_file, 'wb') as file:
+    with open(ground_truths_file, "wb") as file:
         for data in response.iter_content(block_size):
             progress_bar.update(len(data))
             file.write(data)
@@ -217,37 +219,44 @@ def test_mcorr():
     )
 
     # test to check mcorr get_output_path()
-    assert df.iloc[-1].mcorr.get_output_path() == \
-           vid_dir.joinpath(
-            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
-        )
+    assert df.iloc[-1].mcorr.get_output_path() == vid_dir.joinpath(
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
+    )
 
     # test to check mcorr get_output()
     mcorr_output = df.iloc[-1].mcorr.get_output()
-    mcorr_output_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_output.npy'))
+    mcorr_output_actual = numpy.load(
+        ground_truths_dir.joinpath("mcorr", "mcorr_output.npy")
+    )
     numpy.testing.assert_array_equal(mcorr_output, mcorr_output_actual)
 
     # test to check caiman get_input_movie_path()
-    assert df.iloc[-1].caiman.get_input_movie_path() == get_full_data_path(df.iloc[0]["input_movie_path"])
+    assert df.iloc[-1].caiman.get_input_movie_path() == get_full_data_path(
+        df.iloc[0]["input_movie_path"]
+    )
 
     # test to check caiman get_correlation_img()
     mcorr_corr_img = df.iloc[-1].caiman.get_correlation_image()
-    mcorr_corr_img_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_correlation_img.npy'))
+    mcorr_corr_img_actual = numpy.load(
+        ground_truths_dir.joinpath("mcorr", "mcorr_correlation_img.npy")
+    )
     numpy.testing.assert_array_equal(mcorr_corr_img, mcorr_corr_img_actual)
 
     # test to check caiman get_projection("mean")
     mcorr_mean = df.iloc[-1].caiman.get_projection("mean")
-    mcorr_mean_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_mean.npy'))
+    mcorr_mean_actual = numpy.load(
+        ground_truths_dir.joinpath("mcorr", "mcorr_mean.npy")
+    )
     numpy.testing.assert_array_equal(mcorr_mean, mcorr_mean_actual)
 
     # test to check caiman get_projection("std")
     mcorr_std = df.iloc[-1].caiman.get_projection("std")
-    mcorr_std_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_std.npy'))
+    mcorr_std_actual = numpy.load(ground_truths_dir.joinpath("mcorr", "mcorr_std.npy"))
     numpy.testing.assert_array_equal(mcorr_std, mcorr_std_actual)
 
     # test to check caiman get_projection("max")
     mcorr_max = df.iloc[-1].caiman.get_projection("max")
-    mcorr_max_actual = numpy.load(ground_truths_dir.joinpath('mcorr', 'mcorr_max.npy'))
+    mcorr_max_actual = numpy.load(ground_truths_dir.joinpath("mcorr", "mcorr_max.npy"))
     numpy.testing.assert_array_equal(mcorr_max, mcorr_max_actual)
 
 
@@ -379,21 +388,26 @@ def test_cnmf():
     print("testing cnmf.get_cnmf_memmap()")
     # test to check cnmf get_cnmf_memmap()
     cnmf_mmap_output = df.iloc[-1].cnmf.get_cnmf_memmap()
-    cnmf_mmap_output_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_output_mmap.npy'))
+    cnmf_mmap_output_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "cnmf_output_mmap.npy")
+    )
     numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
 
     print("testing cnmf.get_input_memmap()")
     # test to check cnmf get_input_memmap()
     cnmf_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
-    cnmf_input_mmap_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_input_mmap.npy'))
+    cnmf_input_mmap_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "cnmf_input_mmap.npy")
+    )
     numpy.testing.assert_array_equal(cnmf_input_mmap, cnmf_input_mmap_actual)
     # cnmf input memmap from mcorr output should also equal mcorr output
     mcorr_output = df.iloc[-2].mcorr.get_output()
     numpy.testing.assert_array_equal(cnmf_input_mmap, mcorr_output)
 
     # test to check cnmf get_output_path()
-    assert (df.iloc[-1].cnmf.get_output_path() ==
-            vid_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"]))
+    assert df.iloc[-1].cnmf.get_output_path() == vid_dir.joinpath(
+        df.iloc[-1]["outputs"]["cnmf-hdf5-path"]
+    )
 
     # test to check cnmf get_output()
     assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
@@ -403,52 +417,74 @@ def test_cnmf():
 
     # test to check cnmf get_spatial_masks()
     cnmf_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks()
-    cnmf_spatial_masks_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_masks.npy'))
+    cnmf_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "spatial_masks.npy")
+    )
     numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
 
     # test to check get_spatial_contours()
     cnmf_spatial_contours_contours = df.iloc[-1].cnmf.get_spatial_contours()[0]
     cnmf_spatial_contours_coms = df.iloc[-1].cnmf.get_spatial_contours()[1]
-    cnmf_spatial_contours_contours_actual = \
-        numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_contours_contours.npy'), allow_pickle=True)
-    cnmf_spatial_contours_coms_actual = \
-        numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_contours_coms.npy'), allow_pickle=True)
-    for contour, actual_contour in zip(cnmf_spatial_contours_contours, cnmf_spatial_contours_contours_actual):
+    cnmf_spatial_contours_contours_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "spatial_contours_contours.npy"),
+        allow_pickle=True,
+    )
+    cnmf_spatial_contours_coms_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "spatial_contours_coms.npy"),
+        allow_pickle=True,
+    )
+    for contour, actual_contour in zip(
+        cnmf_spatial_contours_contours, cnmf_spatial_contours_contours_actual
+    ):
         numpy.testing.assert_allclose(contour, actual_contour, rtol=1e-2, atol=1e-10)
-    for com, actual_com in zip(cnmf_spatial_contours_coms, cnmf_spatial_contours_coms_actual):
+    for com, actual_com in zip(
+        cnmf_spatial_contours_coms, cnmf_spatial_contours_coms_actual
+    ):
         numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
 
     # test to check get_temporal_components()
     cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal_components()
-    cnmf_temporal_components_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'temporal_components.npy'))
-    numpy.testing.assert_allclose(cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10)
+    cnmf_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "temporal_components.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10
+    )
 
     # test to check get_reconstructed_movie()
     cnmf_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie()
-    cnmf_reconstructed_movie_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'reconstructed_movie.npy'))
-    numpy.testing.assert_allclose(cnmf_reconstructed_movie, cnmf_reconstructed_movie_actual, rtol=1e-2, atol=1e-10)
+    cnmf_reconstructed_movie_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "reconstructed_movie.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmf_reconstructed_movie, cnmf_reconstructed_movie_actual, rtol=1e-2, atol=1e-10
+    )
 
     # test to check caiman get_input_movie_path()
-    assert df.iloc[-1].caiman.get_input_movie_path() == get_full_data_path(df.iloc[-1]["input_movie_path"])
+    assert df.iloc[-1].caiman.get_input_movie_path() == get_full_data_path(
+        df.iloc[-1]["input_movie_path"]
+    )
 
     # test to check caiman get_correlation_img()
     cnmf_corr_img = df.iloc[-1].caiman.get_correlation_image()
-    cnmf_corr_img_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_correlation_img.npy'))
+    cnmf_corr_img_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "cnmf_correlation_img.npy")
+    )
     numpy.testing.assert_array_equal(cnmf_corr_img, cnmf_corr_img_actual)
 
     # test to check caiman get_projection("mean")
     cnmf_mean = df.iloc[-1].caiman.get_projection("mean")
-    cnmf_mean_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_mean.npy'))
+    cnmf_mean_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "cnmf_mean.npy"))
     numpy.testing.assert_array_equal(cnmf_mean, cnmf_mean_actual)
 
     # test to check caiman get_projection("std")
     cnmf_std = df.iloc[-1].caiman.get_projection("std")
-    cnmf_std_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_std.npy'))
+    cnmf_std_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "cnmf_std.npy"))
     numpy.testing.assert_array_equal(cnmf_std, cnmf_std_actual)
 
     # test to check caiman get_projection("max")
     cnmf_max = df.iloc[-1].caiman.get_projection("std")
-    cnmf_max_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'cnmf_std.npy'))
+    cnmf_max_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "cnmf_std.npy"))
     numpy.testing.assert_array_equal(cnmf_max, cnmf_max_actual)
 
 
@@ -495,9 +531,11 @@ def test_cnmfe():
     except:
         pytest.fail("Something wrong with setting UUID for batch items")
 
-    assert vid_dir.joinpath(df.iloc[-1]["input_movie_path"]) == vid_dir.joinpath(
-        df.iloc[0].mcorr.get_output_path()
-    ) == get_full_data_path(input_movie_path)
+    assert (
+        vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        == vid_dir.joinpath(df.iloc[0].mcorr.get_output_path())
+        == get_full_data_path(input_movie_path)
+    )
 
     process = df.iloc[-1].caiman.run(
         batch_path=df.paths.get_batch_path(),
@@ -611,12 +649,16 @@ def test_cnmfe():
 
     # test to check caiman get_correlation_image()
     corr_img = df.iloc[-1].caiman.get_correlation_image()
-    corr_img_actual = numpy.load(ground_truths_dir.joinpath('cnmfe_partial', 'cnmfe_partial_correlation_img.npy'))
+    corr_img_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_correlation_img.npy")
+    )
     numpy.testing.assert_allclose(corr_img, corr_img_actual, rtol=1e-1, atol=1e-10)
 
     # test to check caiman get_pnr_image()
     pnr_image = df.iloc[-1].caiman.get_pnr_image()
-    pnr_image_actual = numpy.load(ground_truths_dir.joinpath('cnmfe_partial', 'cnmfe_partial_pnr_img.npy'))
+    pnr_image_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_pnr_img.npy")
+    )
     numpy.testing.assert_allclose(pnr_image, pnr_image_actual, rtol=1e-4, atol=1e-10)
 
     # extension tests - full
@@ -684,5 +726,3 @@ def test_remove_item():
     assert df.isin([f"test-{algo}"]).any().any() == False
     assert df.isin([f"test1-{algo}"]).any().any() == False
     assert df.empty == True
-
-
