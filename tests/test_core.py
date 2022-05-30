@@ -453,13 +453,31 @@ def test_cnmf():
 
 
 def test_cnmfe():
-    # Test if pnr and cn alone work
     set_parent_data_path(vid_dir)
+    df, batch_path = _create_tmp_batch()
+    print(f"Testing mcorr")
+    input_movie_path = get_datafile("cnmfe")
+    print(input_movie_path)
+    df.caiman.add_item(
+        algo="mcorr",
+        name=f"test-cnmfe-mcorr",
+        input_movie_path=input_movie_path,
+        params=test_params["mcorr"],
+    )
+    process = df.iloc[-1].caiman.run(
+        batch_path=df.paths.get_batch_path(),
+        backend=COMPUTE_BACKEND_SUBPROCESS,
+        callbacks_finished=None,
+    )
+    process.wait()
+
+    df = load_batch(batch_path)
+
+    # Test if pnr and cn alone work
     algo = "cnmfe"
     param_name = "cnmfe_partial"
-    df, batch_path = _create_tmp_batch()
     print(f"testing cnmfe - partial")
-    input_movie_path = get_datafile(algo)
+    input_movie_path = df.iloc[0].mcorr.get_output_path()
     print(input_movie_path)
     df.caiman.add_item(
         algo=algo,
@@ -478,8 +496,8 @@ def test_cnmfe():
         pytest.fail("Something wrong with setting UUID for batch items")
 
     assert vid_dir.joinpath(df.iloc[-1]["input_movie_path"]) == vid_dir.joinpath(
-        f"{algo}.tif"
-    )
+        df.iloc[0].mcorr.get_output_path()
+    ) == get_full_data_path(input_movie_path)
 
     process = df.iloc[-1].caiman.run(
         batch_path=df.paths.get_batch_path(),
@@ -590,6 +608,16 @@ def test_cnmfe():
     )
 
     # extension tests - partial
+
+    # test to check caiman get_correlation_image()
+    corr_img = df.iloc[-1].caiman.get_correlation_image()
+    corr_img_actual = numpy.load(ground_truths_dir.joinpath('cnmfe_partial', 'cnmfe_partial_correlation_img.npy'))
+    numpy.testing.assert_allclose(corr_img, corr_img_actual, rtol=1e-1, atol=1e-10)
+
+    # test to check caiman get_pnr_image()
+    pnr_image = df.iloc[-1].caiman.get_pnr_image()
+    pnr_image_actual = numpy.load(ground_truths_dir.joinpath('cnmfe_partial', 'cnmfe_partial_pnr_img.npy'))
+    numpy.testing.assert_array_equal(pnr_image, pnr_image_actual)
 
     # extension tests - full
 
