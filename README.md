@@ -39,7 +39,7 @@ pip install -e .
 
 # install pytest and run tests
 mamba install pytest
-MESMERIZE_KEEP_TEST_DATA=1 pytest -s .
+MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
 
 ### python venvs
@@ -74,7 +74,7 @@ pip install -e .
 
 # install pytest and run tests
 pip install pytest
-MESMERIZE_KEEP_TEST_DATA=1 pytest -s .
+MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
 
 # Examples
