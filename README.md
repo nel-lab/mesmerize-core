@@ -1,5 +1,8 @@
 # mesmerize-core
 
+![Python Package](https://github.com/nel-lab/mesmerize-core/actions/workflows/python-app.yml/badge.svg) ![Conda install](https://github.com/nel-lab/mesmerize-core/actions/workflows/python-package-conda.yml/badge.svg) 
+
+
 Mesmerize core backend
 
 A high level abstraction that sits on top of the CaImAn library. 
