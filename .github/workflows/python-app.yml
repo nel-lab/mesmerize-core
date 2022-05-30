@@ -49,5 +49,5 @@ jobs:
         
     - name: Test with pytest
       run: |
-        pytest .
+        DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
