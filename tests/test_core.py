@@ -38,7 +38,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f'Downloading ground truths')
-    url = f'https://zenodo.org/record/6590661/files/ground_truths.zip'
+    url = f'https://zenodo.org/record/6591921/files/ground_truths.zip'
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -407,9 +407,16 @@ def test_cnmf():
     numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
 
     # test to check get_spatial_contours()
-    # cnmf_spatial_contours = df.iloc[-1].cnmf.get_spatial_contours()
-    # cnmf_spatial_contours_actual = numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_contours.npy'), allow_pickle=True)
-    # numpy.testing.assert_allclose(cnmf_spatial_contours, cnmf_spatial_contours_actual, rtol=1e-2, atol=1e-10)
+    cnmf_spatial_contours_contours = df.iloc[-1].cnmf.get_spatial_contours()[0]
+    cnmf_spatial_contours_coms = df.iloc[-1].cnmf.get_spatial_contours()[1]
+    cnmf_spatial_contours_contours_actual = \
+        numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_contours_contours.npy'), allow_pickle=True)
+    cnmf_spatial_contours_coms_actual = \
+        numpy.load(ground_truths_dir.joinpath('cnmf', 'spatial_contours_coms.npy'), allow_pickle=True)
+    for contour, actual_contour in zip(cnmf_spatial_contours_contours, cnmf_spatial_contours_contours_actual):
+        numpy.testing.assert_allclose(contour, actual_contour, rtol=1e-2, atol=1e-10)
+    for com, actual_com in zip(cnmf_spatial_contours_coms, cnmf_spatial_contours_coms_actual):
+        numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
 
     # test to check get_temporal_components()
     cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal_components()
