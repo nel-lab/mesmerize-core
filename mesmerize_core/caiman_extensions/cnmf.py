@@ -69,7 +69,6 @@ class CNMFExtensions:
         """
         return get_full_data_path(self._series["outputs"]["cnmf-hdf5-path"])
 
-    # @lru_cache(MESMERIZE_LRU_CACHE)
     @validate("cnmf")
     def get_output(self) -> CNMF:
         """
@@ -129,7 +128,6 @@ class CNMFExtensions:
 
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @staticmethod
-    @lru_cache(5)
     def _get_spatial_contours(
         cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
     ):
