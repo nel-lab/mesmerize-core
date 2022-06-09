@@ -199,7 +199,7 @@ class CaimanSeriesExtensions:
         self,
         batch_path: Union[str, Path],
         backend: str,
-        callbacks_finished: List[callable],
+        callbacks_finished: Optional[List[callable]] = None,
         callback_std_out: Optional[callable] = None,
     ):
         """
