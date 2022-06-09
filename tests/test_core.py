@@ -40,7 +40,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/record/6628745/files/ground_truths.zip"
+    url = f"https://zenodo.org/record/6628956/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
