@@ -217,7 +217,9 @@ class CNMFExtensions:
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
     def get_reconstructed_movie(
-        self, ixs_frames: Tuple[int, int] = None, add_background: bool = True
+        self,
+        ixs_frames: Optional[Tuple[int, int], int] = None,
+        add_background: bool = True,
     ) -> np.ndarray:
         """
         Return the reconstructed movie, (A * C) + (b * f)
