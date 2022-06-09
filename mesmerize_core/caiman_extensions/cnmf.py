@@ -226,7 +226,7 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        ixs_frames: Tuple[int, int]
+        ixs_frames: Tuple[int, int], int
             (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
             including the ``stop_frame``
 
