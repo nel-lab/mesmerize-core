@@ -40,7 +40,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/record/6592084/files/ground_truths.zip"
+    url = f"https://zenodo.org/record/6628745/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -735,6 +735,38 @@ def test_cnmfe():
     numpy.testing.assert_allclose(
         cnmfe_reconstructed_movie, cnmfe_reconstructed_movie_actual, rtol=1e-2, atol=1e-10
     )
+
+    # test to check passing optional ixs components to various functions
+    ixs_components = numpy.array([1, 4, 7, 3])
+
+    # test to check ixs components for cnmf.get_spatial_masks()
+    ixs_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks(ixs_components)
+    ixs_spatial_masks_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "ixs_spatial_masks.npy"), allow_pickle=True)
+    numpy.testing.assert_array_equal(ixs_spatial_masks, ixs_spatial_masks_actual)
+
+    # test to check ixs components for cnmf.get_spatial_contours()
+    ixs_contours_contours = df.iloc[-1].cnmf.get_spatial_contours(ixs_components)[0]
+    ixs_contours_contours_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "ixs_spatial_contours_contours.npy"), allow_pickle=True)
+    ixs_contours_coms = df.iloc[-1].cnmf.get_spatial_contours(ixs_components)[1]
+    ixs_contours_coms_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "ixs_spatial_contours_coms.npy"), allow_pickle=True)
+    for contour, actual_contour in zip(
+            ixs_contours_contours, ixs_contours_contours_actual
+    ):
+        numpy.testing.assert_allclose(contour, actual_contour, rtol=1e-2, atol=1e-10)
+    for com, actual_com in zip(
+            ixs_contours_coms, ixs_contours_coms_actual
+    ):
+        numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
+
+    # test to check ixs components for cnmf.get_temporal_components()
+    ixs_temporal_components = df.iloc[-1].cnmf.get_temporal_components(ixs_components)
+    ixs_temporal_components_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "ixs_temporal_components.npy"), allow_pickle=True)
+    numpy.testing.assert_allclose(ixs_temporal_components, ixs_temporal_components_actual,  rtol=1e2, atol=1e-10)
+
+    # test to check ixs components for cnmf.get_reconstructed_movie()
+    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components)
+    ixs_reconstructed_movie_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "ixs_reconstructed_movie.npy"), allow_pickle=True)
+    numpy.testing.assert_allclose(ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10)
 
 
 def test_remove_item():
