@@ -40,7 +40,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/record/6592084/files/ground_truths.zip"
+    url = f"https://zenodo.org/record/6628956/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -487,6 +487,57 @@ def test_cnmf():
     cnmf_max_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "cnmf_std.npy"))
     numpy.testing.assert_array_equal(cnmf_max, cnmf_max_actual)
 
+    # test to check passing optional ixs components to various functions
+    ixs_components = numpy.array([1, 3, 5, 2])
+
+    # test to check ixs components for cnmf.get_spatial_masks()
+    ixs_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks(ixs_components)
+    ixs_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "cnmf_ixs", "ixs_spatial_masks.npy"),
+        allow_pickle=True,
+    )
+    numpy.testing.assert_array_equal(ixs_spatial_masks, ixs_spatial_masks_actual)
+
+    # test to check ixs components for cnmf.get_spatial_contours()
+    ixs_contours_contours = df.iloc[-1].cnmf.get_spatial_contours(ixs_components)[0]
+    ixs_contours_contours_actual = numpy.load(
+        ground_truths_dir.joinpath(
+            "cnmf", "cnmf_ixs", "ixs_spatial_contours_contours.npy"
+        ),
+        allow_pickle=True,
+    )
+    ixs_contours_coms = df.iloc[-1].cnmf.get_spatial_contours(ixs_components)[1]
+    ixs_contours_coms_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "cnmf_ixs", "ixs_spatial_contours_coms.npy"),
+        allow_pickle=True,
+    )
+    for contour, actual_contour in zip(
+        ixs_contours_contours, ixs_contours_contours_actual
+    ):
+        numpy.testing.assert_allclose(contour, actual_contour, rtol=1e-2, atol=1e-10)
+    for com, actual_com in zip(ixs_contours_coms, ixs_contours_coms_actual):
+        numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
+
+    # test to check ixs components for cnmf.get_temporal_components()
+    ixs_temporal_components = df.iloc[-1].cnmf.get_temporal_components(ixs_components)
+    ixs_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "cnmf_ixs", "ixs_temporal_components.npy"),
+        allow_pickle=True,
+    )
+    numpy.testing.assert_allclose(
+        ixs_temporal_components, ixs_temporal_components_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check ixs components for cnmf.get_reconstructed_movie()
+    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components)
+    ixs_reconstructed_movie_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf", "cnmf_ixs", "ixs_reconstructed_movie.npy"),
+        allow_pickle=True,
+    )
+    numpy.testing.assert_allclose(
+        ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
+    )
+
 
 def test_cnmfe():
     set_parent_data_path(vid_dir)
@@ -558,10 +609,26 @@ def test_cnmfe():
         df.iloc[-1]["outputs"]["corr-img-path"]
     )
 
+    # extension tests - partial
+
+    # test to check caiman get_correlation_image()
+    corr_img = df.iloc[-1].caiman.get_correlation_image()
+    corr_img_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_correlation_img.npy")
+    )
+    numpy.testing.assert_allclose(corr_img, corr_img_actual, rtol=1e-1, atol=1e-10)
+
+    # test to check caiman get_pnr_image()
+    pnr_image = df.iloc[-1].caiman.get_pnr_image()
+    pnr_image_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_pnr_img.npy")
+    )
+    numpy.testing.assert_allclose(pnr_image, pnr_image_actual, rtol=1e2, atol=1e-10)
+
     # Test if running full cnmfe works
     algo = "cnmfe"
     param_name = "cnmfe_full"
-    input_movie_path = get_datafile(algo)
+    input_movie_path = df.iloc[0].mcorr.get_output_path()
     print(input_movie_path)
     df.caiman.add_item(
         algo=algo,
@@ -579,8 +646,10 @@ def test_cnmfe():
     except:
         pytest.fail("Something wrong with setting UUID for batch items")
 
-    assert vid_dir.joinpath(df.iloc[-1]["input_movie_path"]) == vid_dir.joinpath(
-        f"{algo}.tif"
+    assert (
+        vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        == vid_dir.joinpath(df.iloc[0].mcorr.get_output_path())
+        == get_full_data_path(input_movie_path)
     )
 
     process = df.iloc[-1].caiman.run(
@@ -645,23 +714,143 @@ def test_cnmfe():
         == vid_dir.joinpath(f'{df.iloc[-1]["uuid"]}_pn.npy')
     )
 
-    # extension tests - partial
-
-    # test to check caiman get_correlation_image()
-    corr_img = df.iloc[-1].caiman.get_correlation_image()
-    corr_img_actual = numpy.load(
-        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_correlation_img.npy")
-    )
-    numpy.testing.assert_allclose(corr_img, corr_img_actual, rtol=1e-1, atol=1e-10)
-
-    # test to check caiman get_pnr_image()
-    pnr_image = df.iloc[-1].caiman.get_pnr_image()
-    pnr_image_actual = numpy.load(
-        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_pnr_img.npy")
-    )
-    numpy.testing.assert_allclose(pnr_image, pnr_image_actual, rtol=1e-4, atol=1e-10)
-
     # extension tests - full
+
+    # test to check cnmf get_cnmf_memmap()
+    cnmfe_mmap_output = df.iloc[-1].cnmf.get_cnmf_memmap()
+    cnmfe_mmap_output_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_full_output_mmap.npy")
+    )
+    numpy.testing.assert_array_equal(cnmfe_mmap_output, cnmfe_mmap_output_actual)
+
+    # test to check cnmf get_input_memmap()
+    cnmfe_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
+    cnmfe_input_mmap_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_full_input_mmap.npy")
+    )
+    numpy.testing.assert_array_equal(cnmfe_input_mmap, cnmfe_input_mmap_actual)
+    # cnmf input memmap from mcorr output should also equal mcorr output
+    mcorr_output = df.iloc[0].mcorr.get_output()
+    numpy.testing.assert_array_equal(cnmfe_input_mmap, mcorr_output)
+
+    # test to check cnmf get_output_path()
+    assert df.iloc[-1].cnmf.get_output_path() == vid_dir.joinpath(
+        df.iloc[-1]["outputs"]["cnmf-hdf5-path"]
+    )
+
+    # test to check cnmf get_output()
+    assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
+    # this doesn't work because some keys in the hdf5 file are
+    # not always identical, like the path to the mmap file
+    # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
+
+    # test to check cnmf get_spatial_masks()
+    cnmfe_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks()
+    cnmfe_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_spatial_masks.npy")
+    )
+    numpy.testing.assert_array_equal(cnmfe_spatial_masks, cnmfe_spatial_masks_actual)
+
+    # test to check get_spatial_contours()
+    cnmfe_spatial_contours_contours = df.iloc[-1].cnmf.get_spatial_contours()[0]
+    cnmfe_spatial_contours_coms = df.iloc[-1].cnmf.get_spatial_contours()[1]
+    cnmfe_spatial_contours_contours_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_spatial_contours_contours.npy"),
+        allow_pickle=True,
+    )
+    cnmfe_spatial_contours_coms_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_spatial_contours_coms.npy"),
+        allow_pickle=True,
+    )
+    for contour, actual_contour in zip(
+        cnmfe_spatial_contours_contours, cnmfe_spatial_contours_contours_actual
+    ):
+        numpy.testing.assert_allclose(contour, actual_contour, rtol=1e-2, atol=1e-10)
+    for com, actual_com in zip(
+        cnmfe_spatial_contours_coms, cnmfe_spatial_contours_coms_actual
+    ):
+        numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
+
+    # test to check get_temporal_components()
+    cnmfe_temporal_components = df.iloc[-1].cnmf.get_temporal_components()
+    cnmfe_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_temporal_components.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmfe_temporal_components,
+        cnmfe_temporal_components_actual,
+        rtol=1e2,
+        atol=1e-10,
+    )
+
+    # test to check get_reconstructed_movie()
+    cnmfe_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie()
+    cnmfe_reconstructed_movie_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_reconstructed_movie.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmfe_reconstructed_movie,
+        cnmfe_reconstructed_movie_actual,
+        rtol=1e-2,
+        atol=1e-10,
+    )
+
+    # test to check passing optional ixs components to various functions
+    ixs_components = numpy.array([1, 4, 7, 3])
+
+    # test to check ixs components for cnmf.get_spatial_masks()
+    ixs_spatial_masks = df.iloc[-1].cnmf.get_spatial_masks(ixs_components)
+    ixs_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_ixs", "ixs_spatial_masks.npy"),
+        allow_pickle=True,
+    )
+    numpy.testing.assert_array_equal(ixs_spatial_masks, ixs_spatial_masks_actual)
+
+    # test to check ixs components for cnmf.get_spatial_contours()
+    ixs_contours_contours = df.iloc[-1].cnmf.get_spatial_contours(ixs_components)[0]
+    ixs_contours_contours_actual = numpy.load(
+        ground_truths_dir.joinpath(
+            "cnmfe_full", "cnmfe_ixs", "ixs_spatial_contours_contours.npy"
+        ),
+        allow_pickle=True,
+    )
+    ixs_contours_coms = df.iloc[-1].cnmf.get_spatial_contours(ixs_components)[1]
+    ixs_contours_coms_actual = numpy.load(
+        ground_truths_dir.joinpath(
+            "cnmfe_full", "cnmfe_ixs", "ixs_spatial_contours_coms.npy"
+        ),
+        allow_pickle=True,
+    )
+    for contour, actual_contour in zip(
+        ixs_contours_contours, ixs_contours_contours_actual
+    ):
+        numpy.testing.assert_allclose(contour, actual_contour, rtol=1e-2, atol=1e-10)
+    for com, actual_com in zip(ixs_contours_coms, ixs_contours_coms_actual):
+        numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
+
+    # test to check ixs components for cnmf.get_temporal_components()
+    ixs_temporal_components = df.iloc[-1].cnmf.get_temporal_components(ixs_components)
+    ixs_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath(
+            "cnmfe_full", "cnmfe_ixs", "ixs_temporal_components.npy"
+        ),
+        allow_pickle=True,
+    )
+    numpy.testing.assert_allclose(
+        ixs_temporal_components, ixs_temporal_components_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check ixs components for cnmf.get_reconstructed_movie()
+    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components)
+    ixs_reconstructed_movie_actual = numpy.load(
+        ground_truths_dir.joinpath(
+            "cnmfe_full", "cnmfe_ixs", "ixs_reconstructed_movie.npy"
+        ),
+        allow_pickle=True,
+    )
+    numpy.testing.assert_allclose(
+        ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
+    )
 
 
 def test_remove_item():

@@ -156,8 +156,9 @@ class CaimanSeriesExtensions:
             )
 
         # connect the callback functions for when the process finishes
-        for f in callbacks_finished:
-            self.process.finished.connect(f)
+        if callbacks_finished is not None:
+            for f in callbacks_finished:
+                self.process.finished.connect(f)
 
         # Set working dir for the external process
         self.process.setWorkingDirectory(os.path.dirname(self._series.input_movie_path))
@@ -199,7 +200,7 @@ class CaimanSeriesExtensions:
         self,
         batch_path: Union[str, Path],
         backend: str,
-        callbacks_finished: List[callable],
+        callbacks_finished: Optional[List[callable]] = None,
         callback_std_out: Optional[callable] = None,
     ):
         """
