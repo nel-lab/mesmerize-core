@@ -250,3 +250,8 @@ class CNMFExtensions:
                 cnmf_obj.estimates.f[:, ixs_frames[0] : ixs_frames[1]]
             )
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+    @validate("cnmf")
+    def get_residuals(self, ixs_frame: int) -> np.ndarray:
+
+        #blah blah
