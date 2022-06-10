@@ -246,7 +246,7 @@ class CNMFExtensions:
             ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
 
         if isinstance(ixs_frames, int):
-            ixs_frames = (ixs_frames, ixs_frames)
+            ixs_frames = (ixs_frames, ixs_frames + 1)
 
         dn = cnmf_obj.estimates.A.dot(
             cnmf_obj.estimates.C[:, ixs_frames[0] : ixs_frames[1]]
