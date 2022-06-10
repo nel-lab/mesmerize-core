@@ -219,7 +219,7 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_reconstructed_movie(
         self,
-        ixs_frames: Optional[Tuple[int, int], int] = None,
+        ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
         add_background: bool = True,
     ) -> np.ndarray:
         """
@@ -230,6 +230,7 @@ class CNMFExtensions:
         ixs_frames: Tuple[int, int], int
             (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
             including the ``stop_frame``
+            if single int, return reconstructed movie for single frame indicated
 
         add_background: bool
             if ``True``, add the spatial & temporal background, b * f
@@ -243,6 +244,9 @@ class CNMFExtensions:
 
         if ixs_frames is None:
             ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+
+        if ixs_frames is type(int):
+            ixs_frames = (ixs_frames, ixs_frames)
 
         dn = cnmf_obj.estimates.A.dot(
             cnmf_obj.estimates.C[:, ixs_frames[0] : ixs_frames[1]]
