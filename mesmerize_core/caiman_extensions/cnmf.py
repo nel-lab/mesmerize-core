@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import *
 
+import numpy
 import numpy as np
 import pandas as pd
 from caiman import load_memmap
@@ -253,5 +254,24 @@ class CNMFExtensions:
 
     @validate("cnmf")
     def get_residuals(self, ixs_frame: int) -> np.ndarray:
+        """
+        Return the residuals of a given frame, movie - (A * C)
 
-        #blah blah
+        Parameters
+        ----------
+        ixs_frame: int
+            desired frame to compute residual for
+
+        Returns
+        -------
+        np.ndarray
+            shape is [n_frames, x_pixels, y_pixels]
+        """
+        # ixs_frame = (ixs_frame, ixs_frame + 1)
+
+        cnmf_obj = self.get_output()
+
+
+
+
+
