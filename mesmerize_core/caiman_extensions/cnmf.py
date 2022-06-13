@@ -252,3 +252,12 @@ class CNMFExtensions:
                 cnmf_obj.estimates.f[:, ixs_frames[0] : ixs_frames[1]]
             )
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+
+    def save_hdf5_file(self, good_components):
+        cnmf_obj = self.get_output()
+        cnmf_obj.estimates.idx_components = good_components
+        output_path = self.get_output_path()
+        CNMF.save(cnmf_obj, str(output_path))
+
+
