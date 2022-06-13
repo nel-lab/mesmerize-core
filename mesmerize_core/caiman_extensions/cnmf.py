@@ -267,9 +267,23 @@ class CNMFExtensions:
         np.ndarray
             shape is [n_frames, x_pixels, y_pixels]
         """
-        # ixs_frame = (ixs_frame, ixs_frame + 1)
+        ixs_frame = (ixs_frame, ixs_frame + 1)
 
         cnmf_obj = self.get_output()
+
+        movie = cnmf_obj.estimates.A.dot(
+            cnmf_obj.estimates.C[:, ixs_frame[0]: ixs_frame[1]])
+
+        movie += cnmf_obj.estimates.b.dot(
+                cnmf_obj.estimates.f[:, ixs_frame[0]: ixs_frame[1]])
+
+        outer = np.outer(cnmf_obj.estimates.A, cnmf_obj.estimates.C[:, ixs_frame[0]: ixs_frame[1]])
+
+        movie = movie - outer
+
+        return movie.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+
 
 
 
