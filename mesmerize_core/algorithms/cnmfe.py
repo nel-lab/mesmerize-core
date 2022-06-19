@@ -40,7 +40,7 @@ def main(batch_path, uuid, data_path: str = None):
         )
 
         print("making memmap")
-        gSig = params["cnmfe_kwargs"]["gSig"][0]
+        gSig = params["main"]["gSig"][0]
 
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
@@ -80,7 +80,7 @@ def main(batch_path, uuid, data_path: str = None):
                 "center_psf": True,  # for 1p
                 "normalize_init": False,  # for 1p
             }
-            tot = {**cnmfe_params_dict, **params["cnmfe_kwargs"]}
+            tot = {**cnmfe_params_dict, **params["main"]}
             cnmfe_params_dict = CNMFParams(params_dict=tot)
             cnm = cnmf.CNMF(
                 n_processes=n_processes, dview=dview, params=cnmfe_params_dict

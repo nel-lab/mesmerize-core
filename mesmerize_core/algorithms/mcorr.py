@@ -54,7 +54,7 @@ def main(batch_path, uuid, data_path: str = None):
         backend="local", n_processes=n_processes, single_thread=False
     )
 
-    rel_params = dict(params["mcorr_kwargs"])
+    rel_params = dict(params["main"])
     opts = CNMFParams(params_dict=rel_params)
     # Run MC, denote boolean 'success' if MC completes w/out error
     try:
@@ -103,7 +103,7 @@ def main(batch_path, uuid, data_path: str = None):
         print("finished computing correlation image")
 
         # Compute shifts
-        if params["mcorr_kwargs"]["pw_rigid"] == True:
+        if params["main"]["pw_rigid"] == True:
             x_shifts = mc.x_shifts_els
             y_shifts = mc.y_shifts_els
             shifts = [x_shifts, y_shifts]
