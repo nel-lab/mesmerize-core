@@ -35,12 +35,12 @@ Example
 .. code-block:: python
 
     from mesmerize_core import COMPUTE_BACKENDS, COMPUTE_BACKEND_QPROCESS, COMPUTE_BACKEND_SLURM, \
-    COMPUTE_BACKEND_SUBPROCESS, set_parent_data_path, get_parent_data_path, get_full_data_path, \
+    COMPUTE_BACKEND_SUBPROCESS, set_parent_raw_data_path, get_parent_raw_data_path, get_full_raw_data_path, \
     load_batch, create_batch
     from mesmerize_core.caiman_extensions import *
 
     # set the parent directory as the top-level directory for your experiment data
-    set_parent_data_path('/home/kushal/my_exps_dir')
+    set_parent_raw_data_path('/home/kushal/my_exps_dir')
 
     batch_path = '/home/kushal/my_exps_dir/my_batches/exp_1_batch.pickle'
 

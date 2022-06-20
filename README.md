@@ -6,9 +6,14 @@
 Mesmerize core backend
 
 A high level abstraction that sits on top of the CaImAn library. 
-It contains `pandas.DataFrame` and `pandas.Series` extensions that interface with CaImAn for running the various algorithms and organzing input & output data.
+It contains `pandas.DataFrame` and `pandas.Series` extensions that interface with CaImAn for running the various algorithms and organizing input & output data.
+
+This replaces the [Mesmerize legacy desktop application](https://github.com/kushalkolar/MESmerize), `mesmerize-core` is MUCH faster, more efficient, and offers many more features! 
+For example there are simple extensions which you can just call to get the motion correction shifts, CNMF reconstructed movie, CNMF residuals, contours etc.
 
 Required by `mesmerize-napari`. Can also be used standalone, such as in notebooks, as a high level interface for CaImAn.
+
+See the demo notebook at `notebooks/mcorr_cnmf.ipynb` for more details. Note that the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualization.
 
 # Installation
 
@@ -33,6 +38,9 @@ cd mesmerize-core
 
 # update env with environment file
 mamba env update -n mesmerize-core --file environment.yml
+
+# temporary until pandas v1.5.0 is released
+pip install git+https://github.com/pandas-dev/pandas.git
 
 # install caimanmanager
 caimanmanager.py install
@@ -72,6 +80,9 @@ cd mesmerize-core
 # get dependencies
 pip install -r requirements.txt
 
+# temporary until pandas v1.5.0 is released
+pip install git+https://github.com/pandas-dev/pandas.git
+
 # install mesmerize-core
 pip install -e .
 
@@ -82,16 +93,16 @@ MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
 # Examples
 
+See `notebooks/mcorr_cnmf.ipynb` for more details. Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
+
 ## Motion Correction
 
 ```python
-from mesmerize_core import COMPUTE_BACKENDS, COMPUTE_BACKEND_QPROCESS, COMPUTE_BACKEND_SLURM, \
-    COMPUTE_BACKEND_SUBPROCESS, set_parent_data_path, get_parent_data_path, get_full_data_path, \
-    load_batch, create_batch
-from mesmerize_core.caiman_extensions import *
+from mesmerize_core import *
+from matplotlib import pyplot as plt
 
 # set the parent directory as the top-level directory for your experiment data
-set_parent_data_path('/home/kushal/my_exps_dir')
+set_parent_raw_data_path('/home/kushal/my_exps_dir')
 
 batch_path = '/home/kushal/my_exps_dir/my_batches/exp_1_batch.pickle'
 
@@ -102,9 +113,9 @@ df = create_batch(batch_path)
 movie_path = '/home/kushal/my_exps_dir/exp_1/my_movie.tif'
 
 # params, exactly the same as what you'd directly use with CaImAn
-mcorr_params1 = 
+mcorr_params1 =\
 {
-  'mcorr_kwargs': # this key is necessary for specifying that these are mcorr kwargs
+  'main': # this key is necessary for specifying that these are the "main" params for the algorithm
     {
         'max_shifts': [24, 24],
         'strides': [48, 48],
@@ -116,6 +127,7 @@ mcorr_params1 =
     },
 }
 
+# add an item to the batch
 df.caiman.add_item(
   algo='mcorr',
   name='my_movie',
@@ -124,9 +136,9 @@ df.caiman.add_item(
 )
 
 # We create another set of params, useful for gridsearches for example
-mcorr_params2 =\ 
+mcorr_params2 =\
 {
-  'mcorr_kwargs': # this key is necessary for specifying that these are mcorr kwargs
+  'main':
     {
         'max_shifts': [24, 24],
         'strides': [24, 24],
@@ -138,6 +150,7 @@ mcorr_params2 =\
     },
 }
 
+# add other param variant to the batch
 df.caiman.add_item(
   algo='mcorr',
   name='my_movie',
@@ -146,19 +159,16 @@ df.caiman.add_item(
 )
 
 # run the first "batch item"
-process = df.iloc[0].caiman.run(
-  batch_path=batch_path,
-  backend=COMPUTE_BACKEND_SUBPROCESS,  # this is for non-GUI use, COMPUTE_BACKEND_QPROCESS is for use within a Qt GUI
-  callbacks_finished=[lambda: print("yay finished")], # callback function for when this item finishes
-)
+process = df.iloc[0].caiman.run()
+process.wait()
 
 # run the second item
 # you can also use a loop to run all these items
 # just call process.wait() to run them one after another
 process = df.iloc[1].caiman.run(
-  batch_path=batch_path,
-  backend=COMPUTE_BACKEND_SUBPROCESS,
-  callbacks_finished=[lambda: print("yay finished")],
+    batch_path=batch_path,
+    backend=COMPUTE_BACKEND_SUBPROCESS,
+    callbacks_finished=[lambda: print("yay finished")],
 )
 ```
 
@@ -168,50 +178,44 @@ process = df.iloc[1].caiman.run(
 # We can continue from mcorr above and perform CNMF using the mcorr output
 
 # some params for CNMF
-params_cnmf =\ 
+params_cnmf =\
 {
-    'cnmf_kwargs':
+    'main': # indicates that these are the "main" params for the CNMF algo
         {
-            'p': 2,
-            'nb': 1,
+            'p': 1,
+            'gnb': 2,
             # raises error: no parameter 'merge_thresh' found
-            # 'merge_thresh': 0.7,
-            'rf': None,
-            'stride': 30,
-            'K': 10,
-            'gSig': [5,5],
+            'merge_thr': 0.85,
+            'rf': 15,
+            'stride_cnmf': 6,
+            'K': 4,
+            'gSig': [4, 4],
             'ssub': 1,
             'tsub': 1,
             'method_init': 'greedy_roi',
-        },
-    'eval_kwargs':
-        {
-            'min_SNR': 2.50,
-            'rval_thr': 0.8,
+            'min_SNR': 2.0,
+            'rval_thr': 0.7,
             'use_cnn': True,
             'min_cnn_thr': 0.8,
             'cnn_lowest': 0.1,
-            'decay_time': 1,
+            'decay_time': 0.4,
         },
-    'refit': True,
+    'refit': True, # If `True`, run a second iteration of CNMF
 }
 
 df.caiman.add_item(
   algo='cnmf',
   name='my_movie',
-  input_movie_path=df.iloc[0].mcorr.get_output_path()  # use mcorr output from a previous item
+  input_movie_path=df.iloc[0].mcorr.get_output_path(),  # use mcorr output from a previous item
   params=params_cnmf
 )
 
 # run this item
-process = df.iloc[-1].caiman.run(
-  batch_path=batch_path,
-  backend=COMPUTE_BACKEND_SUBPROCESS,
-  callbacks_finished=[lambda: print("yay finished")],
-)
+process = df.iloc[-1].caiman.run()
+process.wait()
 
 # we can look at the spatial components for example
-coors = df.iloc[-1].cnmf.get_spatial_contour_coors()
+coors = df.iloc[-1].cnmf.get_spatial_contours()
 
 # let's plot that on top of the correlation image
 corr_img = df.iloc[-1].caiman.get_correlation_image().T  # must be transposed to line up

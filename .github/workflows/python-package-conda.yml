@@ -38,6 +38,7 @@ jobs:
       run: |
         mamba env update -n base --file environment.yml
         caimanmanager.py install
+        pip install git+https://github.com/pandas-dev/pandas.git
         pip install .
         
     - name: Test with pytest

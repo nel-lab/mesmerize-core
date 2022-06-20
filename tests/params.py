@@ -8,8 +8,8 @@ test_params = {
             "border_nan": "copy",
             "pw_rigid": True,
             "gSig_filt": None,
-            },
         },
+    },
     "cnmf": {
         "main": {
             "p": 2,

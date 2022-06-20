@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from caiman import load_memmap
 
-from ..batch_utils import get_full_data_path
 from .common import validate
 from typing import *
 
@@ -28,7 +27,7 @@ class MCorrExtensions:
         Path
             path to the motion correction output memmap file
         """
-        return get_full_data_path(self._series["outputs"]["mcorr-output-path"])
+        return self._series.paths.resolve(self._series["outputs"]["mcorr-output-path"])
 
     @validate("mcorr")
     def get_output(self) -> np.ndarray:
@@ -63,7 +62,7 @@ class MCorrExtensions:
         --------
         List of Processed X and Y shifts arrays
         """
-        path = get_full_data_path(self._series["outputs"]["shifts"])
+        path = self._series.paths.resolve(self._series["outputs"]["shifts"])
         shifts = np.load(str(path))
 
         if pw_rigid:

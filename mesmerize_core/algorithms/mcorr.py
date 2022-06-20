@@ -14,7 +14,7 @@ from shutil import move as move_file
 
 # prevent circular import
 if __name__ == "__main__":
-    from mesmerize_core import set_parent_data_path, get_full_data_path
+    from mesmerize_core import set_parent_raw_data_path, load_batch
 
 
 @click.command()
@@ -22,17 +22,19 @@ if __name__ == "__main__":
 @click.option("--uuid", type=str)
 @click.option("--data-path", type=str)
 def main(batch_path, uuid, data_path: str = None):
-    df = pd.read_pickle(batch_path)
+    set_parent_raw_data_path(data_path)
+
+    batch_path = Path(batch_path)
+    df = load_batch(batch_path)
+
     item = df[df["uuid"] == uuid].squeeze()
-
-    input_movie_path = item["input_movie_path"]
-
-    set_parent_data_path(data_path)
-    input_movie_path = str(get_full_data_path(input_movie_path))
+    # resolve full path
+    input_movie_path = str(df.paths.resolve(item["input_movie_path"]))
 
     # because caiman doesn't let you specify filename to save memmap files
     # create dir with uuid as the dir name
-    caiman_temp_dir = str(Path(input_movie_path).parent.joinpath(str(uuid)))
+    output_dir = Path(batch_path).parent.joinpath(str(uuid))
+    caiman_temp_dir = str(output_dir)
     os.makedirs(caiman_temp_dir, exist_ok=True)
     os.environ["CAIMAN_TEMP"] = caiman_temp_dir
     os.environ["CAIMAN_NEW_TEMPFILE"] = "True"
@@ -63,28 +65,34 @@ def main(batch_path, uuid, data_path: str = None):
         mc = MotionCorrect(fnames, dview=dview, **opts.get_group("motion"))
         mc.motion_correct(save_movie=True)
 
-        # Find path to mmap file
-        output_path = Path(mc.mmap_file[0])
-        if data_path is not None:
-            output_path = Path(output_path).relative_to(data_path)
+        # find path to mmap file
+        memmap_output_path_temp = df.paths.resolve(mc.mmap_file[0])
+
+        # filename to move the output back to data dir
+        mcorr_memmap_path = output_dir.joinpath(
+            f"{uuid}-{memmap_output_path_temp.name}"
+        )
+
+        # move the output file
+        move_file(memmap_output_path_temp, mcorr_memmap_path)
 
         print("mc finished successfully!")
 
         print("computing projections")
-        Yr, dims, T = cm.load_memmap(str(get_full_data_path(output_path)))
+        Yr, dims, T = cm.load_memmap(str(mcorr_memmap_path))
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
         proj_paths = dict()
         for proj_type in ["mean", "std", "max"]:
             p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
-            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(
+            proj_paths[proj_type] = output_dir.joinpath(
                 f"{uuid}_{proj_type}_projection.npy"
             )
             np.save(str(proj_paths[proj_type]), p_img)
 
         print("Computing correlation image")
         Cns = local_correlations_movie_offline(
-            [mc.mmap_file[0]],
+            [str(mcorr_memmap_path)],
             remove_baseline=True,
             window=1000,
             stride=1000,
@@ -94,7 +102,7 @@ def main(batch_path, uuid, data_path: str = None):
         )
         Cn = Cns.max(axis=0)
         Cn[np.isnan(Cn)] = 0
-        cn_path = Path(input_movie_path).parent.joinpath(f"{uuid}_cn.npy")
+        cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
         np.save(str(cn_path), Cn, allow_pickle=False)
 
         # output dict for pandas series for dataframe row
@@ -107,38 +115,25 @@ def main(batch_path, uuid, data_path: str = None):
             x_shifts = mc.x_shifts_els
             y_shifts = mc.y_shifts_els
             shifts = [x_shifts, y_shifts]
-            shift_path = Path(input_movie_path).parent.joinpath(f"{uuid}_shifts.npy")
+            shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
         else:
             shifts = mc.shifts_rig
-            shift_path = Path(input_movie_path).parent.joinpath(f"{uuid}_shifts.npy")
+            shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
 
-        # filename to move the output back to data dir
-        mcorr_memmap = Path(input_movie_path).parent.joinpath(
-            f"{uuid}-{output_path.stem}.mmap"
-        )
-
-        # move the output file
-        move_file(get_full_data_path(output_path), mcorr_memmap)
-        os.removedirs(caiman_temp_dir)
-
-        if data_path is not None:
-            cn_path = cn_path.relative_to(data_path)
-            mcorr_memmap = get_full_data_path(mcorr_memmap).relative_to(data_path)
-            shift_path = shift_path.relative_to(data_path)
-            for proj_type in proj_paths.keys():
-                d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
-                    data_path
-                )
-        else:
-            cn_path = cn_path
-            mcorr_memmap = get_full_data_path(mcorr_memmap)
-            shift_path = shift_path.resolve()
+        # relative paths
+        cn_path = cn_path.relative_to(output_dir.parent)
+        mcorr_memmap_path = mcorr_memmap_path.relative_to(output_dir.parent)
+        shift_path = shift_path.relative_to(output_dir.parent)
+        for proj_type in proj_paths.keys():
+            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+                output_dir.parent
+            )
 
         d.update(
             {
-                "mcorr-output-path": mcorr_memmap,
+                "mcorr-output-path": mcorr_memmap_path,
                 "corr-img-path": cn_path,
                 "shifts": shift_path,
                 "success": True,
@@ -150,7 +145,6 @@ def main(batch_path, uuid, data_path: str = None):
         d = {"success": False, "traceback": traceback.format_exc()}
         print("mc failed, stored traceback in output")
 
-    print(d)
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
     # Save DataFrame to disk
