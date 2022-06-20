@@ -38,10 +38,7 @@ def main(batch_path, uuid, data_path: str = None):
     )
 
     # merge cnmf and eval kwargs into one dict
-    c = dict(params["cnmf_kwargs"])
-    e = dict(params["eval_kwargs"])
-    tot = {**c, **e}
-    cnmf_params = CNMFParams(params_dict=tot)
+    cnmf_params = CNMFParams(params_dict=params["main"])
     # Run CNMF, denote boolean 'success' if CNMF completes w/out error
     try:
         fname_new = cm.save_memmap(
