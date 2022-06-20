@@ -26,5 +26,5 @@ __all__ = [
     "CaimanSeriesExtensions",
     "CNMFExtensions",
     "MCorrExtensions",
-    "PathsDataFrameExtension"
+    "PathsDataFrameExtension",
 ]

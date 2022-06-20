@@ -66,12 +66,8 @@ def main(batch_path, uuid, data_path: str = None):
             images[::downsample_ratio], swap_dim=False, gSig=gSig
         )
 
-        pnr_output_path = (
-            output_dir.joinpath(f"{uuid}_pn.npy").resolve()
-        )
-        cn_output_path = (
-            output_dir.joinpath(f"{uuid}_cn.npy").resolve()
-        )
+        pnr_output_path = output_dir.joinpath(f"{uuid}_pn.npy").resolve()
+        cn_output_path = output_dir.joinpath(f"{uuid}_cn.npy").resolve()
 
         np.save(str(pnr_output_path), pnr, allow_pickle=False)
         np.save(str(cn_output_path), cn_filter, allow_pickle=False)
@@ -103,10 +99,9 @@ def main(batch_path, uuid, data_path: str = None):
             d["cnmf-hdf5-path"] = cnmf_hdf5_path.relative_to(output_dir.parent)
 
             for proj_type in proj_paths.keys():
-                d[f"{proj_type}-projection-path"] = proj_paths[
-                    proj_type
-                ].relative_to(output_dir.parent)
-
+                d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+                    output_dir.parent
+                )
 
         cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
 

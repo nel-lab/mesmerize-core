@@ -90,9 +90,7 @@ def main(batch_path, uuid, data_path: str = None):
         Cn = cm.local_correlations(images.transpose(1, 2, 0))
         Cn[np.isnan(Cn)] = 0
 
-        corr_img_path = (
-            output_dir.joinpath(f"{uuid}_cn.npy").resolve()
-        )
+        corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy").resolve()
         np.save(str(corr_img_path), Cn, allow_pickle=False)
 
         # output dict for dataframe row (pd.Series)

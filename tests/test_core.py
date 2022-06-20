@@ -166,23 +166,35 @@ def test_mcorr():
         pytest.fail("Something wrong with setting UUID for batch items")
 
     # test that batch path is propagated to pd.Series
-    assert df.attrs["batch_path"] == df.paths.get_batch_path() == df.iloc[-1].paths.get_batch_path() == \
-           df.iloc[-1].attrs["batch_path"]
+    assert (
+        df.attrs["batch_path"]
+        == df.paths.get_batch_path()
+        == df.iloc[-1].paths.get_batch_path()
+        == df.iloc[-1].attrs["batch_path"]
+    )
 
     # test that path resolve works for parent_raw_dir
     rel_input_movie_path = input_movie_path.relative_to(vid_dir)
-    assert df.paths.resolve(rel_input_movie_path) == df.iloc[-1].paths.resolve(rel_input_movie_path) == input_movie_path
+    assert (
+        df.paths.resolve(rel_input_movie_path)
+        == df.iloc[-1].paths.resolve(rel_input_movie_path)
+        == input_movie_path
+    )
     # test that path splitting works for parent_raw_dir
     split = (vid_dir, input_movie_path.relative_to(vid_dir))
-    assert df.paths.split(input_movie_path) == df.iloc[-1].paths.split(input_movie_path) == split
+    assert (
+        df.paths.split(input_movie_path)
+        == df.iloc[-1].paths.split(input_movie_path)
+        == split
+    )
     # test that the input_movie_path in the DataFrame rows are relative
     assert Path(df.iloc[-1]["input_movie_path"]) == split[1]
 
     assert (
-            get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
-            == vid_dir.joinpath(f"{algo}.tif")
-            == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
-            == df.paths.resolve(df.iloc[-1]["input_movie_path"])
+        get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
+        == vid_dir.joinpath(f"{algo}.tif")
+        == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
     )
 
     process = df.iloc[-1].caiman.run()
@@ -190,7 +202,7 @@ def test_mcorr():
 
     df = load_batch(batch_path)
 
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
 
     pprint(df.iloc[-1]["outputs"], width=-1)
@@ -201,60 +213,81 @@ def test_mcorr():
     # test that path resolve works for batch_dir
     mcorr_memmap_path = batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
-        )
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+    )
     rel_mcorr_memmap_path = mcorr_memmap_path.relative_to(batch_dir)
-    assert df.paths.resolve(rel_mcorr_memmap_path) == df.iloc[-1].paths.resolve(rel_mcorr_memmap_path) == mcorr_memmap_path
+    assert (
+        df.paths.resolve(rel_mcorr_memmap_path)
+        == df.iloc[-1].paths.resolve(rel_mcorr_memmap_path)
+        == mcorr_memmap_path
+    )
     # test that path splitting works for batch_dir
     split = (batch_dir, mcorr_memmap_path.relative_to(batch_dir))
-    assert df.paths.split(mcorr_memmap_path) == df.iloc[-1].paths.split(mcorr_memmap_path) == split
+    assert (
+        df.paths.split(mcorr_memmap_path)
+        == df.iloc[-1].paths.split(mcorr_memmap_path)
+        == split
+    )
 
-    assert input_movie_path == df.iloc[-1].caiman.get_input_movie_path() == df.paths.resolve(
-        df.iloc[-1]["input_movie_path"]
+    assert (
+        input_movie_path
+        == df.iloc[-1].caiman.get_input_movie_path()
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
     )
 
     # test to check mmap output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["mcorr-output-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]),
-            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["mcorr-output-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]),
+            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
         )
     )
 
     # test to check mean-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["mean-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["mean-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_mean_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["mean-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["mean-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_mean_projection.npy'
+        )
     )
 
     # test to check std-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["std-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["std-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_std_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["std-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["std-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_std_projection.npy'
+        )
     )
 
     # test to check max-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["max-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["max-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_max_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["max-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["max-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_max_projection.npy'
+        )
     )
 
     # test to check correlation image output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["corr-img-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["corr-img-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
+        == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
 
     # test to check mcorr get_output_path()
-    assert df.iloc[-1].mcorr.get_output_path() == batch_dir.joinpath(
-        str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
-    ) == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
+    assert (
+        df.iloc[-1].mcorr.get_output_path()
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]),
+            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+        )
+        == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
+    )
 
     # test to check mcorr get_output()
     mcorr_output = df.iloc[-1].mcorr.get_output()
@@ -330,7 +363,7 @@ def test_cnmf():
 
     df = load_batch(batch_path)
 
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
 
     pprint(df.iloc[-1]["outputs"], width=-1)
@@ -339,10 +372,11 @@ def test_cnmf():
     assert df.iloc[-1]["outputs"]["traceback"] is None
 
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["mcorr-output-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]),
-            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap'
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["mcorr-output-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]),
+            f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
         )
     )
 
@@ -372,7 +406,7 @@ def test_cnmf():
 
     df = load_batch(batch_path)
 
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
 
     pprint(df.iloc[-1]["outputs"], width=-1)
@@ -382,52 +416,60 @@ def test_cnmf():
     assert df.iloc[-1]["outputs"]["success"] is True
     assert df.iloc[-1]["outputs"]["traceback"] is None
 
-    assert input_movie_path == df.iloc[-1].caiman.get_input_movie_path() == df.paths.resolve(
-        df.iloc[-1]["input_movie_path"]
+    assert (
+        input_movie_path
+        == df.iloc[-1].caiman.get_input_movie_path()
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
     )
 
     assert (
-            batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}.hdf5')
-            == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
-            == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
+        batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}.hdf5')
+        == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
+        == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
     )
 
     # test to check mmap output path
     assert (
-            batch_dir.joinpath(
+        batch_dir.joinpath(
             str(df.iloc[-1]["uuid"]),
-            f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_60_d2_80_d3_1_order_C_frames_2000_.mmap'
+            f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_60_d2_80_d3_1_order_C_frames_2000_.mmap',
         )
-            == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
-            == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
+        == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
     )
 
     # test to check mean-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["mean-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["mean-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_mean_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["mean-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["mean-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_mean_projection.npy'
+        )
     )
 
     # test to check std-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["std-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["std-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_std_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["std-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["std-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_std_projection.npy'
+        )
     )
 
     # test to check max-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["max-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["max-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_max_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["max-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["max-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_max_projection.npy'
+        )
     )
 
     # test to check correlation image output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["corr-img-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["corr-img-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
+        == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
 
     print("testing cnmf.get_cnmf_memmap()")
@@ -450,10 +492,12 @@ def test_cnmf():
     numpy.testing.assert_array_equal(cnmf_input_mmap, mcorr_output)
 
     # test to check cnmf get_output_path()
-    assert df.iloc[-1].cnmf.get_output_path() == batch_dir.joinpath(
-        df.iloc[-1]["outputs"]["cnmf-hdf5-path"]
-    ) == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-hdf5-path"]) \
-           == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}.hdf5')
+    assert (
+        df.iloc[-1].cnmf.get_output_path()
+        == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
+        == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}.hdf5')
+    )
 
     # test to check cnmf get_output()
     assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
@@ -507,9 +551,11 @@ def test_cnmf():
     )
 
     # test to check caiman get_input_movie_path(), should be output of previous mcorr
-    assert df.iloc[-1].caiman.get_input_movie_path() == df.paths.resolve(
-        df.iloc[-1]["input_movie_path"]
-    ) == batch_dir.joinpath(df.iloc[-1]["input_movie_path"])
+    assert (
+        df.iloc[-1].caiman.get_input_movie_path()
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
+        == batch_dir.joinpath(df.iloc[-1]["input_movie_path"])
+    )
 
     # test to check caiman get_correlation_img()
     cnmf_corr_img = df.iloc[-1].caiman.get_correlation_image()
@@ -629,9 +675,9 @@ def test_cnmfe():
         pytest.fail("Something wrong with setting UUID for batch items")
 
     assert (
-            batch_dir.joinpath(df.iloc[-1]["input_movie_path"])
-            == batch_dir.joinpath(df.iloc[0].mcorr.get_output_path())
-            == df.paths.resolve(df.iloc[-1]["input_movie_path"])
+        batch_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        == batch_dir.joinpath(df.iloc[0].mcorr.get_output_path())
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
     )
 
     process = df.iloc[-1].caiman.run()
@@ -639,7 +685,7 @@ def test_cnmfe():
 
     df = load_batch(batch_path)
 
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
 
     pprint(df.iloc[-1]["outputs"], width=-1)
@@ -649,23 +695,24 @@ def test_cnmfe():
     assert df.iloc[-1]["outputs"]["success"] is True
     assert df.iloc[-1]["outputs"]["traceback"] is None
 
-    assert input_movie_path == df.iloc[-1].caiman.get_input_movie_path() == df.paths.resolve(
-        df.iloc[-1]["input_movie_path"]
+    assert (
+        input_movie_path
+        == df.iloc[-1].caiman.get_input_movie_path()
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
     )
 
     assert batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000_.mmap'
+        f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000_.mmap',
     ) == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
 
-    assert batch_dir.joinpath(str(df.iloc[-1]["uuid"]),
-                              f'{df.iloc[-1]["uuid"]}_pn.npy') == df.paths.resolve(
-        df.iloc[-1]["outputs"]["pnr-image-path"]
-    )
+    assert batch_dir.joinpath(
+        str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_pn.npy'
+    ) == df.paths.resolve(df.iloc[-1]["outputs"]["pnr-image-path"])
 
-    assert batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy') == df.paths.resolve(
-        df.iloc[-1]["outputs"]["corr-img-path"]
-    )
+    assert batch_dir.joinpath(
+        str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy'
+    ) == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
 
     # extension tests - partial
 
@@ -706,9 +753,9 @@ def test_cnmfe():
         pytest.fail("Something wrong with setting UUID for batch items")
 
     assert (
-            batch_dir.joinpath(df.iloc[-1]["input_movie_path"])
-            == batch_dir.joinpath(df.iloc[0].mcorr.get_output_path())
-            == df.paths.resolve(df.iloc[-1]["input_movie_path"])
+        batch_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        == batch_dir.joinpath(df.iloc[0].mcorr.get_output_path())
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
     )
 
     process = df.iloc[-1].caiman.run()
@@ -716,7 +763,7 @@ def test_cnmfe():
 
     df = load_batch(batch_path)
 
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
 
     pprint(df.iloc[-1]["outputs"], width=-1)
@@ -726,60 +773,65 @@ def test_cnmfe():
     assert df.iloc[-1]["outputs"]["success"] is True
     assert df.iloc[-1]["outputs"]["traceback"] is None
 
-    assert input_movie_path == df.iloc[-1].caiman.get_input_movie_path() == df.paths.resolve(
-        df.iloc[-1]["input_movie_path"]
+    assert (
+        input_movie_path
+        == df.iloc[-1].caiman.get_input_movie_path()
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
     )
 
     assert batch_dir.joinpath(
-        str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}.hdf5'
-    ) == df.paths.resolve(
-        df.iloc[-1]["outputs"]["cnmf-hdf5-path"]
-    )
+        str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}.hdf5'
+    ) == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
 
     # test to check mmap output path
     assert (
-            batch_dir.joinpath(
+        batch_dir.joinpath(
             str(df.iloc[-1]["uuid"]),
-            f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000_.mmap'
+            f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000_.mmap',
         )
-            == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
-            == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
+        == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
     )
 
     # test to check mean-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["mean-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["mean-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_mean_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["mean-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["mean-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_mean_projection.npy'
+        )
     )
 
     # test to check std-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["std-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["std-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_std_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["std-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["std-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_std_projection.npy'
+        )
     )
 
     # test to check max-projection output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["max-projection-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["max-projection-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_max_projection.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["max-projection-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["max-projection-path"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_max_projection.npy'
+        )
     )
 
     # test to check correlation image output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["corr-img-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["corr-img-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
+        == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy')
     )
 
     # test to check pnr image output path
     assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["pnr-image-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["pnr-image-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_pn.npy')
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["pnr-image-path"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["pnr-image-path"])
+        == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_pn.npy')
     )
 
     # extension tests - full
@@ -802,9 +854,11 @@ def test_cnmfe():
     numpy.testing.assert_array_equal(cnmfe_input_mmap, mcorr_output)
 
     # test to check cnmf get_output_path()
-    assert df.iloc[-1].cnmf.get_output_path() == batch_dir.joinpath(
-        df.iloc[-1]["outputs"]["cnmf-hdf5-path"]
-    ) == df.iloc[-1].paths.resolve(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
+    assert (
+        df.iloc[-1].cnmf.get_output_path()
+        == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
+        == df.iloc[-1].paths.resolve(df.iloc[-1]["outputs"]["cnmf-hdf5-path"])
+    )
 
     # test to check cnmf get_output()
     assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
@@ -944,9 +998,9 @@ def test_remove_item():
         pytest.fail("Something wrong with setting UUID for batch items")
 
     assert (
-            get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
-            == vid_dir.joinpath(f"{algo}.tif")
-            == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
+        == vid_dir.joinpath(f"{algo}.tif")
+        == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
     )
 
     df.caiman.add_item(
@@ -966,9 +1020,9 @@ def test_remove_item():
         pytest.fail("Something wrong with setting UUID for batch items")
 
     assert (
-            get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
-            == vid_dir.joinpath(f"{algo}.tif")
-            == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
+        == vid_dir.joinpath(f"{algo}.tif")
+        == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
     )
     # Check removing specific rows works
     assert df.iloc[0]["name"] == f"test-{algo}"

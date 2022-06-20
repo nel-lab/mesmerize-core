@@ -228,7 +228,9 @@ class CaimanSeriesExtensions:
         batch_path = self._series.paths.get_batch_path()
 
         # Create the runfile in the batch dir using this Series' UUID as the filename
-        runfile_path = str(batch_path.parent.joinpath(self._series["uuid"] + ".runfile"))
+        runfile_path = str(
+            batch_path.parent.joinpath(self._series["uuid"] + ".runfile")
+        )
 
         args_str = f"--batch-path {batch_path} --uuid {self._series.uuid}"
         if get_parent_raw_data_path() is not None:

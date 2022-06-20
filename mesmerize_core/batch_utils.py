@@ -123,11 +123,15 @@ class _BasePathExtensions:
         path = Path(path)
         # check if input movie is within batch dir
         if self.get_batch_path().parent in path.parents:
-            return self.get_batch_path().parent, path.relative_to(self.get_batch_path().parent)
+            return self.get_batch_path().parent, path.relative_to(
+                self.get_batch_path().parent
+            )
 
         # else check if in parent raw data dir
         elif get_parent_raw_data_path() in path.parents:
-            return get_parent_raw_data_path(), path.relative_to(get_parent_raw_data_path())
+            return get_parent_raw_data_path(), path.relative_to(
+                get_parent_raw_data_path()
+            )
 
         else:
             raise NotADirectoryError(
