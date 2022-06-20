@@ -39,6 +39,9 @@ cd mesmerize-core
 # update env with environment file
 mamba env update -n mesmerize-core --file environment.yml
 
+# temporary until pandas v1.5.0 is released
+pip install git+https://github.com/pandas-dev/pandas.git
+
 # install caimanmanager
 caimanmanager.py install
 
@@ -76,6 +79,9 @@ cd mesmerize-core
 
 # get dependencies
 pip install -r requirements.txt
+
+# temporary until pandas v1.5.0 is released
+pip install git+https://github.com/pandas-dev/pandas.git
 
 # install mesmerize-core
 pip install -e .
