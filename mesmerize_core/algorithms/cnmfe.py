@@ -7,9 +7,10 @@ import psutil
 import pandas as pd
 import traceback
 from pathlib import Path
+from shutil import move as move_file
 
 if __name__ == "__main__":
-    from mesmerize_core import set_parent_data_path, get_full_data_path
+    from mesmerize_core import set_parent_raw_data_path, load_batch
 
 
 @click.command()
@@ -17,12 +18,17 @@ if __name__ == "__main__":
 @click.option("--uuid", type=str)
 @click.option("--data-path")
 def main(batch_path, uuid, data_path: str = None):
-    df = pd.read_pickle(batch_path)
+    set_parent_raw_data_path(data_path)
+
+    df = load_batch(batch_path)
     item = df[df["uuid"] == uuid].squeeze()
 
     input_movie_path = item["input_movie_path"]
-    set_parent_data_path(data_path)
-    input_movie_path = str(get_full_data_path(input_movie_path))
+    # resolve full path
+    input_movie_path = str(df.paths.resolve(input_movie_path))
+
+    output_dir = Path(batch_path).parent.joinpath(str(uuid))
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     params = item["params"]
     print("cnmfe params:", params)
@@ -48,7 +54,7 @@ def main(batch_path, uuid, data_path: str = None):
         proj_paths = dict()
         for proj_type in ["mean", "std", "max"]:
             p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
-            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(
+            proj_paths[proj_type] = output_dir.joinpath(
                 f"{uuid}_{proj_type}_projection.npy"
             )
             np.save(str(proj_paths[proj_type]), p_img)
@@ -61,10 +67,10 @@ def main(batch_path, uuid, data_path: str = None):
         )
 
         pnr_output_path = (
-            Path(input_movie_path).parent.joinpath(f"{uuid}_pn.npy").resolve()
+            output_dir.joinpath(f"{uuid}_pn.npy").resolve()
         )
         cn_output_path = (
-            Path(input_movie_path).parent.joinpath(f"{uuid}_cn.npy").resolve()
+            output_dir.joinpath(f"{uuid}_cn.npy").resolve()
         )
 
         np.save(str(pnr_output_path), pnr, allow_pickle=False)
@@ -90,34 +96,25 @@ def main(batch_path, uuid, data_path: str = None):
             print("evaluating components")
             cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
-            output_path = (
-                Path(input_movie_path).parent.joinpath(f"{uuid}.hdf5").resolve()
-            )
-            cnm.save(str(output_path))
+            cnmf_hdf5_path = output_dir.joinpath(f"{uuid}.hdf5").resolve()
+            cnm.save(str(cnmf_hdf5_path))
 
-            if data_path is not None:
-                cnmf_hdf5_path = Path(output_path).relative_to(data_path)
-                for proj_type in proj_paths.keys():
-                    d[f"{proj_type}-projection-path"] = proj_paths[
-                        proj_type
-                    ].relative_to(data_path)
-            else:
-                cnmf_hdf5_path = output_path
-                for proj_type in proj_paths.keys():
-                    d[f"{proj_type}-projection-path"] = proj_paths[proj_type]
+            # save output paths to outputs dict
+            d["cnmf-hdf5-path"] = cnmf_hdf5_path.relative_to(output_dir.parent)
 
-            d.update(
-                {
-                    "cnmf-hdf5-path": cnmf_hdf5_path,
-                }
-            )
+            for proj_type in proj_paths.keys():
+                d[f"{proj_type}-projection-path"] = proj_paths[
+                    proj_type
+                ].relative_to(output_dir.parent)
 
-        if data_path is not None:
-            cnmfe_memmap_path = Path(fname_new).relative_to(data_path)
-            cn_output_path = cn_output_path.relative_to(data_path)
-            pnr_output_path = pnr_output_path.relative_to(data_path)
-        else:
-            cnmfe_memmap_path = fname_new
+
+        cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
+
+        move_file(fname_new, cnmf_memmap_path)
+
+        cnmfe_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
+        cn_output_path = cn_output_path.relative_to(output_dir.parent)
+        pnr_output_path = pnr_output_path.relative_to(output_dir.parent)
 
         d.update(
             {
@@ -129,11 +126,8 @@ def main(batch_path, uuid, data_path: str = None):
             }
         )
 
-        print(f"Final output dict:\n{d}")
-
     except:
         d = {"success": False, "traceback": traceback.format_exc()}
-
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
     # save dataframe to disc

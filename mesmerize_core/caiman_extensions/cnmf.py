@@ -9,7 +9,6 @@ from caiman.source_extraction.cnmf import CNMF
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from caiman.utils.visualization import get_contours as caiman_get_contours
 
-from ..batch_utils import get_full_data_path
 from .common import validate
 
 
@@ -31,7 +30,7 @@ class CNMFExtensions:
         np.ndarray
             numpy memmap array used for CNMF
         """
-        path = get_full_data_path(self._series["outputs"]["cnmf-memmap-path"])
+        path = self._series.paths.resolve(self._series["outputs"]["cnmf-memmap-path"])
         # Get order f images
         Yr, dims, T = load_memmap(str(path))
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
@@ -67,7 +66,7 @@ class CNMFExtensions:
         Path
             Path to the Caiman CNMF hdf5 output file
         """
-        return get_full_data_path(self._series["outputs"]["cnmf-hdf5-path"])
+        return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
     @validate("cnmf")
     def get_output(self) -> CNMF:

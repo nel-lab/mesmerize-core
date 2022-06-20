@@ -70,7 +70,7 @@ def main(batch_path, uuid, data_path: str = None):
 
         # filename to move the output back to data dir
         mcorr_memmap_path = output_dir.joinpath(
-            f"{uuid}-{memmap_output_path_temp.stem}.mmap"
+            f"{uuid}-{memmap_output_path_temp.name}"
         )
 
         # move the output file
@@ -123,12 +123,12 @@ def main(batch_path, uuid, data_path: str = None):
             np.save(str(shift_path), shifts)
 
         # relative paths
-        cn_path = cn_path.relative_to(batch_path.parent)
-        mcorr_memmap_path = mcorr_memmap_path.relative_to(batch_path.parent)
-        shift_path = shift_path.relative_to(batch_path.parent)
+        cn_path = cn_path.relative_to(output_dir.parent)
+        mcorr_memmap_path = mcorr_memmap_path.relative_to(output_dir.parent)
+        shift_path = shift_path.relative_to(output_dir.parent)
         for proj_type in proj_paths.keys():
             d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
-                batch_path.parent
+                output_dir.parent
             )
 
         d.update(
@@ -145,7 +145,6 @@ def main(batch_path, uuid, data_path: str = None):
         d = {"success": False, "traceback": traceback.format_exc()}
         print("mc failed, stored traceback in output")
 
-    print(d)
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
     # Save DataFrame to disk
