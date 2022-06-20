@@ -278,21 +278,20 @@ class CNMFExtensions:
         np.ndarray
             shape is [n_frames, x_pixels, y_pixels]
         """
-        cnmf_obj = self.get_output()
 
         if ixs_frames is None:
-            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+            ixs_frames = (0, self.get_input_memmap().shape[1])
 
         if isinstance(ixs_frames, int):
             ixs_frames = (ixs_frames, ixs_frames + 1)
 
-        movie = self.get_input_memmap()
+        raw_movie = self.get_input_memmap()
 
-        outer = self.get_reconstructed_movie(ixs_frames, False)
+        reconstructed_movie = self.get_reconstructed_movie(ixs_frames, True)
 
-        residuals = movie[ixs_frames] - outer
+        residuals = raw_movie[ixs_frames] - reconstructed_movie
 
-        return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+        return residuals
 
 
 
