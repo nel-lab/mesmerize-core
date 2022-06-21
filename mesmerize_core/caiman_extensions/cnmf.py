@@ -280,7 +280,7 @@ class CNMFExtensions:
         """
 
         if ixs_frames is None:
-            ixs_frames = (0, self.get_input_memmap().shape[1])
+            ixs_frames = (0, self.get_input_memmap().shape[0])
 
         if isinstance(ixs_frames, int):
             ixs_frames = (ixs_frames, ixs_frames + 1)
@@ -289,7 +289,7 @@ class CNMFExtensions:
 
         reconstructed_movie = self.get_reconstructed_movie(ixs_frames, True)
 
-        residuals = raw_movie[ixs_frames] - reconstructed_movie
+        residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie
 
         return residuals
 
