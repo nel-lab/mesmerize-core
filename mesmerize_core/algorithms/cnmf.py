@@ -8,10 +8,11 @@ import numpy as np
 import pandas as pd
 import traceback
 from pathlib import Path
+from shutil import move as move_file
 
 # prevent circular import
 if __name__ == "__main__":
-    from mesmerize_core import set_parent_data_path, get_full_data_path
+    from mesmerize_core import set_parent_raw_data_path, load_batch
 
 
 @click.command()
@@ -19,13 +20,18 @@ if __name__ == "__main__":
 @click.option("--uuid", type=str)
 @click.option("--data-path")
 def main(batch_path, uuid, data_path: str = None):
-    df = pd.read_pickle(batch_path)
+    set_parent_raw_data_path(data_path)
+
+    df = load_batch(batch_path)
     item = df[df["uuid"] == uuid].squeeze()
 
     input_movie_path = item["input_movie_path"]
+    # resolve full path
+    input_movie_path = str(df.paths.resolve(input_movie_path))
 
-    set_parent_data_path(data_path)
-    input_movie_path = str(get_full_data_path(input_movie_path))
+    # make output dir
+    output_dir = Path(batch_path).parent.joinpath(str(uuid))
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     params = item["params"]
     print("cnmf params", params)
@@ -38,10 +44,7 @@ def main(batch_path, uuid, data_path: str = None):
     )
 
     # merge cnmf and eval kwargs into one dict
-    c = dict(params["cnmf_kwargs"])
-    e = dict(params["eval_kwargs"])
-    tot = {**c, **e}
-    cnmf_params = CNMFParams(params_dict=tot)
+    cnmf_params = CNMFParams(params_dict=params["main"])
     # Run CNMF, denote boolean 'success' if CNMF completes w/out error
     try:
         fname_new = cm.save_memmap(
@@ -56,7 +59,7 @@ def main(batch_path, uuid, data_path: str = None):
         proj_paths = dict()
         for proj_type in ["mean", "std", "max"]:
             p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
-            proj_paths[proj_type] = Path(input_movie_path).parent.joinpath(
+            proj_paths[proj_type] = output_dir.joinpath(
                 f"{uuid}_{proj_type}_projection.npy"
             )
             np.save(str(proj_paths[proj_type]), p_img)
@@ -80,38 +83,30 @@ def main(batch_path, uuid, data_path: str = None):
         print("Eval")
         cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
-        output_path = (
-            get_full_data_path(input_movie_path)
-            .parent.joinpath(f"{uuid}.hdf5")
-            .resolve()
-        )
+        output_path = output_dir.joinpath(f"{uuid}.hdf5").resolve()
 
         cnm.save(str(output_path))
 
         Cn = cm.local_correlations(images.transpose(1, 2, 0))
         Cn[np.isnan(Cn)] = 0
 
-        corr_img_path = (
-            Path(input_movie_path).parent.joinpath(f"{uuid}_cn.npy").resolve()
-        )
+        corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy").resolve()
         np.save(str(corr_img_path), Cn, allow_pickle=False)
 
         # output dict for dataframe row (pd.Series)
         d = dict()
 
-        if data_path is not None:  # relative paths
-            cnmf_hdf5_path = output_path.relative_to(data_path)
-            cnmf_memmap_path = Path(fname_new).relative_to(data_path)
-            corr_img_path = corr_img_path.relative_to(data_path)
-            for proj_type in proj_paths.keys():
-                d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
-                    data_path
-                )
-        else:  # absolute paths
-            cnmf_hdf5_path = output_path
-            cnmf_memmap_path = fname_new
-            for proj_type in proj_paths.keys():
-                d[f"{proj_type}-projection-path"] = proj_paths[proj_type]
+        cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
+
+        move_file(fname_new, cnmf_memmap_path)
+
+        cnmf_hdf5_path = output_path.relative_to(output_dir.parent)
+        cnmf_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
+        corr_img_path = corr_img_path.relative_to(output_dir.parent)
+        for proj_type in proj_paths.keys():
+            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+                output_dir.parent
+            )
 
         d.update(
             {
@@ -125,8 +120,6 @@ def main(batch_path, uuid, data_path: str = None):
 
     except:
         d = {"success": False, "traceback": traceback.format_exc()}
-
-    print(f"Final output dict:\n{d}")
 
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]

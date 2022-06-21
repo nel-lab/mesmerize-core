@@ -9,11 +9,12 @@ import numpy as np
 import pandas as pd
 
 from ..batch_utils import (
-    get_full_data_path,
     COMPUTE_BACKENDS,
+    COMPUTE_BACKEND_SUBPROCESS,
     ALGO_MODULES,
-    get_parent_data_path,
+    get_parent_raw_data_path,
     PathsDataFrameExtension,
+    PathsSeriesExtension,
     HAS_PYQT,
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile
@@ -52,7 +53,6 @@ class CaimanDataFrameExtensions:
 
     def __init__(self, df: pd.DataFrame):
         self._df = df
-        self.path = None
 
     def uloc(self, u: Union[str, UUID]) -> pd.Series:
         """
@@ -90,21 +90,19 @@ class CaimanDataFrameExtensions:
             Parameters for running the algorithm with the input movie
 
         """
-
-        input_movie_path = Path(input_movie_path)
+        # make sure path is within batch dir or parent raw data path
+        input_movie_path = self._df.paths.resolve(input_movie_path)
         validate_path(input_movie_path)
 
-        if get_parent_data_path() is not None:
-            input_movie_path = input_movie_path.relative_to(get_parent_data_path())
-
-        input_movie_path = str(input_movie_path)
+        # get relative path
+        input_movie_path = self._df.paths.split(input_movie_path)[1]
 
         # Create a pandas Series (Row) with the provided arguments
         s = pd.Series(
             {
                 "algo": algo,
                 "name": name,
-                "input_movie_path": input_movie_path,
+                "input_movie_path": str(input_movie_path),
                 "params": params,
                 "outputs": None,  # to store dict of output information, such as output file paths
                 "uuid": str(
@@ -117,7 +115,7 @@ class CaimanDataFrameExtensions:
         self._df.loc[self._df.index.size] = s
 
         # Save DataFrame to disk
-        self._df.to_pickle(self.path)
+        self._df.to_pickle(self._df.paths.get_batch_path())
 
     def remove_item(self, index):
         # Drop selected index
@@ -125,7 +123,7 @@ class CaimanDataFrameExtensions:
         # Reset indeces so there are no 'jumps'
         self._df.reset_index(drop=True, inplace=True)
         # Save new df to disc
-        self._df.to_pickle(self.path)
+        self._df.to_pickle(self._df.paths.get_batch_path())
 
 
 @pd.api.extensions.register_series_accessor("caiman")
@@ -160,8 +158,10 @@ class CaimanSeriesExtensions:
             for f in callbacks_finished:
                 self.process.finished.connect(f)
 
+        parent_path = self._series.paths.resolve(self._series.input_movei_path).parent
+
         # Set working dir for the external process
-        self.process.setWorkingDirectory(os.path.dirname(self._series.input_movie_path))
+        self.process.setWorkingDirectory(str(parent_path))
 
         # Start the external process
         if IS_WINDOWS:
@@ -179,7 +179,7 @@ class CaimanSeriesExtensions:
     ):
 
         # Get the dir that contains the input movie
-        parent_path = get_full_data_path(Path(self._series.input_movie_path).parent)
+        parent_path = self._series.paths.resolve(self._series.input_movie_path).parent
 
         self.process = Popen(runfile_path, cwd=parent_path)
         return self.process
@@ -198,8 +198,7 @@ class CaimanSeriesExtensions:
 
     def run(
         self,
-        batch_path: Union[str, Path],
-        backend: str,
+        backend: Optional[str] = COMPUTE_BACKEND_SUBPROCESS,
         callbacks_finished: Optional[List[callable]] = None,
         callback_std_out: Optional[callable] = None,
     ):
@@ -211,8 +210,8 @@ class CaimanSeriesExtensions:
 
         Parameters
         ----------
-        backend: str
-            One of the available backends
+        backend: Optional[str]
+            One of the available backends, if none default is `COMPUTE_BACKEND_SUBPROCESS`
 
         callbacks_finished: List[callable]
             List of callback functions that are called when the external process has finished.
@@ -226,15 +225,16 @@ class CaimanSeriesExtensions:
                 f"{COMPUTE_BACKENDS}"
             )
 
-        # Get the dir that contains the input movie
-        parent_path = get_full_data_path(Path(self._series.input_movie_path).parent)
+        batch_path = self._series.paths.get_batch_path()
 
-        # Create the runfile in the same dir using this Series' UUID as the filename
-        runfile_path = str(parent_path.joinpath(self._series["uuid"] + ".runfile"))
+        # Create the runfile in the batch dir using this Series' UUID as the filename
+        runfile_path = str(
+            batch_path.parent.joinpath(self._series["uuid"] + ".runfile")
+        )
 
         args_str = f"--batch-path {batch_path} --uuid {self._series.uuid}"
-        if get_parent_data_path() is not None:
-            args_str += f" --data-path {get_parent_data_path()}"
+        if get_parent_raw_data_path() is not None:
+            args_str += f" --data-path {get_parent_raw_data_path()}"
 
         # make the runfile
         runfile = make_runfile(
@@ -263,7 +263,7 @@ class CaimanSeriesExtensions:
             full path to the input movie file
         """
 
-        return get_full_data_path(self._series["input_movie_path"])
+        return self._series.paths.resolve(self._series["input_movie_path"])
 
     @validate()
     def get_correlation_image(self) -> np.ndarray:
@@ -273,7 +273,7 @@ class CaimanSeriesExtensions:
         np.ndarray
             correlation image
         """
-        path = get_full_data_path(self._series["outputs"]["corr-img-path"])
+        path = self._series.paths.resolve(self._series["outputs"]["corr-img-path"])
         return np.load(str(path))
 
     @validate()
@@ -284,12 +284,12 @@ class CaimanSeriesExtensions:
         np.ndarray
             pnr image
         """
-        path = get_full_data_path(self._series["outputs"]["pnr-image-path"])
+        path = self._series.paths.resolve(self._series["outputs"]["pnr-image-path"])
         return np.load(str(path))
 
     @validate()
     def get_projection(self, proj_type: str) -> np.ndarray:
-        path = get_full_data_path(
+        path = self._series.paths.resolve(
             self._series["outputs"][f"{proj_type}-projection-path"]
         )
         return np.load(path)
@@ -299,6 +299,6 @@ class CaimanSeriesExtensions:
     #     """
     #     Copy all data associated with this series to a different parent dir
     #     """
-    #     movie_path = get_full_data_path(self._series['input_movie_path'])
+    #     movie_path = get_full_raw_data_path(self._series['input_movie_path'])
     #     output_paths = []
     #     for p in self._series['outputs']

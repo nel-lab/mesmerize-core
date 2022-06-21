@@ -48,6 +48,7 @@ jobs:
         echo "*************** Path during install mesmerize ***************"
         echo $PWD
         pip install -r requirements.txt
+        pip install git+https://github.com/pandas-dev/pandas.git
         pip install pytest
         pip install .        
         
