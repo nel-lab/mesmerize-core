@@ -237,7 +237,7 @@ class CaimanSeriesExtensions:
             args_str += f" --data-path {get_parent_raw_data_path()}"
 
         # make the runfile
-        runfile = make_runfile(
+        runfile_path = make_runfile(
             module_path=os.path.abspath(
                 ALGO_MODULES[self._series["algo"]].__file__
             ),  # caiman algorithm
@@ -246,7 +246,7 @@ class CaimanSeriesExtensions:
         )
         try:
             self.process = getattr(self, f"_run_{backend}")(
-                runfile, callbacks_finished, callback_std_out
+                runfile_path, callbacks_finished, callback_std_out
             )
         except:
             with open(runfile_path, "r") as f:
