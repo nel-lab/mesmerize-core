@@ -46,7 +46,7 @@ qualitative_colormaps = [
 
 
 def validate_path(path: Union[str, Path]):
-    if not regex.match("^[A-Za-z0-9@\/\\:._-]*$", str(path)):
+    if not regex.match("^[A-Za-z0-9@\/\\\:._-]*$", str(path)):
         raise ValueError(
             "Paths must only contain alphanumeric characters, "
             "hyphens ( - ), underscores ( _ ) or periods ( . )"
