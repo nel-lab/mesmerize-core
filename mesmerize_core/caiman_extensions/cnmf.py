@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import *
 
+import numpy
 import numpy as np
 import pandas as pd
 from caiman import load_memmap
@@ -256,3 +257,45 @@ class CNMFExtensions:
                 cnmf_obj.estimates.f[:, ixs_frames[0] : ixs_frames[1]]
             )
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+    @validate("cnmf")
+    def get_residuals(
+        self,
+        ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
+    ) -> np.ndarray:
+        """
+        Return the residuals of a given frame, movie - (A * C)
+
+        Parameters
+        ----------
+        Tuple[int, int], int
+            (start_frame, stop_frame), return residuals for frames in this range including the ``start_frame``, upto and not
+            including the ``stop_frame``
+            if single int, return residual for single frame indicated
+
+        Returns
+        -------
+        np.ndarray
+            shape is [n_frames, x_pixels, y_pixels]
+        """
+
+        if ixs_frames is None:
+            ixs_frames = (0, self.get_input_memmap().shape[0])
+
+        if isinstance(ixs_frames, int):
+            ixs_frames = (ixs_frames, ixs_frames + 1)
+
+        raw_movie = self.get_input_memmap()
+
+        reconstructed_movie = self.get_reconstructed_movie(ixs_frames, True)
+
+        residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie
+
+        return residuals
+
+
+
+
+
+
+
