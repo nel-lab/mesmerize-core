@@ -158,7 +158,7 @@ class CaimanSeriesExtensions:
             for f in callbacks_finished:
                 self.process.finished.connect(f)
 
-        parent_path = self._series.paths.resolve(self._series.input_movei_path).parent
+        parent_path = self._series.paths.resolve(self._series.input_movie_path).parent
 
         # Set working dir for the external process
         self.process.setWorkingDirectory(str(parent_path))
