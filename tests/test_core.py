@@ -542,7 +542,7 @@ def test_cnmf():
     )
 
     # test to check get_reconstructed_movie()
-    cnmf_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie()
+    cnmf_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie() + df.iloc[-1].cnmf.get_reconstructed_background()
     cnmf_reconstructed_movie_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "reconstructed_movie.npy")
     )
@@ -621,7 +621,7 @@ def test_cnmf():
     )
 
     # test to check ixs components for cnmf.get_reconstructed_movie()
-    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components)
+    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components) + df.iloc[-1].cnmf.get_reconstructed_background(ixs_components)
     ixs_reconstructed_movie_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "cnmf_ixs", "ixs_reconstructed_movie.npy"),
         allow_pickle=True,
@@ -906,7 +906,7 @@ def test_cnmfe():
     )
 
     # test to check get_reconstructed_movie()
-    cnmfe_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie()
+    cnmfe_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie() + df.iloc[-1].cnmf.get_reconstructed_background()
     cnmfe_reconstructed_movie_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_reconstructed_movie.npy")
     )
@@ -963,7 +963,7 @@ def test_cnmfe():
     )
 
     # test to check ixs components for cnmf.get_reconstructed_movie()
-    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components)
+    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components) + df.iloc[-1].cnmf.get_reconstructed_background(ixs_components)
     ixs_reconstructed_movie_actual = numpy.load(
         ground_truths_dir.joinpath(
             "cnmfe_full", "cnmfe_ixs", "ixs_reconstructed_movie.npy"
