@@ -9,6 +9,7 @@ import traceback
 from typing import *
 import re as regex
 from pathlib import Path
+from warnings import warn
 
 
 # Useful functions adapted from mesmerize
@@ -43,6 +44,26 @@ qualitative_colormaps = [
     "tab20b",
     "tab20c",
 ]
+
+
+def warning_experimental(more_info: str = None):
+    """
+    decorator to warn the user that the function is experimental
+    """
+    def catcher(func):
+        @wraps(func)
+        def fn(self, *args, **kwargs):
+            warn(
+                f"You are trying to use the following experimental feature, "
+                f"this maybe change in the future without warning:\n"
+                f"{func.__qualname__}\n\n"
+                f"{more_info}",
+                FutureWarning,
+                stacklevel=2
+            )
+            return func(self, *args, **kwargs)
+        return fn
+    return catcher
 
 
 def validate_path(path: Union[str, Path]):
