@@ -46,7 +46,7 @@ qualitative_colormaps = [
 ]
 
 
-def warning_experimental(more_info: str = None):
+def warning_experimental(more_info: str = ""):
     """
     decorator to warn the user that the function is experimental
     """
@@ -56,8 +56,8 @@ def warning_experimental(more_info: str = None):
             warn(
                 f"You are trying to use the following experimental feature, "
                 f"this maybe change in the future without warning:\n"
-                f"{func.__qualname__}\n\n"
-                f"{more_info}",
+                f"{func.__qualname__}\n"
+                f"{more_info}\n",
                 FutureWarning,
                 stacklevel=2
             )
