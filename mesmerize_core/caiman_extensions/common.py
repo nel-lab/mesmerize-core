@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pandas as pd
+import pims
 
 from ..batch_utils import (
     COMPUTE_BACKENDS,
@@ -17,10 +18,11 @@ from ..batch_utils import (
     PathsSeriesExtension,
     HAS_PYQT,
 )
-from ..utils import validate_path, IS_WINDOWS, make_runfile
+from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 
 if HAS_PYQT:
     from PyQt5 import QtCore
+from caiman import load_memmap
 
 
 def validate(algo: str = None):
@@ -254,7 +256,6 @@ class CaimanSeriesExtensions:
 
         return self.process
 
-    @validate()
     def get_input_movie_path(self) -> Path:
         """
         Returns
@@ -264,6 +265,17 @@ class CaimanSeriesExtensions:
         """
 
         return self._series.paths.resolve(self._series["input_movie_path"])
+
+    @warning_experimental()
+    def get_input_movie(self) -> Union[np.ndarray, pims.FramesSequence]:
+        extension = self.get_input_movie_path().suffixes[-1]
+
+        if extension in ['.tiff', '.tif', '.btf']:
+            return pims.open(str(self.get_input_movie_path()))
+
+        elif extension in ['.mmap', '.memmap']:
+            Yr, dims, T = load_memmap(str(self.get_input_movie_path()))
+            return np.reshape(Yr.T, [T] + list(dims), order="F")
 
     @validate()
     def get_correlation_image(self) -> np.ndarray:
