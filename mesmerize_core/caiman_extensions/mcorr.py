@@ -6,7 +6,7 @@ from caiman import load_memmap
 
 from .common import validate
 from typing import *
-from cache import Cache
+from .cache import Cache
 
 cache = Cache()
 
