@@ -10,6 +10,9 @@ from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from caiman.utils.visualization import get_contours as caiman_get_contours
 
 from .common import validate
+from .cache import Cache
+
+cache = Cache()
 
 
 @pd.api.extensions.register_series_accessor("cnmf")
@@ -59,6 +62,7 @@ class CNMFExtensions:
 
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
+    @cache.use_cache
     def get_output_path(self) -> Path:
         """
         Returns
@@ -69,6 +73,7 @@ class CNMFExtensions:
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
     @validate("cnmf")
+    @cache.use_cache
     def get_output(self) -> CNMF:
         """
         Returns
@@ -82,8 +87,9 @@ class CNMFExtensions:
 
     # TODO: Make the ``ixs`` parameter for spatial stuff optional
     @validate("cnmf")
+    @cache.use_cache
     def get_spatial_masks(
-        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01
+            self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01
     ) -> np.ndarray:
         """
         Get binary masks of the spatial components at the given `ixs`
@@ -128,7 +134,7 @@ class CNMFExtensions:
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @staticmethod
     def _get_spatial_contours(
-        cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
+            cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
     ):
         if ixs_components is None:
             ixs_components = cnmf_obj.estimates.idx_components
@@ -148,8 +154,9 @@ class CNMFExtensions:
         return contours
 
     @validate("cnmf")
+    @cache.use_cache
     def get_spatial_contours(
-        self, ixs_components: Optional[np.ndarray] = None
+            self, ixs_components: Optional[np.ndarray] = None
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
@@ -181,8 +188,9 @@ class CNMFExtensions:
         return coordinates, coms
 
     @validate("cnmf")
+    @cache.use_cache
     def get_temporal_components(
-        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False
+            self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False
     ) -> np.ndarray:
         """
         Get the temporal components for this CNMF item
@@ -216,10 +224,10 @@ class CNMFExtensions:
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
     def get_reconstructed_movie(
-        self,
-        ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
-        idx_components: np.ndarray = None,
-        add_background: bool = True,
+            self,
+            ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
+            idx_components: np.ndarray = None,
+            add_background: bool = True,
     ) -> np.ndarray:
         """
         Return the reconstructed movie, (A * C) + (b * f)
@@ -250,12 +258,12 @@ class CNMFExtensions:
         if isinstance(ixs_frames, int):
             ixs_frames = (ixs_frames, ixs_frames + 1)
 
-        dn = cnmf_obj.estimates.A[:,idx_components].dot(
-            cnmf_obj.estimates.C[idx_components, ixs_frames[0] : ixs_frames[1]]
+        dn = cnmf_obj.estimates.A[:, idx_components].dot(
+            cnmf_obj.estimates.C[idx_components, ixs_frames[0]: ixs_frames[1]]
         )
 
         if add_background:
             dn += cnmf_obj.estimates.b.dot(
-                cnmf_obj.estimates.f[:, ixs_frames[0] : ixs_frames[1]]
+                cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
             )
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
