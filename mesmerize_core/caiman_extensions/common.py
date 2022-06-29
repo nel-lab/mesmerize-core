@@ -39,7 +39,8 @@ def validate(algo: str = None):
                     )
 
             if not self._series["outputs"]["success"]:
-                raise ValueError("Cannot load output of an unsuccessful item")
+                tb = self._series["outputs"]["traceback"]
+                raise ValueError(f"Batch item was unsuccessful, traceback from subprocess:\n{tb}")
             return func(self, *args, **kwargs)
 
         return wrapper
