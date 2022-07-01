@@ -4,14 +4,14 @@ import time
 import numpy as np
 
 
-def check_kwarg_equality(kwargs, cache_kwargs):
-    if not type(kwargs) == type(cache_kwargs):
+def check_arg_equality(args, cache_args):
+    if not type(args) == type(cache_args):
         return False
 
-    if isinstance(cache_kwargs, np.ndarray):
-        return np.array_equal(cache_kwargs, kwargs)
+    if isinstance(cache_args, np.ndarray):
+        return np.array_equal(cache_args, args)
     else:
-        return cache_kwargs == kwargs
+        return cache_args == args
 
 
 class Cache:
@@ -41,7 +41,7 @@ class Cache:
 
             # checking to see if there is a cache hit
             for i in range(len(self.cache.index)):
-                if self.cache.iloc[i, 0] == instance._series['uuid'] and self.cache.iloc[i, 1] == func.__name__  and self.cache.iloc[i, 2] == args and check_kwarg_equality(kwargs, self.cache.iloc[i, 3]):
+                if self.cache.iloc[i, 0] == instance._series['uuid'] and self.cache.iloc[i, 1] == func.__name__ and check_arg_equality(args, self.cache.iloc[i, 2]) and check_arg_equality(kwargs, self.cache.iloc[i, 3]):
                     self.cache.iloc[i, 5] = time.time()
                     return_val = self.cache.iloc[i, 4]
                     return self.cache.iloc[i, 4]
