@@ -57,6 +57,7 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
+                return return_val
 
             # checking to see if there is a cache hit
             for i in range(len(self.cache.index)):
