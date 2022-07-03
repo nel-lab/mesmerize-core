@@ -2,6 +2,7 @@ from functools import wraps
 import pandas as pd
 import time
 import numpy as np
+import sys
 
 
 def _check_arg_equality(args, cache_args):
@@ -25,12 +26,16 @@ def _check_args_equality(args, cache_args):
 
 
 class Cache:
-    def __init__(self, cache_size=10):
+    def __init__(self, cache_size=10, length_storage=True):
         self.cache = pd.DataFrame(
             data=None,
             columns=["uuid", "function", "args", "kwargs", "return_val", "time_stamp"],
         )
         self.cache_size = cache_size
+        if length_storage == True:
+            self.storage_type = 'ITEMS'
+        else:
+            self.storage_type = 'RAM'
 
     def get_cache(self):
         print(self.cache)
@@ -41,6 +46,12 @@ class Cache:
 
     def set_maxsize(self, max_size: int):
         self.cache_size = max_size
+
+    def _get_cache_size(self):
+        cache_size = 0
+        for i in range(len(self.cache.index)):
+            cache_size += sys.getsizeof(self.cache.iloc[i, 4])
+        return cache_size
 
     def use_cache(self, func):
         @wraps(func)
@@ -62,45 +73,77 @@ class Cache:
             # checking to see if there is a cache hit
             for i in range(len(self.cache.index)):
                 if (
-                    self.cache.iloc[i, 0] == instance._series["uuid"]
-                    and self.cache.iloc[i, 1] == func.__name__
-                    and _check_args_equality(args, self.cache.iloc[i, 2])
-                    and _check_arg_equality(kwargs, self.cache.iloc[i, 3])
+                        self.cache.iloc[i, 0] == instance._series["uuid"]
+                        and self.cache.iloc[i, 1] == func.__name__
+                        and _check_args_equality(args, self.cache.iloc[i, 2])
+                        and _check_arg_equality(kwargs, self.cache.iloc[i, 3])
                 ):
                     self.cache.iloc[i, 5] = time.time()
                     return_val = self.cache.iloc[i, 4]
                     return self.cache.iloc[i, 4]
 
             # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
-            if len(self.cache.index) == self.cache_size:
-                return_val = func(instance, *args, **kwargs)
-                self.cache.drop(
-                    index=self.cache.sort_values(
-                        by=["time_stamp"], ascending=False
-                    ).index[-1],
-                    axis=0,
-                    inplace=True,
-                )
-                self.cache = self.cache.reset_index(drop=True)
-                self.cache.loc[len(self.cache.index)] = [
-                    instance._series["uuid"],
-                    func.__name__,
-                    args,
-                    kwargs,
-                    return_val,
-                    time.time(),
-                ]
-                return self.cache.iloc[len(self.cache.index) - 1, 4]
-            else:
-                return_val = func(instance, *args, **kwargs)
-                self.cache.loc[len(self.cache.index)] = [
-                    instance._series["uuid"],
-                    func.__name__,
-                    args,
-                    kwargs,
-                    return_val,
-                    time.time(),
-                ]
+            # check which type of memory
+            if self.storage_type == 'ITEMS':
+                if len(self.cache.index) == self.cache_size:
+                    return_val = func(instance, *args, **kwargs)
+                    self.cache.drop(
+                        index=self.cache.sort_values(
+                            by=["time_stamp"], ascending=False
+                        ).index[-1],
+                        axis=0,
+                        inplace=True,
+                    )
+                    self.cache = self.cache.reset_index(drop=True)
+                    self.cache.loc[len(self.cache.index)] = [
+                        instance._series["uuid"],
+                        func.__name__,
+                        args,
+                        kwargs,
+                        return_val,
+                        time.time(),
+                    ]
+                    return self.cache.iloc[len(self.cache.index) - 1, 4]
+                else:
+                    return_val = func(instance, *args, **kwargs)
+                    self.cache.loc[len(self.cache.index)] = [
+                        instance._series["uuid"],
+                        func.__name__,
+                        args,
+                        kwargs,
+                        return_val,
+                        time.time(),
+                    ]
+            elif self.storage_type == 'RAM':
+                if self._get_cache_size() >= self.cache_size:
+                    return_val = func(instance, *args, **kwargs)
+                    self.cache.drop(
+                        index=self.cache.sort_values(
+                            by=["time_stamp"], ascending=False
+                        ).index[-1],
+                        axis=0,
+                        inplace=True,
+                    )
+                    self.cache = self.cache.reset_index(drop=True)
+                    self.cache.loc[len(self.cache.index)] = [
+                        instance._series["uuid"],
+                        func.__name__,
+                        args,
+                        kwargs,
+                        return_val,
+                        time.time(),
+                    ]
+                    return self.cache.iloc[len(self.cache.index) - 1, 4]
+                else:
+                    return_val = func(instance, *args, **kwargs)
+                    self.cache.loc[len(self.cache.index)] = [
+                        instance._series["uuid"],
+                        func.__name__,
+                        args,
+                        kwargs,
+                        return_val,
+                        time.time(),
+                    ]
 
             return return_val
 
