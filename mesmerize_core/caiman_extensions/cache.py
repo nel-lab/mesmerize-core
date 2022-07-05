@@ -7,6 +7,7 @@ import numpy as np
 import sys
 from pathlib import Path
 from caiman.source_extraction.cnmf import CNMF
+import re
 
 
 def _check_arg_equality(args, cache_args):
@@ -42,7 +43,7 @@ class Cache:
             self.storage_type = 'RAM'
 
         if cache_size is None:
-            self.size = '1G'
+            self.size = 1
             self.storage_type = 'RAM'
 
     def get_cache(self):
@@ -55,9 +56,10 @@ class Cache:
     def set_maxsize(self, max_size: Union[int, str]):
         if isinstance(max_size, str):
             self.storage_type = 'RAM'
+            self.size = int(re.split('\d+', max_size)[0])
         else:
             self.storage_type = 'ITEMS'
-        self.size = max_size
+            self.size = max_size
 
     def _get_cache_size_bytes(self, return_gig=True):
         """Returns in GiB or MB"""
@@ -110,8 +112,8 @@ class Cache:
                     return self.cache.iloc[i, 4]
 
             # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
-            # check which type of memory
-            if (self.storage_type == 'ITEMS' and len(self.cache.index) == self.size) or (self.storage_type == 'RAM' and self._get_cache_size_bytes() >= self.size):
+            # if memory type is 'ITEMS': drop the least recently used and then add new item
+            if self.storage_type == 'ITEMS' and len(self.cache.index) == self.size:
                 return_val = func(instance, *args, **kwargs)
                 self.cache.drop(
                     index=self.cache.sort_values(
@@ -130,7 +132,27 @@ class Cache:
                     time.time(),
                 ]
                 return self.cache.iloc[len(self.cache.index) - 1, 4]
-
+            # if memory type is 'RAM': add new item and then remove least recently used items until cache is under correct size again
+            elif self.storage_type == 'RAM' and self._get_cache_size_bytes() > self.size:
+                return_val = func(instance, *args, **kwargs)
+                self.cache.loc[len(self.cache.index)] = [
+                    instance._series["uuid"],
+                    func.__name__,
+                    args,
+                    kwargs,
+                    return_val,
+                    time.time(),
+                ]
+                while self._get_cache_size_bytes() > self.size:
+                    self.cache.drop(
+                        index=self.cache.sort_values(
+                            by=["time_stamp"], ascending=False
+                        ).index[-1],
+                        axis=0,
+                        inplace=True,
+                    )
+                    self.cache = self.cache.reset_index(drop=True)
+            # no matter the storage type if size is not going to be exceeded for either, then item can just be added to cache
             else:
                 return_val = func(instance, *args, **kwargs)
                 self.cache.loc[len(self.cache.index)] = [
