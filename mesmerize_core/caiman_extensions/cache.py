@@ -71,7 +71,7 @@ class Cache:
             elif isinstance(self.cache.iloc[i, 4], Path):
                 cache_size += 0
             elif isinstance(self.cache.iloc[i, 4], CNMF):
-                cache_size += sys.getsizeof(self.cache.iloc[i,4].estimates)
+                cache_size += sys.getsizeof(self.cache.iloc[i, 4].estimates)
             else:
                 cache_size += sys.getsizeof(self.cache.iloc[i, 4])
 
@@ -111,66 +111,36 @@ class Cache:
 
             # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
             # check which type of memory
-            if self.storage_type == 'ITEMS':
-                if len(self.cache.index) == self.size:
-                    return_val = func(instance, *args, **kwargs)
-                    self.cache.drop(
-                        index=self.cache.sort_values(
-                            by=["time_stamp"], ascending=False
-                        ).index[-1],
-                        axis=0,
-                        inplace=True,
-                    )
-                    self.cache = self.cache.reset_index(drop=True)
-                    self.cache.loc[len(self.cache.index)] = [
-                        instance._series["uuid"],
-                        func.__name__,
-                        args,
-                        kwargs,
-                        return_val,
-                        time.time(),
-                    ]
-                    return self.cache.iloc[len(self.cache.index) - 1, 4]
-                else:
-                    return_val = func(instance, *args, **kwargs)
-                    self.cache.loc[len(self.cache.index)] = [
-                        instance._series["uuid"],
-                        func.__name__,
-                        args,
-                        kwargs,
-                        return_val,
-                        time.time(),
-                    ]
-            elif self.storage_type == 'RAM':
-                if self._get_cache_size_bytes() >= self.size:
-                    return_val = func(instance, *args, **kwargs)
-                    self.cache.drop(
-                        index=self.cache.sort_values(
-                            by=["time_stamp"], ascending=False
-                        ).index[-1],
-                        axis=0,
-                        inplace=True,
-                    )
-                    self.cache = self.cache.reset_index(drop=True)
-                    self.cache.loc[len(self.cache.index)] = [
-                        instance._series["uuid"],
-                        func.__name__,
-                        args,
-                        kwargs,
-                        return_val,
-                        time.time(),
-                    ]
-                    return self.cache.iloc[len(self.cache.index) - 1, 4]
-                else:
-                    return_val = func(instance, *args, **kwargs)
-                    self.cache.loc[len(self.cache.index)] = [
-                        instance._series["uuid"],
-                        func.__name__,
-                        args,
-                        kwargs,
-                        return_val,
-                        time.time(),
-                    ]
+            if (self.storage_type == 'ITEMS' and len(self.cache.index) == self.size) or (self.storage_type == 'RAM' and self._get_cache_size_bytes() >= self.size):
+                return_val = func(instance, *args, **kwargs)
+                self.cache.drop(
+                    index=self.cache.sort_values(
+                        by=["time_stamp"], ascending=False
+                    ).index[-1],
+                    axis=0,
+                    inplace=True,
+                )
+                self.cache = self.cache.reset_index(drop=True)
+                self.cache.loc[len(self.cache.index)] = [
+                    instance._series["uuid"],
+                    func.__name__,
+                    args,
+                    kwargs,
+                    return_val,
+                    time.time(),
+                ]
+                return self.cache.iloc[len(self.cache.index) - 1, 4]
+
+            else:
+                return_val = func(instance, *args, **kwargs)
+                self.cache.loc[len(self.cache.index)] = [
+                    instance._series["uuid"],
+                    func.__name__,
+                    args,
+                    kwargs,
+                    return_val,
+                    time.time(),
+                ]
 
             return return_val
 
