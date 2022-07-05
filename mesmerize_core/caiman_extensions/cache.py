@@ -39,8 +39,7 @@ class Cache:
         if cache_size is None:
             self.size = 1
             self.storage_type = 'RAM'
-
-        if isinstance(cache_size, int):
+        elif isinstance(cache_size, int):
             self.storage_type = 'ITEMS'
             self.size = cache_size
         else:
