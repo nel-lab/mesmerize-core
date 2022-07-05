@@ -1,4 +1,6 @@
 from functools import wraps
+from typing import Union, Optional
+
 import pandas as pd
 import time
 import numpy as np
@@ -26,15 +28,19 @@ def _check_args_equality(args, cache_args):
 
 
 class Cache:
-    def __init__(self, cache_size=10, length_storage=True):
+    def __init__(self, cache_size: Optional[Union[int, str]] = None):
         self.cache = pd.DataFrame(
             data=None,
             columns=["uuid", "function", "args", "kwargs", "return_val", "time_stamp"],
         )
-        self.cache_size = cache_size
-        if length_storage == True:
+        self.size = cache_size
+        if isinstance(cache_size, int):
             self.storage_type = 'ITEMS'
         else:
+            self.storage_type = 'RAM'
+
+        if cache_size is None:
+            self.size = '1G'
             self.storage_type = 'RAM'
 
     def get_cache(self):
@@ -44,13 +50,23 @@ class Cache:
         while len(self.cache.index) != 0:
             self.cache.drop(index=self.cache.index[-1], axis=0, inplace=True)
 
-    def set_maxsize(self, max_size: int):
-        self.cache_size = max_size
+    def set_maxsize(self, max_size: Union[int, str]):
+        if isinstance(max_size, str):
+            self.storage_type = 'RAM'
+        else:
+            self.storage_type = 'ITEMS'
+        self.size = max_size
 
-    def _get_cache_size(self):
+    def _get_cache_size_bytes(self, return_gig=True):
+        """Returns in GiB or MB"""
         cache_size = 0
         for i in range(len(self.cache.index)):
             cache_size += sys.getsizeof(self.cache.iloc[i, 4])
+        # need to fix how size of an output is calculated to handle non-built-in types
+        if return_gig:
+            cache_size = cache_size / 1024**3
+        else:
+            cache_size = cache_size / 1024**2
         return cache_size
 
     def use_cache(self, func):
@@ -68,7 +84,6 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
-                return return_val
 
             # checking to see if there is a cache hit
             for i in range(len(self.cache.index)):
@@ -85,7 +100,7 @@ class Cache:
             # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
             # check which type of memory
             if self.storage_type == 'ITEMS':
-                if len(self.cache.index) == self.cache_size:
+                if len(self.cache.index) == self.size:
                     return_val = func(instance, *args, **kwargs)
                     self.cache.drop(
                         index=self.cache.sort_values(
@@ -115,7 +130,7 @@ class Cache:
                         time.time(),
                     ]
             elif self.storage_type == 'RAM':
-                if self._get_cache_size() >= self.cache_size:
+                if self._get_cache_size_bytes() >= self.size:
                     return_val = func(instance, *args, **kwargs)
                     self.cache.drop(
                         index=self.cache.sort_values(
