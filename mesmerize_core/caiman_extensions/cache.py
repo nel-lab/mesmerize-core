@@ -36,15 +36,16 @@ class Cache:
             data=None,
             columns=["uuid", "function", "args", "kwargs", "return_val", "time_stamp"],
         )
-        self.size = cache_size
-        if isinstance(cache_size, int):
-            self.storage_type = 'ITEMS'
-        else:
-            self.storage_type = 'RAM'
-
         if cache_size is None:
             self.size = 1
             self.storage_type = 'RAM'
+
+        if isinstance(cache_size, int):
+            self.storage_type = 'ITEMS'
+            self.size = cache_size
+        else:
+            self.storage_type = 'RAM'
+            self.size = int(re.split('[a-zA-Z]', cache_size)[0])
 
     def get_cache(self):
         print(self.cache)
@@ -56,7 +57,7 @@ class Cache:
     def set_maxsize(self, max_size: Union[int, str]):
         if isinstance(max_size, str):
             self.storage_type = 'RAM'
-            self.size = int(re.split('\d+', max_size)[0])
+            self.size = int(re.split('[a-zA-Z]', max_size)[0])
         else:
             self.storage_type = 'ITEMS'
             self.size = max_size
