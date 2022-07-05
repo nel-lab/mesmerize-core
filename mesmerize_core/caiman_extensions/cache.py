@@ -1,10 +1,12 @@
 from functools import wraps
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 
 import pandas as pd
 import time
 import numpy as np
 import sys
+from pathlib import Path
+from caiman.source_extraction.cnmf import CNMF
 
 
 def _check_arg_equality(args, cache_args):
@@ -61,8 +63,18 @@ class Cache:
         """Returns in GiB or MB"""
         cache_size = 0
         for i in range(len(self.cache.index)):
-            cache_size += sys.getsizeof(self.cache.iloc[i, 4])
-        # need to fix how size of an output is calculated to handle non-built-in types
+            if isinstance(self.cache.iloc[i, 4], np.ndarray):
+                cache_size += (self.cache.iloc[i, 4].size * self.cache.iloc[i,4].itemsize)
+            elif isinstance(self.cache.iloc[i, 4], Tuple):
+                cache_size += (self.cache.iloc[i, 4][0].size * self.cache.iloc[i, 4][0].itemsize) + \
+                              (self.cache.iloc[i, 4][1].size * self.cache.iloc[i, 4][1].itemsize)
+            elif isinstance(self.cache.iloc[i, 4], Path):
+                cache_size += 0
+            elif isinstance(self.cache.iloc[i, 4], CNMF):
+                cache_size += sys.getsizeof(self.cache.iloc[i,4].estimates)
+            else:
+                cache_size += sys.getsizeof(self.cache.iloc[i, 4])
+
         if return_gig:
             cache_size = cache_size / 1024**3
         else:
