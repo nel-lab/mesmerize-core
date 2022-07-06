@@ -1,5 +1,6 @@
 from functools import wraps
 from typing import Union, Optional, Tuple
+from builtins import list
 
 import pandas as pd
 import time
@@ -65,11 +66,14 @@ class Cache:
         """Returns in GiB or MB"""
         cache_size = 0
         for i in range(len(self.cache.index)):
-            if isinstance(self.cache.iloc[i, 4], np.ndarray):
-                cache_size += (self.cache.iloc[i, 4].size * self.cache.iloc[i, 4].itemsize)
-            elif isinstance(self.cache.iloc[i, 4], Tuple):
+            if isinstance(self.cache.iloc[i, 4], list):
                 for array in self.cache.iloc[i, 4]:
-                    cache_size += (array.size * array.itemsize)
+                    cache_size += array.data.nbytes
+            if isinstance(self.cache.iloc[i, 4], np.ndarray):
+                cache_size += self.cache.iloc[i, 4].data.nbytes
+            elif isinstance(self.cache.iloc[i, 4], tuple):
+                for array in self.cache.iloc[i, 4]:
+                    cache_size += array.data.nbytes
             elif isinstance(self.cache.iloc[i, 4], Path):
                 cache_size += 0
             elif isinstance(self.cache.iloc[i, 4], CNMF):
@@ -79,7 +83,7 @@ class Cache:
 
         if self.size.endswith('G'):
             cache_size = cache_size / 1024**3
-        else:
+        elif self.size.endswith('M'):
             cache_size = cache_size / 1024**2
         return cache_size
 
@@ -143,15 +147,15 @@ class Cache:
                         inplace=True,
                     )
                     self.cache = self.cache.reset_index(drop=True)
-                    return_val = func(instance, *args, **kwargs)
-                    self.cache.loc[len(self.cache.index)] = [
-                        instance._series["uuid"],
-                        func.__name__,
-                        args,
-                        kwargs,
-                        return_val,
-                        time.time(),
-                    ]
+                return_val = func(instance, *args, **kwargs)
+                self.cache.loc[len(self.cache.index)] = [
+                    instance._series["uuid"],
+                    func.__name__,
+                    args,
+                    kwargs,
+                    return_val,
+                    time.time(),
+                ]
             # no matter the storage type if size is not going to be exceeded for either, then item can just be added to cache
             else:
                 return_val = func(instance, *args, **kwargs)

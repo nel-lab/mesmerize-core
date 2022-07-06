@@ -21,7 +21,6 @@ class MCorrExtensions:
         self._series = s
 
     @validate("mcorr")
-    @cache.use_cache
     def get_output_path(self) -> Path:
         """
         Get the path to the motion corrected output memmap file

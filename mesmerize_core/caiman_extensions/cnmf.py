@@ -25,7 +25,6 @@ class CNMFExtensions:
         self._series = s
 
     @validate("cnmf")
-    @cache.use_cache
     def get_cnmf_memmap(self) -> np.ndarray:
         """
         Get the CNMF memmap
@@ -41,7 +40,6 @@ class CNMFExtensions:
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
         return images
 
-    @cache.use_cache
     def get_input_memmap(self) -> np.ndarray:
         """
         Return the F-order memmap if the input to the
@@ -65,7 +63,6 @@ class CNMFExtensions:
 
     # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
-    @cache.use_cache
     def get_output_path(self) -> Path:
         """
         Returns
