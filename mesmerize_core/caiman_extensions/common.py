@@ -107,6 +107,7 @@ class CaimanDataFrameExtensions:
                 "input_movie_path": str(input_movie_path),
                 "params": params,
                 "outputs": None,  # to store dict of output information, such as output file paths
+                "comments": None,
                 "uuid": str(
                     uuid4()
                 ),  # unique identifier for this combination of movie + params
