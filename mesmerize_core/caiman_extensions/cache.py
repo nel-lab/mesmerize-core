@@ -7,6 +7,8 @@ import numpy as np
 import sys
 from caiman.source_extraction.cnmf import CNMF
 import re
+from sys import getsizeof
+import copy
 
 
 def _check_arg_equality(args, cache_args):
@@ -31,6 +33,10 @@ def _check_args_equality(args, cache_args):
     return all(equality)
 
 
+def _return_wrapper(output):
+    return copy.deepcopy(output)
+
+
 class Cache:
     def __init__(self, cache_size: Optional[Union[int, str]] = None):
         self.cache = pd.DataFrame(
@@ -38,13 +44,13 @@ class Cache:
             columns=["uuid", "function", "args", "kwargs", "return_val", "time_stamp"],
         )
         if cache_size is None:
-            self.size = '1G'
-            self.storage_type = 'RAM'
+            self.size = "1G"
+            self.storage_type = "RAM"
         elif isinstance(cache_size, int):
-            self.storage_type = 'ITEMS'
+            self.storage_type = "ITEMS"
             self.size = cache_size
         else:
-            self.storage_type = 'RAM'
+            self.storage_type = "RAM"
             self.size = cache_size
 
     def get_cache(self):
@@ -56,10 +62,10 @@ class Cache:
 
     def set_maxsize(self, max_size: Union[int, str]):
         if isinstance(max_size, str):
-            self.storage_type = 'RAM'
+            self.storage_type = "RAM"
             self.size = max_size
         else:
-            self.storage_type = 'ITEMS'
+            self.storage_type = "ITEMS"
             self.size = max_size
 
     def _get_cache_size_bytes(self):
@@ -73,13 +79,18 @@ class Cache:
                     for array in lists:
                         cache_size += array.data.nbytes
             elif isinstance(self.cache.iloc[i, 4], CNMF):
-                cache_size += (self.cache.iloc[i, 4].estimates.A.data.nbytes + self.cache.iloc[i, 4].estimates.C.data.nbytes + self.cache.iloc[i, 4].estimates.b.data.nbytes + self.cache.iloc[i, 4].estimates.f.data.nbytes)
+                sizes = list()
+                for attr in self.cache.iloc[i, 4].estimates.__dict__.values():
+                    if isinstance(attr, np.ndarray):
+                        sizes.append(attr.data.nbytes)
+                    else:
+                        sizes.append(getsizeof(attr))
             else:
                 cache_size += sys.getsizeof(self.cache.iloc[i, 4])
 
-        if self.size.endswith('G'):
+        if self.size.endswith("G"):
             cache_size = cache_size / 1024**3
-        elif self.size.endswith('M'):
+        elif self.size.endswith("M"):
             cache_size = cache_size / 1024**2
         return cache_size
 
@@ -98,23 +109,23 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
-                return return_val
+                return _return_wrapper(return_val)
 
             # checking to see if there is a cache hit
             for i in range(len(self.cache.index)):
                 if (
-                        self.cache.iloc[i, 0] == instance._series["uuid"]
-                        and self.cache.iloc[i, 1] == func.__name__
-                        and _check_args_equality(args, self.cache.iloc[i, 2])
-                        and _check_arg_equality(kwargs, self.cache.iloc[i, 3])
+                    self.cache.iloc[i, 0] == instance._series["uuid"]
+                    and self.cache.iloc[i, 1] == func.__name__
+                    and _check_args_equality(args, self.cache.iloc[i, 2])
+                    and _check_arg_equality(kwargs, self.cache.iloc[i, 3])
                 ):
                     self.cache.iloc[i, 5] = time.time()
                     return_val = self.cache.iloc[i, 4]
-                    return self.cache.iloc[i, 4]
+                    return _return_wrapper(self.cache.iloc[i, 4])
 
             # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
             # if memory type is 'ITEMS': drop the least recently used and then add new item
-            if self.storage_type == 'ITEMS' and len(self.cache.index) >= self.size:
+            if self.storage_type == "ITEMS" and len(self.cache.index) >= self.size:
                 return_val = func(instance, *args, **kwargs)
                 self.cache.drop(
                     index=self.cache.sort_values(
@@ -132,9 +143,11 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
-                return self.cache.iloc[len(self.cache.index) - 1, 4]
+                return _return_wrapper(self.cache.iloc[len(self.cache.index) - 1, 4])
             # if memory type is 'RAM': add new item and then remove least recently used items until cache is under correct size again
-            elif self.storage_type == 'RAM' and self._get_cache_size_bytes() > int(re.split('[a-zA-Z]', self.size)[0]):
+            elif self.storage_type == "RAM" and self._get_cache_size_bytes() > int(
+                re.split("[a-zA-Z]", self.size)[0]
+            ):
                 while self._get_cache_size_bytes() > self.size:
                     self.cache.drop(
                         index=self.cache.sort_values(
@@ -165,6 +178,6 @@ class Cache:
                     time.time(),
                 ]
 
-            return return_val
+            return _return_wrapper(return_val)
 
         return _use_cache
