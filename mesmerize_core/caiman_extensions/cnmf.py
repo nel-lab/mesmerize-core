@@ -306,20 +306,6 @@ class CNMFExtensions:
             shape is [n_frames, x_pixels, y_pixels]
         """
 
-        # if ixs_frames is None:
-        #     ixs_frames = (0, self.get_input_memmap().shape[0])
-        #
-        # if isinstance(ixs_frames, int):
-        #     ixs_frames = (ixs_frames, ixs_frames + 1)
-        #
-        # raw_movie = self.get_input_memmap()
-        #
-        # reconstructed_movie = self.get_reconstructed_movie(ixs_frames, True)
-        #
-        # residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie
-
-        ##
-
         cnmf_obj = self.get_output()
 
         if ixs_frames is None:
@@ -332,20 +318,14 @@ class CNMFExtensions:
 
         reconstructed_movie = self.get_reconstructed_movie(ixs_frames)
 
-        background = cnmf_obj.estimates.b.dot(
-            cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
-        )
+        background = self.get_reconstructed_background(ixs_frames)
 
-        cnmf_obj.estimates.b.dot(
-            cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
-        )
+        # print(background.shape)
+        # print(raw_movie.shape)
+        # print(reconstructed_movie.shape)
 
-        print(background.shape)
-        print(raw_movie.shape)
-        print(reconstructed_movie.shape)
+        residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie - background
 
-        # residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie - background
+        return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
 
-        # return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
-
-        return
+        #return
