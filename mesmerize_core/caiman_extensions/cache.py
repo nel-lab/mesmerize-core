@@ -1,12 +1,10 @@
 from functools import wraps
-from typing import Union, Optional, Tuple
-from builtins import list
+from typing import Union, Optional
 
 import pandas as pd
 import time
 import numpy as np
 import sys
-from pathlib import Path
 from caiman.source_extraction.cnmf import CNMF
 import re
 
@@ -21,6 +19,8 @@ def _check_arg_equality(args, cache_args):
 
 
 def _check_args_equality(args, cache_args):
+    if len(args) != len(cache_args):
+        return False
     equality = list()
     if isinstance(args, tuple):
         for arg, cache_arg in zip(args, cache_args):
@@ -66,16 +66,12 @@ class Cache:
         """Returns in GiB or MB"""
         cache_size = 0
         for i in range(len(self.cache.index)):
-            if isinstance(self.cache.iloc[i, 4], list):
-                for array in self.cache.iloc[i, 4]:
-                    cache_size += array.data.nbytes
             if isinstance(self.cache.iloc[i, 4], np.ndarray):
                 cache_size += self.cache.iloc[i, 4].data.nbytes
             elif isinstance(self.cache.iloc[i, 4], tuple):
-                for array in self.cache.iloc[i, 4]:
-                    cache_size += array.data.nbytes
-            elif isinstance(self.cache.iloc[i, 4], Path):
-                cache_size += 0
+                for lists in self.cache.iloc[i, 4]:
+                    for array in lists:
+                        cache_size += array.data.nbytes
             elif isinstance(self.cache.iloc[i, 4], CNMF):
                 cache_size += (self.cache.iloc[i, 4].estimates.A.data.nbytes + self.cache.iloc[i, 4].estimates.C.data.nbytes + self.cache.iloc[i, 4].estimates.b.data.nbytes + self.cache.iloc[i, 4].estimates.f.data.nbytes)
             else:
@@ -102,6 +98,7 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
+                return return_val
 
             # checking to see if there is a cache hit
             for i in range(len(self.cache.index)):
