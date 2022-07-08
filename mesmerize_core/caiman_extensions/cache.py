@@ -68,7 +68,7 @@ class Cache:
         for i in range(len(self.cache.index)):
             if isinstance(self.cache.iloc[i, 4], np.ndarray):
                 cache_size += self.cache.iloc[i, 4].data.nbytes
-            elif isinstance(self.cache.iloc[i, 4], tuple):
+            elif isinstance(self.cache.iloc[i, 4], (tuple, list)):
                 for lists in self.cache.iloc[i, 4]:
                     for array in lists:
                         cache_size += array.data.nbytes
