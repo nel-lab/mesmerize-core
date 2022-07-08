@@ -213,74 +213,139 @@ class CNMFExtensions:
         else:
             return C
 
-        # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
-        @validate("cnmf")
-        def get_reconstructed_movie(
-                self,
-                idx_components: np.ndarray = None,
-                ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
-        ) -> np.ndarray:
-            """
-            Return the reconstructed movie with no background, (A * C)
+    # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
+    @validate("cnmf")
+    def get_reconstructed_movie(
+            self,
+            ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
+            idx_components: np.ndarray = None,
+    ) -> np.ndarray:
+        """
+        Return the reconstructed movie with no background, (A * C)
 
-            Parameters
-            ----------
-            ixs_frames: Tuple[int, int], int
-                (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
-                including the ``stop_frame``
-                if single int, return reconstructed movie for single frame indicated
+        Parameters
+        ----------
+        ixs_frames: Tuple[int, int], int
+            (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
+            including the ``stop_frame``
+            if single int, return reconstructed movie for single frame indicated
 
-            Returns
-            -------
-            np.ndarray
-                shape is [n_frames, x_pixels, y_pixels]
-            """
-            cnmf_obj = self.get_output()
+        Returns
+        -------
+        np.ndarray
+            shape is [n_frames, x_pixels, y_pixels]
+        """
+        cnmf_obj = self.get_output()
 
-            if ixs_frames is None:
-                ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+        if idx_components is None:
+            idx_components = np.arange(cnmf_obj.estimates.A.shape[1])
 
-            if idx_components is None:
-                idx_components = np.arange(cnmf_obj.estimates.A.shape[1])
+        if ixs_frames is None:
+            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
 
-            if isinstance(ixs_frames, int):
-                ixs_frames = (ixs_frames, ixs_frames + 1)
+        if isinstance(ixs_frames, int):
+            ixs_frames = (ixs_frames, ixs_frames + 1)
 
-            dn = cnmf_obj.estimates.A[:, idx_components].dot(
-                cnmf_obj.estimates.C[idx_components, ixs_frames[0]: ixs_frames[1]]
-            )
+        dn = cnmf_obj.estimates.A[:, idx_components].dot(
+            cnmf_obj.estimates.C[idx_components, ixs_frames[0]: ixs_frames[1]]
+        )
 
-            return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+        return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
 
-        @validate("cnmf")
-        def get_reconstructed_background(
-                self,
-                ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
-        ) -> np.ndarray:
-            """
-            Return the reconstructed background, (b * f)
+    @validate("cnmf")
+    def get_reconstructed_background(
+            self,
+            ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
+    ) -> np.ndarray:
+        """
+        Return the reconstructed background, (b * f)
 
-            Parameters
-            ----------
-            ixs_frames: Tuple[int, int], int
-                (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
-                including the ``stop_frame``
-                if single int, return reconstructed background for single frame indicated
+        Parameters
+        ----------
+        ixs_frames: Tuple[int, int], int
+            (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
+            including the ``stop_frame``
+            if single int, return reconstructed background for single frame indicated
 
-            Returns
-            -------
-            np.ndarray
-                shape is [n_frames, x_pixels, y_pixels]
-            """
-            cnmf_obj = self.get_output()
+        Returns
+        -------
+        np.ndarray
+            shape is [n_frames, x_pixels, y_pixels]
+        """
+        cnmf_obj = self.get_output()
 
-            if ixs_frames is None:
-                ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+        if ixs_frames is None:
+            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
 
-            if isinstance(ixs_frames, int):
-                ixs_frames = (ixs_frames, ixs_frames + 1)
+        if isinstance(ixs_frames, int):
+            ixs_frames = (ixs_frames, ixs_frames + 1)
 
-            dn = cnmf_obj.estimates.b.dot(
-                cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
-            )
-            return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+        dn = cnmf_obj.estimates.b.dot(
+            cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
+        )
+        return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+    @validate("cnmf")
+    def get_residuals(
+            self,
+            ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
+    ) -> np.ndarray:
+        """
+        Return residuals, raw movie - (A * C) - (b * f)
+
+        Parameters
+        ----------
+        Tuple[int, int], int
+            (start_frame, stop_frame), return residuals for frames in this range including the ``start_frame``, upto and not
+            including the ``stop_frame``
+            if single int, return residual for single frame indicated
+
+        Returns
+        -------
+        np.ndarray
+            shape is [n_frames, x_pixels, y_pixels]
+        """
+
+        # if ixs_frames is None:
+        #     ixs_frames = (0, self.get_input_memmap().shape[0])
+        #
+        # if isinstance(ixs_frames, int):
+        #     ixs_frames = (ixs_frames, ixs_frames + 1)
+        #
+        # raw_movie = self.get_input_memmap()
+        #
+        # reconstructed_movie = self.get_reconstructed_movie(ixs_frames, True)
+        #
+        # residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie
+
+        ##
+
+        cnmf_obj = self.get_output()
+
+        if ixs_frames is None:
+            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+
+        if isinstance(ixs_frames, int):
+            ixs_frames = (ixs_frames, ixs_frames + 1)
+
+        raw_movie = self.get_input_memmap()
+
+        reconstructed_movie = self.get_reconstructed_movie(ixs_frames)
+
+        background = cnmf_obj.estimates.b.dot(
+            cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
+        )
+
+        cnmf_obj.estimates.b.dot(
+            cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
+        )
+
+        print(background.shape)
+        print(raw_movie.shape)
+        print(reconstructed_movie.shape)
+
+        # residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie - background
+
+        # return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+        return
