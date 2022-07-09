@@ -320,12 +320,6 @@ class CNMFExtensions:
 
         background = self.get_reconstructed_background(ixs_frames)
 
-        # print(background.shape)
-        # print(raw_movie.shape)
-        # print(reconstructed_movie.shape)
-
         residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie - background
 
         return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
-
-        #return
