@@ -33,8 +33,11 @@ def _check_args_equality(args, cache_args):
     return all(equality)
 
 
-def _return_wrapper(output):
-    return copy.deepcopy(output)
+def _return_wrapper(output, copy_bool):
+    if copy_bool == True:
+        return copy.deepcopy(output)
+    else:
+        return output
 
 
 class Cache:
@@ -97,6 +100,10 @@ class Cache:
     def use_cache(self, func):
         @wraps(func)
         def _use_cache(instance, *args, **kwargs):
+            if "copy" in kwargs.keys():
+                return_copy = kwargs["copy"]
+            else:
+                return_copy = True
 
             # if cache is empty, will always be a cache miss
             if len(self.cache.index) == 0:
@@ -109,7 +116,7 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
-                return _return_wrapper(return_val)
+                return _return_wrapper(return_val, copy_bool=return_copy)
 
             # checking to see if there is a cache hit
             for i in range(len(self.cache.index)):
@@ -121,7 +128,7 @@ class Cache:
                 ):
                     self.cache.iloc[i, 5] = time.time()
                     return_val = self.cache.iloc[i, 4]
-                    return _return_wrapper(self.cache.iloc[i, 4])
+                    return _return_wrapper(self.cache.iloc[i, 4], copy_bool=return_copy)
 
             # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
             # if memory type is 'ITEMS': drop the least recently used and then add new item
@@ -143,7 +150,7 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
-                return _return_wrapper(self.cache.iloc[len(self.cache.index) - 1, 4])
+                return _return_wrapper(self.cache.iloc[len(self.cache.index) - 1, 4], copy_bool=return_copy)
             # if memory type is 'RAM': add new item and then remove least recently used items until cache is under correct size again
             elif self.storage_type == "RAM" and self._get_cache_size_bytes() > int(
                 re.split("[a-zA-Z]", self.size)[0]
@@ -178,6 +185,6 @@ class Cache:
                     time.time(),
                 ]
 
-            return _return_wrapper(return_val)
+            return _return_wrapper(return_val, copy_bool=return_copy)
 
         return _use_cache
