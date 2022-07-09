@@ -46,27 +46,28 @@ class Cache:
             data=None,
             columns=["uuid", "function", "args", "kwargs", "return_val", "time_stamp"],
         )
-        if cache_size is None:
-            self.size = "1G"
-            self.storage_type = "RAM"
-        elif isinstance(cache_size, int):
-            self.storage_type = "ITEMS"
-            self.size = cache_size
-        else:
-            self.storage_type = "RAM"
-            self.size = cache_size
+        self.set_maxsize(cache_size)
 
     def get_cache(self):
         print(self.cache)
+
+    def get_cache2(self):
+        return self.cache
 
     def clear_cache(self):
         while len(self.cache.index) != 0:
             self.cache.drop(index=self.cache.index[-1], axis=0, inplace=True)
 
     def set_maxsize(self, max_size: Union[int, str]):
-        if isinstance(max_size, str):
+        if max_size is None:
             self.storage_type = "RAM"
-            self.size = max_size
+            self.size = 1024**3
+        elif isinstance(max_size, str):
+            self.storage_type = "RAM"
+            if max_size.endswith("G"):
+                self.size = int(max_size[:-1]) * 1024**3
+            elif max_size.endswith("M"):
+                self.size = int(max_size[:-1]) * 1024**2
         else:
             self.storage_type = "ITEMS"
             self.size = max_size
@@ -91,10 +92,6 @@ class Cache:
             else:
                 cache_size += sys.getsizeof(self.cache.iloc[i, 4])
 
-        if self.size.endswith("G"):
-            cache_size = cache_size / 1024**3
-        elif self.size.endswith("M"):
-            cache_size = cache_size / 1024**2
         return cache_size
 
     def use_cache(self, func):
@@ -152,9 +149,7 @@ class Cache:
                 ]
                 return _return_wrapper(self.cache.iloc[len(self.cache.index) - 1, 4], copy_bool=return_copy)
             # if memory type is 'RAM': add new item and then remove least recently used items until cache is under correct size again
-            elif self.storage_type == "RAM" and self._get_cache_size_bytes() > int(
-                re.split("[a-zA-Z]", self.size)[0]
-            ):
+            elif self.storage_type == "RAM":
                 while self._get_cache_size_bytes() > self.size:
                     self.cache.drop(
                         index=self.cache.sort_values(
