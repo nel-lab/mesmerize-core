@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 from caiman.utils.utils import load_dict_from_hdf5
 from caiman.source_extraction.cnmf import cnmf
 import numpy.testing
@@ -24,6 +25,7 @@ from pathlib import Path
 import shutil
 from zipfile import ZipFile
 from pprint import pprint
+from mesmerize_core.caiman_extensions import mcorr, cnmf
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
@@ -1036,3 +1038,130 @@ def test_remove_item():
     assert df.isin([f"test-{algo}"]).any().any() == False
     assert df.isin([f"test1-{algo}"]).any().any() == False
     assert df.empty == True
+
+def test_cache():
+    set_parent_raw_data_path(vid_dir)
+    algo = "mcorr"
+
+    df, batch_path = _create_tmp_batch()
+
+    batch_path = Path(batch_path)
+    batch_dir = batch_path.parent
+
+    input_movie_path = get_datafile(algo)
+    print(input_movie_path)
+
+    df.caiman.add_item(
+        algo=algo,
+        name=f"test-{algo}",
+        input_movie_path=input_movie_path,
+        params=test_params[algo],
+    )
+
+    assert df.iloc[-1]["algo"] == algo
+    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["params"] == test_params[algo]
+    assert df.iloc[-1]["outputs"] is None
+    try:
+        UUID(df.iloc[-1]["uuid"])
+    except:
+        pytest.fail("Something wrong with setting UUID for batch items")
+
+    assert vid_dir.joinpath(df.iloc[-1]["input_movie_path"]) == vid_dir.joinpath(
+        f"{algo}.tif"
+    )
+
+    process = df.iloc[-1].caiman.run()
+    process.wait()
+
+    df = load_batch(batch_path)
+
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+        print(df)
+
+    pprint(df.iloc[-1]["outputs"], width=-1)
+    print(df.iloc[-1]["outputs"]["traceback"])
+    assert df.iloc[-1]["outputs"]["success"] is True
+    assert df.iloc[-1]["outputs"]["traceback"] is None
+
+    assert (
+            batch_dir.joinpath(df.iloc[-1]["outputs"]["mcorr-output-path"])
+            == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
+            == batch_dir.joinpath(
+        str(df.iloc[-1]["uuid"]),
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+    )
+    )
+
+    algo = "cnmf"
+    print("Testing cnmf")
+    input_movie_path = df.iloc[-1].mcorr.get_output_path()
+    df.caiman.add_item(
+        algo=algo,
+        name=f"test-{algo}",
+        input_movie_path=input_movie_path,
+        params=test_params[algo],
+    )
+
+    assert df.iloc[-1]["algo"] == algo
+    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["params"] == test_params[algo]
+    assert df.iloc[-1]["outputs"] is None
+    try:
+        UUID(df.iloc[-1]["uuid"])
+    except:
+        pytest.fail("Something wrong with setting UUID for batch items")
+    print("cnmf input_movie_path:", df.iloc[-1]["input_movie_path"])
+    assert batch_dir.joinpath(df.iloc[-1]["input_movie_path"]) == input_movie_path
+
+    process = df.iloc[-1].caiman.run()
+    process.wait()
+
+    df = load_batch(batch_path)
+
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+        print(df)
+
+    pprint(df.iloc[-1]["outputs"], width=-1)
+    print(df.iloc[-1]["outputs"]["traceback"])
+
+    # test that cache values are returned when calls are made to same function
+
+    # testing that cache size limits work
+    cnmf.cache.set_maxsize("1M")
+    cnmf_output = df.iloc[-1].cnmf.get_output()
+    hex_get_output = hex(id(cnmf_output))
+    cache = cnmf.cache.get_cache()
+    hex1 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
+    #assert(hex(id(df.iloc[-1].cnmf.get_output(copy=False))) == hex1)
+    #assert(hex_get_output != hex1)
+    time_stamp1 = cache[cache["function"] == "get_output"]["time_stamp"].item()
+    df.iloc[-1].cnmf.get_temporal_components()
+    df.iloc[-1].cnmf.get_spatial_contours()
+    df.iloc[-1].cnmf.get_spatial_masks()
+    df.iloc[-1].cnmf.get_temporal_components(np.arange(7))
+    df.iloc[-1].cnmf.get_temporal_components(np.arange(8))
+    df.iloc[-1].cnmf.get_temporal_components(np.arange(9))
+    df.iloc[-1].cnmf.get_temporal_components(np.arange(6))
+    df.iloc[-1].cnmf.get_temporal_components(np.arange(5))
+    df.iloc[-1].cnmf.get_temporal_components(np.arange(4))
+    df.iloc[-1].cnmf.get_temporal_components(np.arange(3))
+    df.iloc[-1].cnmf.get_spatial_masks(np.arange(8))
+    df.iloc[-1].cnmf.get_spatial_masks(np.arange(9))
+    df.iloc[-1].cnmf.get_spatial_masks(np.arange(7))
+    df.iloc[-1].cnmf.get_spatial_masks(np.arange(6))
+    df.iloc[-1].cnmf.get_spatial_masks(np.arange(5))
+    df.iloc[-1].cnmf.get_spatial_masks(np.arange(4))
+    df.iloc[-1].cnmf.get_spatial_masks(np.arange(3))
+    time_stamp2 = cache[cache["function"] == "get_output"]["time_stamp"].item()
+    hex2 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
+    assert(cache[cache["function"] == "get_output"].index.size == 1)
+    assert(len(cnmf.cache.get_cache().index) == 17)
+    assert(time_stamp2 > time_stamp1)
+    assert(hex1 == hex2)
+
+
+
+
+
+
