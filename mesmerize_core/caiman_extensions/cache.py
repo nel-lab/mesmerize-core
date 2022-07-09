@@ -49,9 +49,6 @@ class Cache:
         self.set_maxsize(cache_size)
 
     def get_cache(self):
-        print(self.cache)
-
-    def get_cache2(self):
         return self.cache
 
     def clear_cache(self):
@@ -73,7 +70,7 @@ class Cache:
             self.size = max_size
 
     def _get_cache_size_bytes(self):
-        """Returns in GiB or MB"""
+        """Returns in bytes"""
         cache_size = 0
         for i in range(len(self.cache.index)):
             if isinstance(self.cache.iloc[i, 4], np.ndarray):
@@ -147,7 +144,9 @@ class Cache:
                     return_val,
                     time.time(),
                 ]
-                return _return_wrapper(self.cache.iloc[len(self.cache.index) - 1, 4], copy_bool=return_copy)
+                return _return_wrapper(
+                    self.cache.iloc[len(self.cache.index) - 1, 4], copy_bool=return_copy
+                )
             # if memory type is 'RAM': add new item and then remove least recently used items until cache is under correct size again
             elif self.storage_type == "RAM":
                 while self._get_cache_size_bytes() > self.size:
