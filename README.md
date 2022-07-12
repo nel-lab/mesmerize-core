@@ -5,15 +5,17 @@
 
 Mesmerize core backend
 
-A high level abstraction that sits on top of the CaImAn library. 
+A batch management system for calcium imaging analysis using the CaImAn library. 
 It contains `pandas.DataFrame` and `pandas.Series` extensions that interface with CaImAn for running the various algorithms and organizing input & output data.
 
-This replaces the [Mesmerize legacy desktop application](https://github.com/kushalkolar/MESmerize), `mesmerize-core` is MUCH faster, more efficient, and offers many more features! 
-For example there are simple extensions which you can just call to get the motion correction shifts, CNMF reconstructed movie, CNMF residuals, contours etc.
-
-Required by `mesmerize-napari`. Can also be used standalone, such as in notebooks, as a high level interface for CaImAn.
+This replaces the [Mesmerize legacy desktop application](https://github.com/kushalkolar/MESmerize)\
+`mesmerize-core` is MUCH faster, more efficient, and offers many more features! For example there are simple extensions which you can just call to get the motion correction shifts, CNMF reconstructed movie, CNMF residuals, contours etc.
 
 See the demo notebook at `notebooks/mcorr_cnmf.ipynb` for more details. Note that the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualization.
+
+# Visualization
+
+For visualization we recommend [`mesmerize-viz`](https://github.com/kushalkolar/mesmerize-viz) which contains a standard set of visualizations (a WIP), or [`fastplotlib`](https://github.com/kushalkolar/fastplotlib). You can also use the `mesmerize-napari` plugin for smaller datasets.
 
 # Installation
 

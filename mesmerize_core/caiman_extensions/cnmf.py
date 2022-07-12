@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import *
 
+import numpy
 import numpy as np
 import pandas as pd
 from caiman import load_memmap
