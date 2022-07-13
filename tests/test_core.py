@@ -1183,9 +1183,17 @@ def test_cache():
     assert (len(cnmf.cache.get_cache().index) == 0)
 
     cnmf.cache.set_maxsize(0)
+    start = time.time()
     df.iloc[-1].cnmf.get_output()
-    print(cnmf.cache.get_cache())
-    # assert (len(cnmf.cache.get_cache().index) == 0)
+    end = time.time()
+    assert (len(cnmf.cache.get_cache().index) == 0)
+
+    start2 = time.time()
+    df.iloc[-1].cnmf.get_output()
+    end2 = time.time()
+    assert (len(cnmf.cache.get_cache().index) == 0)
+    assert(abs((end-start)-(end2-start2)) < 0.01)
+
 
 
 

@@ -99,6 +99,10 @@ class Cache:
             else:
                 return_copy = True
 
+            if self.size == 0:
+                self.clear_cache()
+                return _return_wrapper(func(instance, *args, **kwargs), return_copy)
+
             # if cache is empty, will always be a cache miss
             if len(self.cache.index) == 0:
                 return_val = func(instance, *args, **kwargs)
