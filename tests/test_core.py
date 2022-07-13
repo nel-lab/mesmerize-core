@@ -962,15 +962,42 @@ def test_cnmfe():
     )
 
     # test to check get_reconstructed_movie()
-    cnmfe_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie() + df.iloc[-1].cnmf.get_reconstructed_background()
+    cnmfe_reconstructed_movie_AC = df.iloc[-1].cnmf.get_reconstructed_movie()
+    cnmfe_reconstructed_movie_AC_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_reconstructed_movie_new.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmfe_reconstructed_movie_AC, cnmfe_reconstructed_movie_AC_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check get_reconstructed_background()
+    cnmfe_reconstructed_background = df.iloc[-1].cnmf.get_reconstructed_background()
+    cnmfe_reconstructed_background_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_reconstructed_background.npy"))
+    numpy.testing.assert_allclose(
+        cnmfe_reconstructed_background, cnmfe_reconstructed_background_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check old numpy reconstructed file = get_reconstructed_movie()
+    # + test to check get_reconstructed_background()
+    cnmfe_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie() + df.iloc[
+        -1].cnmf.get_reconstructed_background()
     cnmfe_reconstructed_movie_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_reconstructed_movie.npy")
     )
     numpy.testing.assert_allclose(
-        cnmfe_reconstructed_movie,
-        cnmfe_reconstructed_movie_actual,
-        rtol=1e-2,
-        atol=1e-10,
+        cnmfe_reconstructed_movie, cnmfe_reconstructed_movie_actual, rtol=1e2, atol=1e-10
+    )
+    reconstructed_actual = cnmfe_reconstructed_movie_AC_actual + cnmfe_reconstructed_background_actual
+    numpy.testing.assert_allclose(
+        cnmfe_reconstructed_movie, reconstructed_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check get_residuals()
+    cnmfe_residuals = df.iloc[-1].cnmf.get_residuals()
+    cnmfe_residuals_actual = numpy.load(ground_truths_dir.joinpath("cnmfe_full", "cnmfe_residuals.npy"))
+    numpy.testing.assert_allclose(
+        cnmfe_residuals, cnmfe_residuals_actual, rtol=1e3, atol=1e-10
     )
 
     # test to check passing optional ixs components to various functions
@@ -1018,16 +1045,43 @@ def test_cnmfe():
         ixs_temporal_components, ixs_temporal_components_actual, rtol=1e2, atol=1e-10
     )
 
-    # test to check ixs components for cnmf.get_reconstructed_movie()
-    ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components) + df.iloc[-1].cnmf.get_reconstructed_background(ixs_components)
-    ixs_reconstructed_movie_actual = numpy.load(
-        ground_truths_dir.joinpath(
-            "cnmfe_full", "cnmfe_ixs", "ixs_reconstructed_movie.npy"
-        ),
-        allow_pickle=True,
+    # test to check get_reconstructed_movie()
+    cnmfe_ixs_reconstructed_movie_AC = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components)
+    cnmfe_ixs_reconstructed_movie_AC_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full","cnmfe_ixs", "ixs_cnmfe_reconstructed_movie_new.npy")
     )
     numpy.testing.assert_allclose(
-        ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
+        cnmfe_ixs_reconstructed_movie_AC, cnmfe_ixs_reconstructed_movie_AC_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check get_reconstructed_background()
+    cnmfe_ixs_reconstructed_background = df.iloc[-1].cnmf.get_reconstructed_background(ixs_components)
+    cnmfe_ixs_reconstructed_background_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_ixs", "ixs_cnmfe_reconstructed_background.npy"))
+    numpy.testing.assert_allclose(
+        cnmfe_ixs_reconstructed_background, cnmfe_ixs_reconstructed_background_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check old numpy reconstructed file = get_reconstructed_movie()
+    # + test to check get_reconstructed_background()
+    cnmfe_ixs_reconstructed_movie = df.iloc[-1].cnmf.get_reconstructed_movie(ixs_components) + df.iloc[
+        -1].cnmf.get_reconstructed_background(ixs_components)
+    cnmfe_ixs_reconstructed_movie_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_full", "cnmfe_ixs", "ixs_reconstructed_movie.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmfe_ixs_reconstructed_movie, cnmfe_ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
+    )
+    reconstructed_actual = cnmfe_ixs_reconstructed_movie_AC_actual + cnmfe_ixs_reconstructed_background_actual
+    numpy.testing.assert_allclose(
+        cnmfe_ixs_reconstructed_movie, reconstructed_actual, rtol=1e2, atol=1e-10
+    )
+
+    # test to check get_residuals()
+    cnmfe_ixs_residuals = df.iloc[-1].cnmf.get_residuals(ixs_components)
+    cnmfe_ixs_residuals_actual = numpy.load(ground_truths_dir.joinpath("cnmfe_full", "cnmfe_ixs", "ixs_cnmfe_residuals.npy"))
+    numpy.testing.assert_allclose(
+        cnmfe_ixs_residuals, cnmfe_ixs_residuals_actual, rtol=1e3, atol=1e-10
     )
 
 
