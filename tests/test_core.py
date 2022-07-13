@@ -39,7 +39,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/record/6628956/files/ground_truths.zip"
+    url = f"https://zenodo.org/record/6828096/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -547,7 +547,7 @@ def test_cnmf():
         ground_truths_dir.joinpath("cnmf", "reconstructed_movie_new.npy")
     )
     numpy.testing.assert_allclose(
-        cnmf_reconstructed_movie_AC, cnmf_reconstructed_movie_AC_actual, rtol=1e-2, atol=1e-10
+        cnmf_reconstructed_movie_AC, cnmf_reconstructed_movie_AC_actual, rtol=1e-1, atol=1e-10
     )
 
     # test to check get_reconstructed_background()
