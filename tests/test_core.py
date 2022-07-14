@@ -577,6 +577,11 @@ def test_cnmf():
     numpy.testing.assert_allclose(
         cnmf_residuals, cnmf_residuals_actual, rtol=1e3, atol=1e-10
     )
+    # cnmf_residuals_orig_minus_AouterC_minus_bouterf = df.iloc[
+    #                                                        -1].cnmf.get_input_memmap() - cnmf_reconstructed_movie_AouterC - cnmf_reconstructed_background
+    # numpy.testing.assert_allclose(
+    #     cnmf_residuals, cnmf_residuals_orig_minus_AouterC_minus_bouterf, rtol=1e3, atol=1e-10
+    # )
 
     # test to check caiman get_input_movie_path(), should be output of previous mcorr
     assert (
@@ -999,6 +1004,11 @@ def test_cnmfe():
     numpy.testing.assert_allclose(
         cnmfe_residuals, cnmfe_residuals_actual, rtol=1e3, atol=1e-10
     )
+    # cnmfe_residuals_orig_minus_AouterC_minus_bouterf = df.iloc[-1].cnmf.get_input_memmap() - cnmfe_reconstructed_movie_AouterC - cnmfe_reconstructed_background
+    # numpy.testing.assert_allclose(
+    #     cnmfe_residuals, cnmfe_residuals_orig_minus_AouterC_minus_bouterf, rtol=1e3, atol=1e-10
+    # )
+
 
     # test to check passing optional ixs components to various functions
     ixs_components = numpy.array([1, 4, 7, 3])
