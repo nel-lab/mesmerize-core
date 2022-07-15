@@ -97,9 +97,9 @@ pip install pytest
 MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
 
-# API Overview
+# Examples demonstrating the API
 
-See `notebooks/mcorr_cnmf.ipynb` for more details. Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
+**See `notebooks/mcorr_cnmf.ipynb` for more detailed examples.** Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
 
 ## Motion Correction
 
