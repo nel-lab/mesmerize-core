@@ -25,7 +25,8 @@ from pathlib import Path
 import shutil
 from zipfile import ZipFile
 from pprint import pprint
-from mesmerize_core.caiman_extensions import mcorr, cnmf
+from mesmerize_core.caiman_extensions import cnmf
+import time
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
@@ -1157,31 +1158,40 @@ def test_cache():
     time_stamp2 = cache[cache["function"] == "get_output"]["time_stamp"].item()
     hex2 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
     assert (cache[cache["function"] == "get_output"].index.size == 1)
+    # after adding enough items for cache to exceed max size, cache should remove least recently used items until
+    # size is back under max
     assert (len(cnmf.cache.get_cache().index) == 17)
+    # the time stamp to get_output the second time should be greater than the original time
+    # stamp because the cached item is being returned and therefore will have been accessed more recently
     assert (time_stamp2 > time_stamp1)
+    # the hex id of the item in the cache when get_output is first called
+    # should be the same hex id of the item in the cache when get_output is called again
     assert (hex1 == hex2)
 
     # test clear_cache()
     cnmf.cache.clear_cache()
     assert (len(cnmf.cache.get_cache().index) == 0)
 
-    import time
-
+    # checking that cache is cleared, checking speed at which item is returned
     start = time.time()
     df.iloc[-1].cnmf.get_output()
     end = time.time()
     assert (len(cnmf.cache.get_cache().index) == 1)
 
+    # second call to item now added to cache, time to return item should be must faster than before because item has
+    # now been cached
     start2 = time.time()
     df.iloc[-1].cnmf.get_output()
     end2 = time.time()
-
     assert(end2-start2 < end-start)
 
-    # test setting maxsize as 0
+    # testing clear_cache() again, length of dataframe should be zero
     cnmf.cache.clear_cache()
     assert (len(cnmf.cache.get_cache().index) == 0)
 
+    # test setting maxsize as 0, should effectively disable the cache...additionally, time to return an item called
+    # twice should roughly be the same because item is not being stored in the cache
+    # cache length should remain zero throughout calls to extension functions
     cnmf.cache.set_maxsize(0)
     start = time.time()
     df.iloc[-1].cnmf.get_output()
@@ -1193,6 +1203,56 @@ def test_cache():
     end2 = time.time()
     assert (len(cnmf.cache.get_cache().index) == 0)
     assert(abs((end-start)-(end2-start2)) < 0.01)
+
+    # test to check that separate cache items are being returned for different batch items
+    # must add another item to the batch, running cnmfe
+
+    input_movie_path = get_datafile("cnmfe")
+    print(input_movie_path)
+    df.caiman.add_item(
+        algo="mcorr",
+        name=f"test-cnmfe-mcorr",
+        input_movie_path=input_movie_path,
+        params=test_params["mcorr"],
+    )
+    process = df.iloc[-1].caiman.run()
+    process.wait()
+
+    df = load_batch(batch_path)
+
+    algo = "cnmfe"
+    param_name = "cnmfe_full"
+    input_movie_path = df.iloc[-1].mcorr.get_output_path()
+    print(input_movie_path)
+
+    df.caiman.add_item(
+        algo=algo,
+        name=f"test-{algo}",
+        input_movie_path=input_movie_path,
+        params=test_params[param_name],
+    )
+
+    process = df.iloc[-1].caiman.run()
+    process.wait()
+
+    df = load_batch(batch_path)
+
+    cnmf.cache.set_maxsize("1M")
+
+    df.iloc[1].cnmf.get_output() # cnmf output
+    df.iloc[-1].cnmf.get_output() # cnmfe output
+
+    cache = cnmf.cache.get_cache()
+
+    # checking that both outputs from different batch items are added to the cache
+    assert(len(cache.index) == 2)
+
+    # checking that the uuid of each outputs from the different batch items are not the same
+    assert(cache.iloc[-1]["uuid"] != cache.iloc[-2]["uuid"])
+
+    # checking that the uuid of the output in the cache is the correct uuid of the batch item in the df
+    assert(cache.iloc[-1]["uuid"] == df.iloc[-1]["uuid"])
+
 
 
 
