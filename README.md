@@ -17,6 +17,10 @@ See the demo notebook at `notebooks/mcorr_cnmf.ipynb` for more details. Note tha
 
 For visualization we recommend [`mesmerize-viz`](https://github.com/kushalkolar/mesmerize-viz) which contains a standard set of visualizations (a WIP), or [`fastplotlib`](https://github.com/kushalkolar/fastplotlib). You can also use the `mesmerize-napari` plugin for smaller datasets.
 
+# Overview
+
+![batch_management](https://user-images.githubusercontent.com/9403332/179145962-82317da6-0340-44e4-83ba-7dace0300f55.png)
+
 # Installation
 
 ## For development
@@ -93,7 +97,7 @@ pip install pytest
 MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
 
-# Examples
+# API Overview
 
 See `notebooks/mcorr_cnmf.ipynb` for more details. Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
 
@@ -137,7 +141,7 @@ df.caiman.add_item(
   params=mcorr_params1
 )
 
-# We create another set of params, useful for gridsearches for example
+# We create another set of params, useful for gridsearches to find optimal parameters
 mcorr_params2 =\
 {
   'main':
@@ -167,11 +171,16 @@ process.wait()
 # run the second item
 # you can also use a loop to run all these items
 # just call process.wait() to run them one after another
-process = df.iloc[1].caiman.run(
-    batch_path=batch_path,
-    backend=COMPUTE_BACKEND_SUBPROCESS,
-    callbacks_finished=[lambda: print("yay finished")],
-)
+process = df.iloc[1].caiman.run()
+
+# get the mot corrected video
+# fastplotlib can be used for fast random-access visualization in notebooks
+
+mcorr_movie = df.iloc[-1].mcorr.get_output()
+
+# get the x-y shifts
+# you can plot these as a line plot
+shits = df.iloc[-1].mcorr.get_shifts()
 ```
 
 ## CNMF
@@ -217,6 +226,7 @@ process = df.iloc[-1].caiman.run()
 process.wait()
 
 # we can look at the spatial components for example
+# see th demo notebook for an example that uses fastplotlib to visualize contours with the movie
 coors = df.iloc[-1].cnmf.get_spatial_contours()
 
 # let's plot that on top of the correlation image
@@ -228,4 +238,6 @@ plt.imshow(corr_img, cmap='gray')
 for coor in coors:
   plt.scatter(coor[:, 0], coor[:, 1], s=4)
 plt.show()
+
+# see the demo notebook to see how to visualize residuals, reconstructed movie, etc.
 ```
