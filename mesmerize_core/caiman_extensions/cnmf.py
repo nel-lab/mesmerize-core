@@ -259,7 +259,7 @@ class CNMFExtensions:
             ixs_frames = (ixs_frames, ixs_frames + 1)
 
         dn = cnmf_obj.estimates.A[:, idx_components].dot(
-            cnmf_obj.estimates.C[idx_components, ixs_frames[0] : ixs_frames[1]]
+            cnmf_obj.estimates.C[idx_components, ixs_frames[0]: ixs_frames[1]]
         )
 
         if add_background:
