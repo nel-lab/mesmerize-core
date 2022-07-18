@@ -1268,13 +1268,13 @@ def test_cache():
     
     # test for copy
     # if return_copy=True, then hex id of calls to the same function should be false
+    output = df.iloc[1].cnmf.get_output()
     assert(hex(id(output)) != hex(id(cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1])))
     # if return_copy=False, then hex id of calls to the same function should be true
-    df.iloc[1].cnmf.get_output(return_copy=False)
-    df.iloc[1].cnmf.get_output(return_copy=False)
     output = df.iloc[1].cnmf.get_output(return_copy=False)
     output2 = df.iloc[1].cnmf.get_output(return_copy=False)
     assert(hex(id(output)) == hex(id(output2)))
+    assert(hex(id(cnmf.cache.get_cache().iloc[-1]["return_val"])) == hex(id(output)))
 
 
 
