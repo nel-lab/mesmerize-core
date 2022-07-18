@@ -1253,6 +1253,30 @@ def test_cache():
     # checking that the uuid of the output in the cache is the correct uuid of the batch item in the df
     assert(cache.iloc[-1]["uuid"] == df.iloc[-1]["uuid"])
 
+    # call get output from cnmf, check that it is the most recent thing called in the cache
+    df.iloc[1].cnmf.get_output()
+    cnmf_uuid = df.iloc[1]["uuid"]
+    most_recently_called = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    cache_uuid = most_recently_called["uuid"]
+    assert(cnmf_uuid == cache_uuid)
+
+    # check to make sure by certain params that it is cnmf vs cnmfe
+    output = df.iloc[1].cnmf.get_output()
+    assert(output.params.patch["low_rank_background"] == True)
+    output2 = df.iloc[-1].cnmf.get_output()
+    assert(output2.params.patch["low_rank_background"] == False)
+    
+    # test for copy
+    # if return_copy=True, then hex id of calls to the same function should be false
+    assert(hex(id(output)) != hex(id(cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1])))
+    # if return_copy=False, then hex id of calls to the same function should be true
+    df.iloc[1].cnmf.get_output(return_copy=False)
+    df.iloc[1].cnmf.get_output(return_copy=False)
+    output = df.iloc[1].cnmf.get_output(return_copy=False)
+    output2 = df.iloc[1].cnmf.get_output(return_copy=False)
+    assert(hex(id(output)) == hex(id(output2)))
+
+
 
 
 

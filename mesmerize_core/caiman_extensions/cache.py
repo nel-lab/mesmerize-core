@@ -94,8 +94,8 @@ class Cache:
     def use_cache(self, func):
         @wraps(func)
         def _use_cache(instance, *args, **kwargs):
-            if "copy" in kwargs.keys():
-                return_copy = kwargs["copy"]
+            if "return_copy" in kwargs.keys():
+                return_copy = kwargs["return_copy"]
             else:
                 return_copy = True
 

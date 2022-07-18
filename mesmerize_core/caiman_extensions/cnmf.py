@@ -74,7 +74,7 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @cache.use_cache
-    def get_output(self, copy=True) -> CNMF:
+    def get_output(self, return_copy=True) -> CNMF:
         """
         Returns
         -------
@@ -89,7 +89,7 @@ class CNMFExtensions:
     @validate("cnmf")
     @cache.use_cache
     def get_spatial_masks(
-        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01, copy=True
+        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01, return_copy=True
     ) -> np.ndarray:
         """
         Get binary masks of the spatial components at the given `ixs`
@@ -156,7 +156,7 @@ class CNMFExtensions:
     @validate("cnmf")
     @cache.use_cache
     def get_spatial_contours(
-        self, ixs_components: Optional[np.ndarray] = None, copy=True
+        self, ixs_components: Optional[np.ndarray] = None, return_copy=True
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
@@ -190,7 +190,7 @@ class CNMFExtensions:
     @validate("cnmf")
     @cache.use_cache
     def get_temporal_components(
-        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False, copy=True
+        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False, return_copy=True
     ) -> np.ndarray:
         """
         Get the temporal components for this CNMF item
