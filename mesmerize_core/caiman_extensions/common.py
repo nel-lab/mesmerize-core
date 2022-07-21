@@ -271,10 +271,10 @@ class CaimanSeriesExtensions:
     def get_input_movie(self) -> Union[np.ndarray, pims.FramesSequence]:
         extension = self.get_input_movie_path().suffixes[-1]
 
-        if extension in ['.tiff', '.tif', '.btf']:
+        if extension in [".tiff", ".tif", ".btf"]:
             return pims.open(str(self.get_input_movie_path()))
 
-        elif extension in ['.mmap', '.memmap']:
+        elif extension in [".mmap", ".memmap"]:
             Yr, dims, T = load_memmap(str(self.get_input_movie_path()))
             return np.reshape(Yr.T, [T] + list(dims), order="F")
 

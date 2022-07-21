@@ -11,6 +11,9 @@ from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from caiman.utils.visualization import get_contours as caiman_get_contours
 
 from .common import validate
+from .cache import Cache
+
+cache = Cache()
 
 
 @pd.api.extensions.register_series_accessor("cnmf")
@@ -22,6 +25,7 @@ class CNMFExtensions:
     def __init__(self, s: pd.Series):
         self._series = s
 
+    @validate("cnmf")
     def get_cnmf_memmap(self) -> np.ndarray:
         """
         Get the CNMF memmap
@@ -70,7 +74,8 @@ class CNMFExtensions:
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
     @validate("cnmf")
-    def get_output(self) -> CNMF:
+    @cache.use_cache
+    def get_output(self, return_copy=True) -> CNMF:
         """
         Returns
         -------
@@ -83,8 +88,9 @@ class CNMFExtensions:
 
     # TODO: Make the ``ixs`` parameter for spatial stuff optional
     @validate("cnmf")
+    @cache.use_cache
     def get_spatial_masks(
-        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01
+        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01, return_copy=True
     ) -> np.ndarray:
         """
         Get binary masks of the spatial components at the given `ixs`
@@ -149,8 +155,9 @@ class CNMFExtensions:
         return contours
 
     @validate("cnmf")
+    @cache.use_cache
     def get_spatial_contours(
-        self, ixs_components: Optional[np.ndarray] = None
+        self, ixs_components: Optional[np.ndarray] = None, return_copy=True
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
@@ -182,8 +189,9 @@ class CNMFExtensions:
         return coordinates, coms
 
     @validate("cnmf")
+    @cache.use_cache
     def get_temporal_components(
-        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False
+        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False, return_copy=True
     ) -> np.ndarray:
         """
         Get the temporal components for this CNMF item

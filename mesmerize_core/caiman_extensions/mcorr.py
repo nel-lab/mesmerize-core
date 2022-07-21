@@ -6,6 +6,9 @@ from caiman import load_memmap
 
 from .common import validate
 from typing import *
+from .cache import Cache
+
+cache = Cache()
 
 
 @pd.api.extensions.register_series_accessor("mcorr")
@@ -45,6 +48,7 @@ class MCorrExtensions:
         return mc_movie
 
     @validate("mcorr")
+    @cache.use_cache
     def get_shifts(
         self, pw_rigid: bool = False
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
