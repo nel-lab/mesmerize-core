@@ -633,6 +633,8 @@ def test_cnmf():
         ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
     )
 
+    cnmf.cache.clear_cache()
+
 
 def test_cnmfe():
     set_parent_raw_data_path(vid_dir)
@@ -976,6 +978,8 @@ def test_cnmfe():
     numpy.testing.assert_allclose(
         ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
     )
+
+    cnmf.cache.clear_cache()
 
 
 def test_remove_item():
