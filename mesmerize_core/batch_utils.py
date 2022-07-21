@@ -17,7 +17,7 @@ ALGO_MODULES = {
     "cnmfe": cnmfe,
 }
 
-COMPUTE_BACKEND_SUBPROCESS = "subprocess"  #: subprocess backend, for use output a Qt application such as a notebook
+COMPUTE_BACKEND_SUBPROCESS = "subprocess"  #: subprocess backend
 COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend, not yet implemented
 
 COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM]

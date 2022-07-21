@@ -16,7 +16,6 @@ from ..batch_utils import (
     get_parent_raw_data_path,
     PathsDataFrameExtension,
     PathsSeriesExtension,
-    HAS_PYQT,
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from caiman import load_memmap
