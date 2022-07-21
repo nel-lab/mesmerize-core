@@ -33,7 +33,6 @@ class MCorrExtensions:
         return self._series.paths.resolve(self._series["outputs"]["mcorr-output-path"])
 
     @validate("mcorr")
-    @cache.use_cache
     def get_output(self) -> np.ndarray:
         """
         Get the motion corrected output as a memmaped numpy array, allows fast random-access scrolling.

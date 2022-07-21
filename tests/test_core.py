@@ -633,8 +633,6 @@ def test_cnmf():
         ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
     )
 
-    cnmf.cache.clear_cache()
-
 
 def test_cnmfe():
     set_parent_raw_data_path(vid_dir)
@@ -979,8 +977,6 @@ def test_cnmfe():
         ixs_reconstructed_movie, ixs_reconstructed_movie_actual, rtol=1e2, atol=1e-10
     )
 
-    cnmf.cache.clear_cache()
-
 
 def test_remove_item():
     set_parent_raw_data_path(vid_dir)
@@ -1046,6 +1042,9 @@ def test_remove_item():
 
 
 def test_cache():
+    print("*** Testing cache ***")
+    cnmf.cache.clear_cache()
+
     set_parent_raw_data_path(vid_dir)
     algo = "mcorr"
 
@@ -1100,7 +1099,6 @@ def test_cache():
     )
 
     algo = "cnmf"
-    print("Testing cnmf")
     input_movie_path = df.iloc[-1].mcorr.get_output_path()
     df.caiman.add_item(
         algo=algo,
