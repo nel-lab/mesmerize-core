@@ -1,22 +1,21 @@
-from qtpy.QtWidgets import QWidget, QFileDialog, QMessageBox
-from qtpy import QtGui
+"""
+Useful functions adapted from old mesmerize
+
+GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+"""
+
+
 import numpy as np
 from matplotlib import cm as matplotlib_color_map
 from functools import wraps
 import os
 from stat import S_IEXEC
-import traceback
 from typing import *
 import re as regex
 from pathlib import Path
 from warnings import warn
 
 
-# Useful functions adapted from mesmerize
-
-
-# to use powershell to run the CNMF process using QProcess
-# napari's built in @thread_worker locks up the entire application
 if os.name == "nt":
     IS_WINDOWS = True
     HOME = "USERPROFILE"
@@ -75,200 +74,43 @@ def validate_path(path: Union[str, Path]):
     return path
 
 
-def use_open_file_dialog(
-    title: str = "Choose file",
-    start_dir: Union[str, None] = None,
-    exts: List[str] = None,
-):
-    """
-    Use to pass a file path, for opening, into the decorated function using QFileDialog.getOpenFileName
-
-    :param title:       Title of the dialog box
-    :param start_dir:   Directory that is first shown in the dialog box.
-    :param exts:        List of file extensions to set the filter in the dialog box
-    """
-
-    def wrapper(func):
-        @wraps(func)
-        def fn(self, *args, **kwargs):
-            if "qdialog" in kwargs.keys():
-                if not kwargs["qdialog"]:
-                    func(self, *args, **kwargs)
-                    return fn
-
-            if exts is None:
-                e = []
-            else:
-                e = exts
-
-            if isinstance(self, QWidget):
-                parent = self
-            else:
-                parent = None
-
-            path = QFileDialog.getOpenFileName(
-                parent, title, os.environ["HOME"], f'({" ".join(e)})'
-            )
-            if not path[0]:
-                return
-            path = path[0]
-            func(self, path, *args, **kwargs)
-
-        return fn
-
-    return wrapper
-
-
-def use_save_file_dialog(
-    title: str = "Save file", start_dir: Union[str, None] = None, ext: str = None
-):
-    """
-    Use to pass a file path, for saving, into the decorated function using QFileDialog.getSaveFileName
-
-    :param title:       Title of the dialog box
-    :param start_dir:   Directory that is first shown in the dialog box.
-    :param exts:        List of file extensions to set the filter in the dialog box
-    """
-
-    def wrapper(func):
-        @wraps(func)
-        def fn(self, *args, **kwargs):
-            if ext is None:
-                raise ValueError("Must specify extension")
-            if ext.startswith("*"):
-                ex = ext[1:]
-            else:
-                ex = ext
-
-            if isinstance(self, QWidget):
-                parent = self
-            else:
-                parent = None
-
-            path = QFileDialog.getSaveFileName(parent, title, start_dir, f"(*{ex})")
-            if not path[0]:
-                return
-            path = path[0]
-            if not path.endswith(ex):
-                path = f"{path}{ex}"
-
-            path = validate_path(path)
-
-            func(self, path, *args, **kwargs)
-
-        return fn
-
-    return wrapper
-
-
-def use_open_dir_dialog(
-    title: str = "Open directory", start_dir: Union[str, None] = None
-):
-    """
-    Use to pass a dir path, to open, into the decorated function using QFileDialog.getExistingDirectory
-    :param title:       Title of the dialog box
-    :param start_dir:   Directory that is first shown in the dialog box.
-    Example:
-    .. code-block:: python
-        @use_open_dir_dialog('Select Project Directory', '')
-        def load_data(self, path, *args, **kwargs):
-            my_func_to_do_stuff_and_load_data(path)
-    """
-
-    def wrapper(func):
-        @wraps(func)
-        def fn(self, *args, **kwargs):
-            if isinstance(self, QWidget):
-                parent = self
-            else:
-                parent = None
-
-            path = QFileDialog.getExistingDirectory(parent, title)
-            if not path:
-                return
-            func(self, path, *args, **kwargs)
-
-        return fn
-
-    return wrapper
-
-
-def present_exceptions(
-    title: str = "error", msg: str = "The following error occurred."
-):
-    """
-    Use to catch exceptions and present them to the user in a QMessageBox warning dialog.
-    The traceback from the exception is also shown.
-
-    This decorator can be stacked on top of other decorators.
-
-    Example:
-
-    .. code-block: python
-
-            @present_exceptions('Error loading file')
-            @use_open_file_dialog('Choose file')
-                def select_file(self, path: str, *args):
-                    pass
-
-
-    :param title:       Title of the dialog box
-    :param msg:         Message to display above the traceback in the dialog box
-    :param help_func:   A helper function which is called if the user clicked the "Help" button
-    """
-
-    def catcher(func):
-        @wraps(func)
-        def fn(self, *args, **kwargs):
-            try:
-                return func(self, *args, **kwargs)
-            except Exception as e:
-                tb = traceback.format_exc()
-
-                mb = QMessageBox()
-                mb.setIcon(QMessageBox.Warning)
-                mb.setWindowTitle(title)
-                mb.setText(msg)
-                mb.setInformativeText(f"{e.__class__.__name__}: {e}")
-                mb.setDetailedText(tb)
-                mb.setStandardButtons(QMessageBox.Ok | QMessageBox.Help)
-
-                # getLogger().info(
-                #     f"{e.__class__.__name__}: {e}\n"
-                #     f"{traceback.format_exc()}"
-                # )
-
-        return fn
-
-    return catcher
-
-
 def auto_colormap(
     n_colors: int,
     cmap: str = "hsv",
-    output: str = "mpl",
+    output: Union[str, type] = "float",
     spacing: str = "uniform",
     alpha: float = 1.0,
-) -> List[Union[QtGui.QColor, np.ndarray, str]]:
+) -> List[Union[np.ndarray, str]]:
     """
     If non-qualitative map: returns list of colors evenly spread through the chosen colormap.
     If qualitative map: returns subsequent colors from the chosen colormap
 
-    :param n_colors: Numbers of colors to return
-    :param cmap:     name of colormap
+    Parameters
+    ----------
+    n_colors: int
+        Numbers of colors to return
 
-    :param output:   option: 'mpl' returns RGBA values between 0-1 which matplotlib likes,
-                     option: 'bokeh' returns hex strings that correspond to the RGBA values which bokeh likes
+    cmap: str
+        name of colormap
 
-    :param spacing:  option: 'uniform' returns evenly spaced colors across the entire cmap range
-                     option: 'subsequent' returns subsequent colors from the cmap
+    output: Union[str, type]
+        option: "float" or ``float`` returns RGBA values between 0-1: [R, G, B, A],
+        option: "hex" returns hex strings that correspond to the RGBA values
 
-    :param alpha:    alpha level, 0.0 - 1.0
+    spacing: str
+        option: "uniform"'" returns evenly spaced colors across the entire cmap range
+        option: "subsequent" returns subsequent colors from the cmap
 
-    :return:         List of colors as either ``QColor``, ``numpy.ndarray``, or hex ``str`` with length ``n_colors``
+    alpha: float
+        alpha level, 0.0 - 1.0
+
+    Returns
+    -------
+    List[Union[np.ndarray, str]]
+        List of colors as either ``numpy.ndarray``, or hex ``str`` with length ``n_colors``
     """
 
-    valid = ["mpl", "pyqt", "bokeh"]
+    valid = ["float", float, "hex"]
     if output not in valid:
         raise ValueError(f"output must be one {valid}")
 
@@ -282,10 +124,7 @@ def auto_colormap(
     cm = matplotlib_color_map.get_cmap(cmap)
     cm._init()
 
-    if output == "pyqt":
-        lut = (cm._lut * 255).view(np.ndarray)
-    else:
-        lut = (cm._lut).view(np.ndarray)
+    lut = (cm._lut).view(np.ndarray)
 
     lut[:, 3] *= alpha
 
@@ -306,12 +145,12 @@ def auto_colormap(
     for ix in range(n_colors):
         c = lut[cm_ixs[ix]]
 
-        if output == "bokeh":
+        if output == "hex":
             c = tuple(c[:3] * 255)
             hc = "#%02x%02x%02x" % tuple(map(int, c))
             colors.append(hc)
 
-        else:  # mpl
+        else:  # floats
             colors.append(c)
 
     return colors
@@ -321,28 +160,24 @@ def make_runfile(
     module_path: str, args_str: Optional[str] = None, filename: Optional[str] = None
 ) -> str:
     """
-    Make an executable bash script. Used for running python scripts in external processes.
+    Make an executable bash script.
+    Used for running python scripts in external processes within the same python environment as the main/parent process.
 
-    :param module_path: absolute module path
-    :type module_path:  str
+    Parameters
+    ----------
+    module_path: str
+        absolute path to the python module/script that should be run externally
 
-    :param args_str:    str of args that is directly passed with the python command in the bash script
-    :type args_str:     str
+    args_str: Optional[str]
+        optinal str of args that is directly passed to the script specified by ``module_path``
 
-    :param savedir:     working directory
-    :type savedir:      Optional[str]
+    filename: Optional[str]
+        optional, filename of the executable bash script
 
-    :param filename:    optional, specific filename for the script
-    :type filename:     Optional[str]
-
-    :param pre_run:     optional, str to run before module is ran
-    :type pre_run:      Optional[str]
-
-    :param post_run:    optional, str to run after module has run
-    :type post_run:     Optional[str]
-
-    :return: path to the shell script that can be run
-    :rtype:  str
+    Returns
+    -------
+    str
+        path to the shell script that can be executed
     """
 
     if filename is None:

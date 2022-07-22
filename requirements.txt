@@ -5,10 +5,7 @@ tqdm
 setuptools
 wheel
 numpy
-QtPy
 matplotlib
 click
 psutil
-PyQt5
 pims
-
