@@ -5,6 +5,8 @@
 
 Mesmerize core backend
 
+**Note: We're currently waiting for the release of pandas v1.5 before the initial release of mesmerize-core**
+
 A batch management system for calcium imaging analysis using the CaImAn library. 
 It contains `pandas.DataFrame` and `pandas.Series` extensions that interface with CaImAn for running the various algorithms and organizing input & output data.
 
