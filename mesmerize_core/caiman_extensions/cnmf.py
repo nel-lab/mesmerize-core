@@ -62,7 +62,6 @@ class CNMFExtensions:
                 f"{movie_path}"
             )
 
-    # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
     def get_output_path(self) -> Path:
         """
@@ -86,7 +85,6 @@ class CNMFExtensions:
         # collective global cache
         return load_CNMF(self.get_output_path())
 
-    # TODO: Make the ``ixs`` parameter for spatial stuff optional
     @validate("cnmf")
     @cache.use_cache
     def get_spatial_masks(
@@ -132,7 +130,6 @@ class CNMFExtensions:
 
         return masks
 
-    # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @staticmethod
     def _get_spatial_contours(
         cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
@@ -222,7 +219,6 @@ class CNMFExtensions:
         else:
             return C
 
-    # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
     def get_reconstructed_movie(
             self,
