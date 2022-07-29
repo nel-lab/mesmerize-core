@@ -1,8 +1,5 @@
-from functools import lru_cache
 from pathlib import Path
 from typing import *
-
-import numpy
 import numpy as np
 import pandas as pd
 from caiman import load_memmap
@@ -28,7 +25,7 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_cnmf_memmap(self) -> np.ndarray:
         """
-        Get the CNMF memmap
+        Get the CNMF C-order memmap
 
         Returns
         -------
@@ -43,7 +40,7 @@ class CNMFExtensions:
 
     def get_input_memmap(self) -> np.ndarray:
         """
-        Return the F-order memmap if the input to the
+        Return the F-order memmap if the input to this
         CNMF batch item was a mcorr output memmap
 
         Returns
@@ -68,7 +65,7 @@ class CNMFExtensions:
         Returns
         -------
         Path
-            Path to the Caiman CNMF hdf5 output file
+            full path to the caiman-format CNMF hdf5 output file
         """
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
@@ -76,6 +73,13 @@ class CNMFExtensions:
     @cache.use_cache
     def get_output(self, return_copy=True) -> CNMF:
         """
+        Parameters
+        ----------
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory.
+            | In general you want a copy of the cached value.
+
         Returns
         -------
         CNMF
@@ -87,22 +91,26 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @cache.use_cache
-    def get_spatial_masks(
-        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01, return_copy=True
+    def get_masks(
+        self, component_indices: Optional[np.ndarray] = None, threshold: float = 0.01, return_copy=True
     ) -> np.ndarray:
         """
-        Get binary masks of the spatial components at the given `ixs`
-
-        Basically created from cnmf.estimates.A
+        | Get binary masks of the spatial components at the given ``component_indices``.
+        | Created from cnmf.estimates.A.
 
         Parameters
         ----------
-        ixs_components: np.ndarray
+        component_indices: np.ndarray
             numpy array containing integer indices for which you want spatial masks.
-            if `None` uses cnmf.estimates.idx_components
+            if ``None`` uses "good" components, i.e. ``cnmf.estimates.idx_components``
 
         threshold: float
             threshold
+
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory.
+            | In general you want a copy of the cached value.
 
         Returns
         -------
@@ -116,12 +124,12 @@ class CNMFExtensions:
         if dims is None:
             dims = cnmf_obj.estimates.dims
 
-        if ixs_components is None:
-            ixs_components = cnmf_obj.estimates.idx_components
+        if component_indices is None:
+            component_indices = cnmf_obj.estimates.idx_components
 
-        masks = np.zeros(shape=(dims[0], dims[1], len(ixs_components)), dtype=bool)
+        masks = np.zeros(shape=(dims[0], dims[1], len(component_indices)), dtype=bool)
 
-        for n, ix in enumerate(ixs_components):
+        for n, ix in enumerate(component_indices):
             s = cnmf_obj.estimates.A[:, ix].toarray().reshape(cnmf_obj.dims)
             s[s >= threshold] = 1
             s[s < threshold] = 0
@@ -132,10 +140,10 @@ class CNMFExtensions:
 
     @staticmethod
     def _get_spatial_contours(
-        cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
+        cnmf_obj: CNMF, component_indices: Optional[np.ndarray] = None
     ):
-        if ixs_components is None:
-            ixs_components = cnmf_obj.estimates.idx_components
+        if component_indices is None:
+            component_indices = cnmf_obj.estimates.idx_components
 
         dims = cnmf_obj.dims
         if dims is None:
@@ -146,31 +154,39 @@ class CNMFExtensions:
         dims = dims[1], dims[0]
 
         contours = caiman_get_contours(
-            cnmf_obj.estimates.A[:, ixs_components], dims, swap_dim=True
+            cnmf_obj.estimates.A[:, component_indices], dims, swap_dim=True
         )
 
         return contours
 
     @validate("cnmf")
     @cache.use_cache
-    def get_spatial_contours(
-        self, ixs_components: Optional[np.ndarray] = None, return_copy=True
+    def get_contours(
+        self, component_indices: Optional[np.ndarray] = None, return_copy=True
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
 
         Parameters
         ----------
-        ixs_components: np.ndarray
+        component_indices: np.ndarray
             indices for which to return spatial contours.
             if `None` uses cnmf.estimates.idx_components
 
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory.
+            | In general you want a copy of the cached value.
+
         Returns
         -------
-
+        Tuple[List[np.ndarray], List[np.ndarray]]
+            | (List[coordinates array], List[centers of masses array])
+            | each array of coordinates is 2D, [xs, ys]
+            | each center of mass is [x, y]
         """
         cnmf_obj = self.get_output()
-        contours = self._get_spatial_contours(cnmf_obj, ixs_components)
+        contours = self._get_spatial_contours(cnmf_obj, component_indices)
 
         coordinates = list()
         coms = list()
@@ -187,31 +203,37 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @cache.use_cache
-    def get_temporal_components(
-        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False, return_copy=True
+    def get_temporal(
+        self, component_indices: Optional[np.ndarray] = None, add_background: bool = False, return_copy=True
     ) -> np.ndarray:
         """
-        Get the temporal components for this CNMF item
+        Get the temporal components for this CNMF item, basically ``cnmf.estimates.C``
 
         Parameters
         ----------
-        ixs_components: np.ndarray
-            indices for which to return temporal components, ``cnmf.estimates.C``.
-            if `None` uses cnmf.estimates.idx_components
+        component_indices: np.ndarray
+            | indices for which to return temporal components, ``cnmf.estimates.C``.
+            | if ``None`` uses ``cnmf.estimates.idx_components``
 
         add_background: bool
-            if ``True``, add the temporal background, basically ``cnmf.estimates.C + cnmf.estimates.f``
+            if ``True``, add the temporal background, ``cnmf.estimates.C + cnmf.estimates.f``
+
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory.
+            | In general you want a copy of the cached value.
 
         Returns
         -------
-
+        np.ndarray
+            shape is [n_components, n_frames]
         """
         cnmf_obj = self.get_output()
 
-        if ixs_components is None:
-            ixs_components = cnmf_obj.estimates.idx_components
+        if component_indices is None:
+            component_indices = cnmf_obj.estimates.idx_components
 
-        C = cnmf_obj.estimates.C[ixs_components]
+        C = cnmf_obj.estimates.C[component_indices]
         f = cnmf_obj.estimates.f
 
         if add_background:
@@ -220,20 +242,24 @@ class CNMFExtensions:
             return C
 
     @validate("cnmf")
-    def get_reconstructed_movie(
+    def get_rcm(
             self,
-            ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
-            idx_components: np.ndarray = None,
+            frame_indices: Optional[Union[Tuple[int, int], int]] = None,
+            component_indices: np.ndarray = None,
     ) -> np.ndarray:
         """
         Return the reconstructed movie with no background, (A * C)
 
         Parameters
         ----------
-        ixs_frames: Tuple[int, int], int
+        frame_indices: Tuple[int, int], int
             (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
             including the ``stop_frame``
             if single int, return reconstructed movie for single frame indicated
+
+        component_indices: Optional[np.ndarray]
+            | component indices to reconstruct movie with
+            | if ``None`` uses ``cnmf.estimates.idx_components``
 
         Returns
         -------
@@ -242,32 +268,32 @@ class CNMFExtensions:
         """
         cnmf_obj = self.get_output()
 
-        if idx_components is None:
-            idx_components = np.arange(cnmf_obj.estimates.A.shape[1])
+        if component_indices is None:
+            component_indices = cnmf_obj.estimates.idx_components
 
-        if ixs_frames is None:
-            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+        if frame_indices is None:
+            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
 
-        if isinstance(ixs_frames, int):
-            ixs_frames = (ixs_frames, ixs_frames + 1)
+        if isinstance(frame_indices, int):
+            frame_indices = (frame_indices, frame_indices + 1)
 
-        dn = cnmf_obj.estimates.A[:, idx_components].dot(
-            cnmf_obj.estimates.C[idx_components, ixs_frames[0]: ixs_frames[1]]
+        dn = cnmf_obj.estimates.A[:, component_indices].dot(
+            cnmf_obj.estimates.C[component_indices, frame_indices[0]: frame_indices[1]]
         )
 
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
 
     @validate("cnmf")
-    def get_reconstructed_background(
+    def get_rcb(
             self,
-            ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
+            frame_indices: Optional[Union[Tuple[int, int], int]] = None,
     ) -> np.ndarray:
         """
         Return the reconstructed background, (b * f)
 
         Parameters
         ----------
-        ixs_frames: Tuple[int, int], int
+        frame_indices: Tuple[int, int], int
             (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
             including the ``stop_frame``
             if single int, return reconstructed background for single frame indicated
@@ -279,21 +305,21 @@ class CNMFExtensions:
         """
         cnmf_obj = self.get_output()
 
-        if ixs_frames is None:
-            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+        if frame_indices is None:
+            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
 
-        if isinstance(ixs_frames, int):
-            ixs_frames = (ixs_frames, ixs_frames + 1)
+        if isinstance(frame_indices, int):
+            frame_indices = (frame_indices, frame_indices + 1)
 
         dn = cnmf_obj.estimates.b.dot(
-            cnmf_obj.estimates.f[:, ixs_frames[0]: ixs_frames[1]]
+            cnmf_obj.estimates.f[:, frame_indices[0]: frame_indices[1]]
         )
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
 
     @validate("cnmf")
     def get_residuals(
             self,
-            ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
+            frame_indices: Optional[Union[Tuple[int, int], int]] = None,
     ) -> np.ndarray:
         """
         Return residuals, raw movie - (A * C) - (b * f)
@@ -313,18 +339,18 @@ class CNMFExtensions:
 
         cnmf_obj = self.get_output()
 
-        if ixs_frames is None:
-            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+        if frame_indices is None:
+            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
 
-        if isinstance(ixs_frames, int):
-            ixs_frames = (ixs_frames, ixs_frames + 1)
+        if isinstance(frame_indices, int):
+            frame_indices = (frame_indices, frame_indices + 1)
 
         raw_movie = self.get_input_memmap()
 
-        reconstructed_movie = self.get_reconstructed_movie(ixs_frames)
+        reconstructed_movie = self.get_rcm(frame_indices)
 
-        background = self.get_reconstructed_background(ixs_frames)
+        background = self.get_rcb(frame_indices)
 
-        residuals = raw_movie[np.arange(*ixs_frames)] - reconstructed_movie - background
+        residuals = raw_movie[np.arange(*frame_indices)] - reconstructed_movie - background
 
         return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
