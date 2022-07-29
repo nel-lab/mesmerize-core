@@ -4,7 +4,5 @@ dependencies:
   - caiman >= 1.9.10
   - pandas
   - requests
-  - qtpy
-  - pyqt
   - click
 
