@@ -305,7 +305,7 @@ def test_mcorr():
     )
 
     # test to check caiman get_correlation_img()
-    mcorr_corr_img = df.iloc[-1].caiman.get_correlation_image()
+    mcorr_corr_img = df.iloc[-1].caiman.get_corr_image()
     mcorr_corr_img_actual = numpy.load(
         ground_truths_dir.joinpath("mcorr", "mcorr_correlation_img.npy")
     )
@@ -594,7 +594,7 @@ def test_cnmf():
     )
 
     # test to check caiman get_correlation_img()
-    cnmf_corr_img = df.iloc[-1].caiman.get_correlation_image()
+    cnmf_corr_img = df.iloc[-1].caiman.get_corr_image()
     cnmf_corr_img_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "cnmf_correlation_img.npy")
     )
@@ -780,8 +780,8 @@ def test_cnmfe():
 
     # extension tests - partial
 
-    # test to check caiman get_correlation_image()
-    corr_img = df.iloc[-1].caiman.get_correlation_image()
+    # test to check caiman get_corr_image()
+    corr_img = df.iloc[-1].caiman.get_corr_image()
     corr_img_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_correlation_img.npy")
     )
