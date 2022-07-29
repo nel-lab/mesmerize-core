@@ -240,7 +240,7 @@ class CaimanSeriesExtensions:
             return np.reshape(Yr.T, [T] + list(dims), order="F")
 
     @validate()
-    def get_correlation_image(self) -> np.ndarray:
+    def get_corr_image(self) -> np.ndarray:
         """
         Returns
         -------
@@ -267,12 +267,3 @@ class CaimanSeriesExtensions:
             self._series["outputs"][f"{proj_type}-projection-path"]
         )
         return np.load(path)
-
-    # TODO: finish the copy_data() extension
-    # def copy_data(self, new_parent_dir: Union[Path, str]):
-    #     """
-    #     Copy all data associated with this series to a different parent dir
-    #     """
-    #     movie_path = get_full_raw_data_path(self._series['input_movie_path'])
-    #     output_paths = []
-    #     for p in self._series['outputs']
