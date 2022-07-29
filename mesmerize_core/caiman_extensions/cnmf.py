@@ -6,11 +6,61 @@ from caiman import load_memmap
 from caiman.source_extraction.cnmf import CNMF
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from caiman.utils.visualization import get_contours as caiman_get_contours
+from functools import wraps
 
 from .common import validate
 from .cache import Cache
 
 cache = Cache()
+
+
+# this decorator MUST be called BEFORE caching decorators!
+def _component_indices_parser(func):
+    @wraps(func)
+    def _parser(instance, *args, **kwargs) -> np.ndarray:
+        print(args)
+        print(kwargs)
+        print(func)
+        if "component_indices" in kwargs.keys():
+            component_indices: Union[np.ndarray, str, None] = kwargs["component_indices"]
+        elif len(args) > 0:
+            component_indices = args[0]  # always first positional arg in the extensions
+        else:
+            component_indices = None  # default
+
+        cnmf_obj = instance.get_output()
+
+        # TODO: finally time to learn Python's new switch case
+        accepted = (np.ndarray, str, type(None))
+        if not isinstance(component_indices, accepted):
+            raise TypeError(f"`component_indices` must be one of type: {accepted}")
+
+        if isinstance(component_indices, np.ndarray):
+            pass
+
+        elif component_indices is None:
+            component_indices = np.arange(cnmf_obj.estimates.A.shape[1])
+
+        if isinstance(component_indices, str):
+            accepted = ["all", "good", "bad"]
+            if component_indices not in accepted:
+                raise ValueError(f"Accepted `str` values for `component_indices` are: {accepted}")
+
+            if component_indices == "all":
+                component_indices = np.arange(cnmf_obj.estimates.A.shape[1])
+
+            elif component_indices == "good":
+                component_indices = cnmf_obj.estimates.idx_components
+
+            elif component_indices == "bad":
+                component_indices = cnmf_obj.estimates.idx_components_bad
+        if "component_indices" in kwargs.keys():
+            kwargs["component_indices"] = component_indices
+        else:
+            args = (component_indices, *args[1:])
+
+        return func(instance, *args, **kwargs)
+    return _parser
 
 
 @pd.api.extensions.register_series_accessor("cnmf")
@@ -90,6 +140,7 @@ class CNMFExtensions:
         return load_CNMF(self.get_output_path())
 
     @validate("cnmf")
+    @_component_indices_parser
     @cache.use_cache
     def get_masks(
         self, component_indices: Optional[np.ndarray] = None, threshold: float = 0.01, return_copy=True
@@ -124,8 +175,6 @@ class CNMFExtensions:
         if dims is None:
             dims = cnmf_obj.estimates.dims
 
-        if component_indices is None:
-            component_indices = cnmf_obj.estimates.idx_components
 
         masks = np.zeros(shape=(dims[0], dims[1], len(component_indices)), dtype=bool)
 
@@ -142,8 +191,6 @@ class CNMFExtensions:
     def _get_spatial_contours(
         cnmf_obj: CNMF, component_indices: Optional[np.ndarray] = None
     ):
-        if component_indices is None:
-            component_indices = cnmf_obj.estimates.idx_components
 
         dims = cnmf_obj.dims
         if dims is None:
@@ -160,6 +207,7 @@ class CNMFExtensions:
         return contours
 
     @validate("cnmf")
+    @_component_indices_parser
     @cache.use_cache
     def get_contours(
         self, component_indices: Optional[np.ndarray] = None, return_copy=True
@@ -202,6 +250,7 @@ class CNMFExtensions:
         return coordinates, coms
 
     @validate("cnmf")
+    @_component_indices_parser
     @cache.use_cache
     def get_temporal(
         self, component_indices: Optional[np.ndarray] = None, add_background: bool = False, return_copy=True
@@ -230,9 +279,6 @@ class CNMFExtensions:
         """
         cnmf_obj = self.get_output()
 
-        if component_indices is None:
-            component_indices = cnmf_obj.estimates.idx_components
-
         C = cnmf_obj.estimates.C[component_indices]
         f = cnmf_obj.estimates.f
 
@@ -242,10 +288,11 @@ class CNMFExtensions:
             return C
 
     @validate("cnmf")
+    @_component_indices_parser
     def get_rcm(
             self,
-            frame_indices: Optional[Union[Tuple[int, int], int]] = None,
             component_indices: np.ndarray = None,
+            frame_indices: Optional[Union[Tuple[int, int], int]] = None,
     ) -> np.ndarray:
         """
         Return the reconstructed movie with no background, (A * C)
@@ -267,9 +314,6 @@ class CNMFExtensions:
             shape is [n_frames, x_pixels, y_pixels]
         """
         cnmf_obj = self.get_output()
-
-        if component_indices is None:
-            component_indices = np.arange(cnmf_obj.estimates.A.shape[1])
 
         if frame_indices is None:
             frame_indices = (0, cnmf_obj.estimates.C.shape[1])
@@ -347,7 +391,7 @@ class CNMFExtensions:
 
         raw_movie = self.get_input_memmap()
 
-        reconstructed_movie = self.get_rcm(frame_indices)
+        reconstructed_movie = self.get_rcm(component_indices="all", frame_indices=frame_indices)
 
         background = self.get_rcb(frame_indices)
 
