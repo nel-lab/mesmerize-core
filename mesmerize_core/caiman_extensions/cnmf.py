@@ -269,7 +269,7 @@ class CNMFExtensions:
         cnmf_obj = self.get_output()
 
         if component_indices is None:
-            component_indices = cnmf_obj.estimates.idx_components
+            component_indices = np.arange(cnmf_obj.estimates.A.shape[1])
 
         if frame_indices is None:
             frame_indices = (0, cnmf_obj.estimates.C.shape[1])
