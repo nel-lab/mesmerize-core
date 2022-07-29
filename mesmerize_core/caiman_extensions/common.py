@@ -139,8 +139,7 @@ class CaimanSeriesExtensions:
     def _run_subprocess(
         self,
         runfile_path: str,
-        callbacks_finished: List[callable] = None,
-        callback_std_out: Optional[callable] = None,
+        **kwargs
     ):
 
         # Get the dir that contains the input movie
@@ -152,20 +151,18 @@ class CaimanSeriesExtensions:
     def _run_slurm(
         self,
         runfile_path: str,
-        callbacks_finished: List[callable],
-        callback_std_out: Optional[callable] = None,
+        **kwargs
     ):
-        submission_command = (
-            f'sbatch --ntasks=1 --cpus-per-task=16 --mem=90000 --wrap="{runfile_path}"'
-        )
-
-        Popen(submission_command.split(" "))
+        raise NotImplementedError("Not just implemented, just a placeholder")
+        # submission_command = (
+        #     f'sbatch --ntasks=1 --cpus-per-task=16 --mem=90000 --wrap="{runfile_path}"'
+        # )
+        #
+        # Popen(submission_command.split(" "))
 
     def run(
         self,
-        backend: Optional[str] = COMPUTE_BACKEND_SUBPROCESS,
-        callbacks_finished: Optional[List[callable]] = None,
-        callback_std_out: Optional[callable] = None,
+        backend: Optional[str] = COMPUTE_BACKEND_SUBPROCESS, **kwargs
     ):
         """
         Run a CaImAn algorithm in an external process using the chosen backend
@@ -178,11 +175,8 @@ class CaimanSeriesExtensions:
         backend: Optional[str]
             One of the available backends, if none default is `COMPUTE_BACKEND_SUBPROCESS`
 
-        callbacks_finished: List[callable]
-            List of callback functions that are called when the external process has finished.
-
-        callback_std_out: Optional[callable]
-            callback function to pipe the stdout
+        **kwargs
+            any kwargs to pass to the backend
         """
         if backend not in COMPUTE_BACKENDS:
             raise KeyError(
@@ -211,7 +205,7 @@ class CaimanSeriesExtensions:
         )
         try:
             self.process = getattr(self, f"_run_{backend}")(
-                runfile, callbacks_finished, callback_std_out
+                runfile, **kwargs
             )
         except:
             with open(runfile_path, "r") as f:
