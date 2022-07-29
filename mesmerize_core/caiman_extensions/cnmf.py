@@ -1,15 +1,66 @@
-from functools import lru_cache
 from pathlib import Path
 from typing import *
-
 import numpy as np
 import pandas as pd
 from caiman import load_memmap
 from caiman.source_extraction.cnmf import CNMF
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from caiman.utils.visualization import get_contours as caiman_get_contours
+from functools import wraps
 
 from .common import validate
+from .cache import Cache
+
+cache = Cache()
+
+
+# this decorator MUST be called BEFORE caching decorators!
+def _component_indices_parser(func):
+    @wraps(func)
+    def _parser(instance, *args, **kwargs) -> Any:
+        print(args)
+        print(kwargs)
+        print(func)
+        if "component_indices" in kwargs.keys():
+            component_indices: Union[np.ndarray, str, None] = kwargs["component_indices"]
+        elif len(args) > 0:
+            component_indices = args[0]  # always first positional arg in the extensions
+        else:
+            component_indices = None  # default
+
+        cnmf_obj = instance.get_output()
+
+        # TODO: finally time to learn Python's new switch case
+        accepted = (np.ndarray, str, type(None))
+        if not isinstance(component_indices, accepted):
+            raise TypeError(f"`component_indices` must be one of type: {accepted}")
+
+        if isinstance(component_indices, np.ndarray):
+            pass
+
+        elif component_indices is None:
+            component_indices = np.arange(cnmf_obj.estimates.A.shape[1])
+
+        if isinstance(component_indices, str):
+            accepted = ["all", "good", "bad"]
+            if component_indices not in accepted:
+                raise ValueError(f"Accepted `str` values for `component_indices` are: {accepted}")
+
+            if component_indices == "all":
+                component_indices = np.arange(cnmf_obj.estimates.A.shape[1])
+
+            elif component_indices == "good":
+                component_indices = cnmf_obj.estimates.idx_components
+
+            elif component_indices == "bad":
+                component_indices = cnmf_obj.estimates.idx_components_bad
+        if "component_indices" in kwargs.keys():
+            kwargs["component_indices"] = component_indices
+        else:
+            args = (component_indices, *args[1:])
+
+        return func(instance, *args, **kwargs)
+    return _parser
 
 
 @pd.api.extensions.register_series_accessor("cnmf")
@@ -21,9 +72,10 @@ class CNMFExtensions:
     def __init__(self, s: pd.Series):
         self._series = s
 
+    @validate("cnmf")
     def get_cnmf_memmap(self) -> np.ndarray:
         """
-        Get the CNMF memmap
+        Get the CNMF C-order memmap
 
         Returns
         -------
@@ -38,7 +90,7 @@ class CNMFExtensions:
 
     def get_input_memmap(self) -> np.ndarray:
         """
-        Return the F-order memmap if the input to the
+        Return the F-order memmap if the input to this
         CNMF batch item was a mcorr output memmap
 
         Returns
@@ -57,20 +109,28 @@ class CNMFExtensions:
                 f"{movie_path}"
             )
 
-    # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
     def get_output_path(self) -> Path:
         """
         Returns
         -------
         Path
-            Path to the Caiman CNMF hdf5 output file
+            full path to the caiman-format CNMF hdf5 output file
         """
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
     @validate("cnmf")
-    def get_output(self) -> CNMF:
+    @cache.use_cache
+    def get_output(self, return_copy=True) -> CNMF:
         """
+        Parameters
+        ----------
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
+            strange unexpected behavior.
+            | In general you want a copy of the cached value.
+
         Returns
         -------
         CNMF
@@ -80,24 +140,34 @@ class CNMFExtensions:
         # collective global cache
         return load_CNMF(self.get_output_path())
 
-    # TODO: Make the ``ixs`` parameter for spatial stuff optional
     @validate("cnmf")
-    def get_spatial_masks(
-        self, ixs_components: Optional[np.ndarray] = None, threshold: float = 0.01
+    @_component_indices_parser
+    @cache.use_cache
+    def get_masks(
+        self, component_indices: Union[np.ndarray, str] = None, threshold: float = 0.01, return_copy=True
     ) -> np.ndarray:
         """
-        Get binary masks of the spatial components at the given `ixs`
-
-        Basically created from cnmf.estimates.A
+        | Get binary masks of the spatial components at the given ``component_indices``.
+        | Created from cnmf.estimates.A.
 
         Parameters
         ----------
-        ixs_components: np.ndarray
-            numpy array containing integer indices for which you want spatial masks.
-            if `None` uses cnmf.estimates.idx_components
+        component_indices: optional, Union[np.ndarray, str]
+            | indices of the components to include
+            | if ``np.ndarray``, uses these indices in the provided array
+            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
+            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
+            | if not provided, ``None``, or ``"all"`` uses all components
+
 
         threshold: float
             threshold
+
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
+            strange unexpected behavior.
+            | In general you want a copy of the cached value.
 
         Returns
         -------
@@ -111,12 +181,9 @@ class CNMFExtensions:
         if dims is None:
             dims = cnmf_obj.estimates.dims
 
-        if ixs_components is None:
-            ixs_components = cnmf_obj.estimates.idx_components
+        masks = np.zeros(shape=(dims[0], dims[1], len(component_indices)), dtype=bool)
 
-        masks = np.zeros(shape=(dims[0], dims[1], len(ixs_components)), dtype=bool)
-
-        for n, ix in enumerate(ixs_components):
+        for n, ix in enumerate(component_indices):
             s = cnmf_obj.estimates.A[:, ix].toarray().reshape(cnmf_obj.dims)
             s[s >= threshold] = 1
             s[s < threshold] = 0
@@ -125,13 +192,10 @@ class CNMFExtensions:
 
         return masks
 
-    # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @staticmethod
     def _get_spatial_contours(
-        cnmf_obj: CNMF, ixs_components: Optional[np.ndarray] = None
+        cnmf_obj: CNMF, component_indices
     ):
-        if ixs_components is None:
-            ixs_components = cnmf_obj.estimates.idx_components
 
         dims = cnmf_obj.dims
         if dims is None:
@@ -142,30 +206,44 @@ class CNMFExtensions:
         dims = dims[1], dims[0]
 
         contours = caiman_get_contours(
-            cnmf_obj.estimates.A[:, ixs_components], dims, swap_dim=True
+            cnmf_obj.estimates.A[:, component_indices], dims, swap_dim=True
         )
 
         return contours
 
     @validate("cnmf")
-    def get_spatial_contours(
-        self, ixs_components: Optional[np.ndarray] = None
+    @_component_indices_parser
+    @cache.use_cache
+    def get_contours(
+        self, component_indices: Union[np.ndarray, str] = None, return_copy=True
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
 
         Parameters
         ----------
-        ixs_components: np.ndarray
-            indices for which to return spatial contours.
-            if `None` uses cnmf.estimates.idx_components
+        component_indices: optional, Union[np.ndarray, str]
+            | indices of the components to include
+            | if ``np.ndarray``, uses these indices in the provided array
+            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
+            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
+            | if not provided, ``None``, or ``"all"`` uses all components
+
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
+            strange unexpected behavior.
+            | In general you want a copy of the cached value.
 
         Returns
         -------
-
+        Tuple[List[np.ndarray], List[np.ndarray]]
+            | (List[coordinates array], List[centers of masses array])
+            | each array of coordinates is 2D, [xs, ys]
+            | each center of mass is [x, y]
         """
         cnmf_obj = self.get_output()
-        contours = self._get_spatial_contours(cnmf_obj, ixs_components)
+        contours = self._get_spatial_contours(cnmf_obj, component_indices)
 
         coordinates = list()
         coms = list()
@@ -181,31 +259,40 @@ class CNMFExtensions:
         return coordinates, coms
 
     @validate("cnmf")
-    def get_temporal_components(
-        self, ixs_components: Optional[np.ndarray] = None, add_background: bool = False
+    @_component_indices_parser
+    @cache.use_cache
+    def get_temporal(
+        self, component_indices: Union[np.ndarray, str] = None, add_background: bool = False, return_copy=True
     ) -> np.ndarray:
         """
-        Get the temporal components for this CNMF item
+        Get the temporal components for this CNMF item, basically ``cnmf.estimates.C``
 
         Parameters
         ----------
-        ixs_components: np.ndarray
-            indices for which to return temporal components, ``cnmf.estimates.C``.
-            if `None` uses cnmf.estimates.idx_components
+        component_indices: optional, Union[np.ndarray, str]
+            | indices of the components to include
+            | if ``np.ndarray``, uses these indices in the provided array
+            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
+            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
+            | if not provided, ``None``, or ``"all"`` uses all components
 
         add_background: bool
-            if ``True``, add the temporal background, basically ``cnmf.estimates.C + cnmf.estimates.f``
+            if ``True``, add the temporal background, ``cnmf.estimates.C + cnmf.estimates.f``
+
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
+            strange unexpected behavior.
+            | In general you want a copy of the cached value.
 
         Returns
         -------
-
+        np.ndarray
+            shape is [n_components, n_frames]
         """
         cnmf_obj = self.get_output()
 
-        if ixs_components is None:
-            ixs_components = cnmf_obj.estimates.idx_components
-
-        C = cnmf_obj.estimates.C[ixs_components]
+        C = cnmf_obj.estimates.C[component_indices]
         f = cnmf_obj.estimates.f
 
         if add_background:
@@ -213,26 +300,30 @@ class CNMFExtensions:
         else:
             return C
 
-    # TODO: Cache this globally so that a common upper cache limit is valid for ALL batch items
     @validate("cnmf")
-    def get_reconstructed_movie(
-        self,
-        ixs_frames: Optional[Union[Tuple[int, int], int]] = None,
-        idx_components: np.ndarray = None,
-        add_background: bool = True,
+    @_component_indices_parser
+    def get_rcm(
+            self,
+            component_indices: Union[np.ndarray, str] = None,
+            frame_indices: Union[Tuple[int, int], int] = None,
     ) -> np.ndarray:
         """
-        Return the reconstructed movie, (A * C) + (b * f)
+        Return the reconstructed movie with no background, (A * C)
 
         Parameters
         ----------
-        ixs_frames: Tuple[int, int], int
-            (start_frame, stop_frame), return frames in this range including the ``start_frame``, upto and not
-            including the ``stop_frame``
-            if single int, return reconstructed movie for single frame indicated
+        component_indices: optional, Union[np.ndarray, str]
+            | indices of the components to include
+            | if ``np.ndarray``, uses these indices in the provided array
+            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
+            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
+            | if not provided, ``None``, or ``"all"`` uses all components
 
-        add_background: bool
-            if ``True``, add the spatial & temporal background, b * f
+        frame_indices: optional, Union[Tuple[int, int], int]
+            (start_frame, stop_frame), return frames in this range including
+            the ``start_frame`` upto and not including the ``stop_frame``
+            | if single int, return only for single frame indicated
+            | if ``None`` or not provided returns all frames, **not recommended**
 
         Returns
         -------
@@ -241,21 +332,88 @@ class CNMFExtensions:
         """
         cnmf_obj = self.get_output()
 
-        if idx_components is None:
-            idx_components = np.arange(cnmf_obj.estimates.A.shape[1])
+        if frame_indices is None:
+            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
 
-        if ixs_frames is None:
-            ixs_frames = (0, cnmf_obj.estimates.C.shape[1])
+        if isinstance(frame_indices, int):
+            frame_indices = (frame_indices, frame_indices + 1)
 
-        if isinstance(ixs_frames, int):
-            ixs_frames = (ixs_frames, ixs_frames + 1)
-
-        dn = cnmf_obj.estimates.A[:,idx_components].dot(
-            cnmf_obj.estimates.C[idx_components, ixs_frames[0] : ixs_frames[1]]
+        dn = cnmf_obj.estimates.A[:, component_indices].dot(
+            cnmf_obj.estimates.C[component_indices, frame_indices[0]: frame_indices[1]]
         )
 
-        if add_background:
-            dn += cnmf_obj.estimates.b.dot(
-                cnmf_obj.estimates.f[:, ixs_frames[0] : ixs_frames[1]]
-            )
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+    @validate("cnmf")
+    def get_rcb(
+            self,
+            frame_indices: Union[Tuple[int, int], int] = None,
+    ) -> np.ndarray:
+        """
+        Return the reconstructed background, (b * f)
+
+        Parameters
+        ----------
+        frame_indices: optional, Union[Tuple[int, int], int]
+            (start_frame, stop_frame), return frames in this range including
+            the ``start_frame`` upto and not including the ``stop_frame``
+            | if single int, return only for single frame indicated
+            | if ``None`` or not provided returns all frames, **not recommended**
+
+        Returns
+        -------
+        np.ndarray
+            shape is [n_frames, x_pixels, y_pixels]
+        """
+        cnmf_obj = self.get_output()
+
+        if frame_indices is None:
+            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
+
+        if isinstance(frame_indices, int):
+            frame_indices = (frame_indices, frame_indices + 1)
+
+        dn = cnmf_obj.estimates.b.dot(
+            cnmf_obj.estimates.f[:, frame_indices[0]: frame_indices[1]]
+        )
+        return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+    @validate("cnmf")
+    def get_residuals(
+            self,
+            frame_indices: Union[Tuple[int, int], int] = None,
+    ) -> np.ndarray:
+        """
+        Return residuals, raw movie - (A * C) - (b * f)
+
+        Parameters
+        ----------
+        frame_indices: optional, Union[Tuple[int, int], int]
+            (start_frame, stop_frame), return frames in this range including
+            the ``start_frame`` upto and not including the ``stop_frame``
+            | if single int, return only for single frame indicated
+            | if ``None`` or not provided returns all frames, **not recommended**
+
+        Returns
+        -------
+        np.ndarray
+            shape is [n_frames, x_pixels, y_pixels]
+        """
+
+        cnmf_obj = self.get_output()
+
+        if frame_indices is None:
+            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
+
+        if isinstance(frame_indices, int):
+            frame_indices = (frame_indices, frame_indices + 1)
+
+        raw_movie = self.get_input_memmap()
+
+        reconstructed_movie = self.get_rcm(component_indices="all", frame_indices=frame_indices)
+
+        background = self.get_rcb(frame_indices)
+
+        residuals = raw_movie[np.arange(*frame_indices)] - reconstructed_movie - background
+
+        return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])

@@ -16,12 +16,8 @@ from ..batch_utils import (
     get_parent_raw_data_path,
     PathsDataFrameExtension,
     PathsSeriesExtension,
-    HAS_PYQT,
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
-
-if HAS_PYQT:
-    from PyQt5 import QtCore
 from caiman import load_memmap
 
 
@@ -39,7 +35,8 @@ def validate(algo: str = None):
                     )
 
             if not self._series["outputs"]["success"]:
-                raise ValueError("Cannot load output of an unsuccessful item")
+                tb = self._series["outputs"]["traceback"]
+                raise ValueError(f"Batch item was unsuccessful, traceback from subprocess:\n{tb}")
             return func(self, *args, **kwargs)
 
         return wrapper
@@ -137,42 +134,7 @@ class CaimanSeriesExtensions:
 
     def __init__(self, s: pd.Series):
         self._series = s
-        self.process: [Union, QtCore.QProcess, Popen] = None
-
-    def _run_qprocess(
-        self,
-        runfile_path: str,
-        callbacks_finished: List[callable],
-        callback_std_out: Optional[callable] = None,
-    ) -> QtCore.QProcess:
-
-        # Create a QProcess
-        self.process = QtCore.QProcess()
-        self.process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
-
-        # Set the callback function to read the stdout
-        if callback_std_out is not None:
-            self.process.readyReadStandardOutput.connect(
-                partial(callback_std_out, self.process)
-            )
-
-        # connect the callback functions for when the process finishes
-        if callbacks_finished is not None:
-            for f in callbacks_finished:
-                self.process.finished.connect(f)
-
-        parent_path = self._series.paths.resolve(self._series.input_movie_path).parent
-
-        # Set working dir for the external process
-        self.process.setWorkingDirectory(str(parent_path))
-
-        # Start the external process
-        if IS_WINDOWS:
-            self.process.start("powershell.exe", [runfile_path])
-        else:
-            self.process.start(runfile_path)
-
-        return self.process
+        self.process: Popen = None
 
     def _run_subprocess(
         self,
@@ -271,15 +233,15 @@ class CaimanSeriesExtensions:
     def get_input_movie(self) -> Union[np.ndarray, pims.FramesSequence]:
         extension = self.get_input_movie_path().suffixes[-1]
 
-        if extension in ['.tiff', '.tif', '.btf']:
+        if extension in [".tiff", ".tif", ".btf"]:
             return pims.open(str(self.get_input_movie_path()))
 
-        elif extension in ['.mmap', '.memmap']:
+        elif extension in [".mmap", ".memmap"]:
             Yr, dims, T = load_memmap(str(self.get_input_movie_path()))
             return np.reshape(Yr.T, [T] + list(dims), order="F")
 
     @validate()
-    def get_correlation_image(self) -> np.ndarray:
+    def get_corr_image(self) -> np.ndarray:
         """
         Returns
         -------
@@ -306,12 +268,3 @@ class CaimanSeriesExtensions:
             self._series["outputs"][f"{proj_type}-projection-path"]
         )
         return np.load(path)
-
-    # TODO: finish the copy_data() extension
-    # def copy_data(self, new_parent_dir: Union[Path, str]):
-    #     """
-    #     Copy all data associated with this series to a different parent dir
-    #     """
-    #     movie_path = get_full_raw_data_path(self._series['input_movie_path'])
-    #     output_paths = []
-    #     for p in self._series['outputs']
