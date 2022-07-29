@@ -122,7 +122,7 @@ class Cache:
                     self.cache.iloc[i, 0] == instance._series["uuid"]
                     and self.cache.iloc[i, 1] == func.__name__
                     and _check_args_equality(args, self.cache.iloc[i, 2])
-                    and _check_arg_equality(kwargs, self.cache.iloc[i, 3])
+                    and _check_args_equality(kwargs, self.cache.iloc[i, 3])
                 ):
                     self.cache.iloc[i, 5] = time.time()
                     return_val = self.cache.iloc[i, 4]
