@@ -509,15 +509,15 @@ def test_cnmf():
     # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
 
     # test to check cnmf get_masks()
-    cnmf_spatial_masks = df.iloc[-1].cnmf.get_masks()
+    cnmf_spatial_masks = df.iloc[-1].cnmf.get_masks("good")
     cnmf_spatial_masks_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "spatial_masks.npy")
     )
     numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
 
     # test to check get_contours()
-    cnmf_spatial_contours_contours = df.iloc[-1].cnmf.get_contours()[0]
-    cnmf_spatial_contours_coms = df.iloc[-1].cnmf.get_contours()[1]
+    cnmf_spatial_contours_contours = df.iloc[-1].cnmf.get_contours("good")[0]
+    cnmf_spatial_contours_coms = df.iloc[-1].cnmf.get_contours("good")[1]
     cnmf_spatial_contours_contours_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "spatial_contours_contours.npy"),
         allow_pickle=True,
@@ -536,7 +536,7 @@ def test_cnmf():
         numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
 
     # test to check get_temporal()
-    cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal()
+    cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal("good")
     cnmf_temporal_components_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "temporal_components.npy")
     )
@@ -545,7 +545,7 @@ def test_cnmf():
     )
 
     # test to check get_rcm()
-    cnmf_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm()
+    cnmf_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm("all")
     cnmf_reconstructed_movie_AouterC_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "reconstructed_movie_new.npy")
     )
@@ -562,7 +562,7 @@ def test_cnmf():
 
     # test to check old numpy reconstructed file = get_rcm()
     # + test to check get_rcb()
-    cnmf_reconstructed_movie_AouterC_plus_bouterf = df.iloc[-1].cnmf.get_rcm() + df.iloc[-1].cnmf.get_rcb()
+    cnmf_reconstructed_movie_AouterC_plus_bouterf = df.iloc[-1].cnmf.get_rcm("all") + df.iloc[-1].cnmf.get_rcb()
     cnmf_reconstructed_movie_AouterC_plus_bouterf_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "reconstructed_movie.npy")
     )
@@ -658,7 +658,7 @@ def test_cnmf():
 
     ixs_frames = numpy.array([1, 3, 5, 2])
     # test to check ixs frames for cnmf.get_rcm()
-    ixs_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm(ixs_frames)
+    ixs_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm("all", ixs_frames)
     ixs_reconstructed_movie_AouterC_actual = numpy.load(ground_truths_dir.joinpath("cnmf", "cnmf_ixs", "ixs_reconstructed_movie_new.npy"))
     numpy.testing.assert_allclose(
         ixs_reconstructed_movie_AouterC, ixs_reconstructed_movie_AouterC_actual, rtol=1e2, atol=1e-10
@@ -673,7 +673,7 @@ def test_cnmf():
 
     # test to check ixs components for old cnmf.get_rcm() should equal
     # get_rcm + get_rcb
-    ixs_reconstructed_movie_AouterC_plus_bouterf = df.iloc[-1].cnmf.get_rcm(ixs_frames) + df.iloc[
+    ixs_reconstructed_movie_AouterC_plus_bouterf = df.iloc[-1].cnmf.get_rcm("all", ixs_frames) + df.iloc[
         -1].cnmf.get_rcb(ixs_frames)
     ixs_reconstructed_movie_AouterC_plus_bouterf_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "cnmf_ixs", "ixs_reconstructed_movie.npy"),
@@ -931,15 +931,15 @@ def test_cnmfe():
     # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
 
     # test to check cnmf get_masks()
-    cnmfe_spatial_masks = df.iloc[-1].cnmf.get_masks()
+    cnmfe_spatial_masks = df.iloc[-1].cnmf.get_masks("good")
     cnmfe_spatial_masks_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_spatial_masks.npy")
     )
     numpy.testing.assert_array_equal(cnmfe_spatial_masks, cnmfe_spatial_masks_actual)
 
     # test to check get_contours()
-    cnmfe_spatial_contours_contours = df.iloc[-1].cnmf.get_contours()[0]
-    cnmfe_spatial_contours_coms = df.iloc[-1].cnmf.get_contours()[1]
+    cnmfe_spatial_contours_contours = df.iloc[-1].cnmf.get_contours("good")[0]
+    cnmfe_spatial_contours_coms = df.iloc[-1].cnmf.get_contours("good")[1]
     cnmfe_spatial_contours_contours_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_spatial_contours_contours.npy"),
         allow_pickle=True,
@@ -958,7 +958,7 @@ def test_cnmfe():
         numpy.testing.assert_allclose(com, actual_com, rtol=1e-2, atol=1e-10)
 
     # test to check get_temporal()
-    cnmfe_temporal_components = df.iloc[-1].cnmf.get_temporal()
+    cnmfe_temporal_components = df.iloc[-1].cnmf.get_temporal("good")
     cnmfe_temporal_components_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_temporal_components.npy")
     )
@@ -970,7 +970,7 @@ def test_cnmfe():
     )
 
     # test to check get_rcm()
-    cnmfe_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm()
+    cnmfe_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm("all")
     cnmfe_reconstructed_movie_AouterC_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_reconstructed_movie_new.npy")
     )
@@ -988,7 +988,7 @@ def test_cnmfe():
 
     # test to check old numpy reconstructed file = get_rcm()
     # + test to check get_rcb()
-    cnmfe_reconstructed_movie_AouterC_plus_bouterf = df.iloc[-1].cnmf.get_rcm() + df.iloc[
+    cnmfe_reconstructed_movie_AouterC_plus_bouterf = df.iloc[-1].cnmf.get_rcm("all") + df.iloc[
         -1].cnmf.get_rcb()
     cnmfe_reconstructed_movie_AouterC_plus_bouterf_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_reconstructed_movie.npy")
@@ -1061,7 +1061,7 @@ def test_cnmfe():
     ixs_frames = numpy.array([1, 4, 7, 3])
 
     # test to check get_rcm()
-    cnmfe_ixs_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm(ixs_frames)
+    cnmfe_ixs_reconstructed_movie_AouterC = df.iloc[-1].cnmf.get_rcm("all", ixs_frames)
     cnmfe_ixs_reconstructed_movie_AouterC_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full","cnmfe_ixs", "ixs_cnmfe_reconstructed_movie_new.npy")
     )
@@ -1079,7 +1079,7 @@ def test_cnmfe():
 
     # test to check old numpy reconstructed file = get_rcm()
     # + test to check get_rcb()
-    cnmfe_ixs_reconstructed_AouterC_plus_bouterf_movie = df.iloc[-1].cnmf.get_rcm(ixs_frames) + df.iloc[
+    cnmfe_ixs_reconstructed_AouterC_plus_bouterf_movie = df.iloc[-1].cnmf.get_rcm("all", ixs_frames) + df.iloc[
         -1].cnmf.get_rcb(ixs_frames)
     cnmfe_ixs_reconstructed_movie_AouterC_plus_bouterf_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_ixs", "ixs_reconstructed_movie.npy")
@@ -1262,9 +1262,9 @@ def test_cache():
     # assert(hex(id(df.iloc[-1].cnmf.get_output(copy=False))) == hex1)
     # assert(hex_get_output != hex1)
     time_stamp1 = cache[cache["function"] == "get_output"]["time_stamp"].item()
-    df.iloc[-1].cnmf.get_temporal()
-    df.iloc[-1].cnmf.get_contours()
-    df.iloc[-1].cnmf.get_masks()
+    df.iloc[-1].cnmf.get_temporal("good")
+    df.iloc[-1].cnmf.get_contours("good")
+    df.iloc[-1].cnmf.get_masks("good")
     df.iloc[-1].cnmf.get_temporal(np.arange(7))
     df.iloc[-1].cnmf.get_temporal(np.arange(8))
     df.iloc[-1].cnmf.get_temporal(np.arange(9))
