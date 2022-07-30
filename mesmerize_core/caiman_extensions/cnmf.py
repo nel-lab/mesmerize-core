@@ -18,9 +18,6 @@ cache = Cache()
 def _component_indices_parser(func):
     @wraps(func)
     def _parser(instance, *args, **kwargs) -> Any:
-        print(args)
-        print(kwargs)
-        print(func)
         if "component_indices" in kwargs.keys():
             component_indices: Union[np.ndarray, str, None] = kwargs["component_indices"]
         elif len(args) > 0:
@@ -306,6 +303,7 @@ class CNMFExtensions:
             self,
             component_indices: Union[np.ndarray, str] = None,
             frame_indices: Union[Tuple[int, int], int] = None,
+            temporal_components: np.ndarray = None
     ) -> np.ndarray:
         """
         Return the reconstructed movie with no background, (A * C)
@@ -325,6 +323,11 @@ class CNMFExtensions:
             | if single int, return only for single frame indicated
             | if ``None`` or not provided returns all frames, **not recommended**
 
+        temporal_components: optional, np.ndarray
+            temporal components to use as ``C`` for computing reconstructed movie.
+            | uses ``cnmf.estimates.C`` if not provided
+            | useful if you want to create the reconstructed movie using dF/Fo, z-scored data, etc.
+
         Returns
         -------
         np.ndarray
@@ -332,14 +335,24 @@ class CNMFExtensions:
         """
         cnmf_obj = self.get_output()
 
+        if temporal_components is None:
+            temporal_components = cnmf_obj.estimates.C
+
+        else:  # number of spatial components must equal number of temporal components
+            if cnmf_obj.estimates.A.shape[1] != temporal_components.shape[0]:
+                raise ValueError(
+                    f"Number of temporal components provided: `{temporal_components.shape[0]}` "
+                    f"does not equal number of spatial components provided: `{cnmf_obj.estimates.A.shape[1]}`"
+                )
+
         if frame_indices is None:
-            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
+            frame_indices = (0, temporal_components.shape[1])
 
         if isinstance(frame_indices, int):
             frame_indices = (frame_indices, frame_indices + 1)
 
         dn = cnmf_obj.estimates.A[:, component_indices].dot(
-            cnmf_obj.estimates.C[component_indices, frame_indices[0]: frame_indices[1]]
+            temporal_components[component_indices, frame_indices[0]: frame_indices[1]]
         )
 
         return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
