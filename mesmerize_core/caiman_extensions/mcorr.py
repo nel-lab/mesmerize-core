@@ -46,7 +46,7 @@ class MCorrExtensions:
         View the raw movie and mcorr movie side by side
 
         .. code-block:: python
-        
+
             from mesmerize_core import load_batch
 
             # needs fastplotlib and must be run in a notebook
