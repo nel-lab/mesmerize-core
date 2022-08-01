@@ -223,4 +223,3 @@ class Cache:
 
             return __invalidate
         return _invalidate
-
