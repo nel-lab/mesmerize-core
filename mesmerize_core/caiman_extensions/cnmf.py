@@ -430,3 +430,63 @@ class CNMFExtensions:
         residuals = raw_movie[np.arange(*frame_indices)] - reconstructed_movie - background
 
         return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+
+    @cache.invalidate()
+    def run_detrend_dfof(
+            self,
+            quantileMin: float = 8,
+            frames_window: int = 500,
+            flag_auto: bool = True,
+            use_fast: bool = False,
+            use_residuals: bool = True,
+            detrend_only: bool = False
+    ) -> None:
+        """
+        | Uses caiman's detrend_df_f.
+        | call ``cnmf.get_detrend_dfof()`` to get the values.
+        | Sets CNMF.estimates.F_dff.
+
+        Note: invalidates the cache for this batch item.
+
+        Parameters
+        ----------
+        quantile_min: float
+            quantile used to estimate the baseline (values in [0,100])
+            used only if 'flag_auto' is False, i.e. ignored by default
+
+        frames_window: int
+            number of frames for computing running quantile
+
+        flag_auto: bool
+            flag for determining quantile automatically
+
+        use_fast: bool
+            flag for using approximate fast percentile filtering
+
+        detrend_only: bool
+            flag for only subtracting baseline and not normalizing by it.
+            Used in 1p data processing where baseline fluorescence cannot be
+            determined.
+
+        Returns
+        -------
+        None
+
+        """
+
+        cnmf_obj: CNMF = self.get_output()
+        cnmf_obj.estimates.detrend_df_f(
+            quantileMin=quantileMin,
+            frames_window=frames_window,
+            flag_auto=flag_auto,
+            use_fast=use_fast,
+            use_residuals=use_residuals,
+            detrend_only=detrend_only
+        )
+
+        # remove current hdf5 file
+        cnmf_obj_path = self.get_output_path()
+        cnmf_obj_path.unlink()
+
+        # save new hdf5 file with new F_dff vals
+        cnmf_obj.save(str(cnmf_obj_path))
