@@ -89,6 +89,12 @@ class CaimanDataFrameExtensions:
             Parameters for running the algorithm with the input movie
 
         """
+        if get_parent_raw_data_path() is None:
+            raise ValueError(
+                "parent raw data path is not set, you must set it using:\n"
+                "`set_parent_raw_data_path()`"
+            )
+
         # make sure path is within batch dir or parent raw data path
         input_movie_path = self._df.paths.resolve(input_movie_path)
         validate_path(input_movie_path)
@@ -178,6 +184,12 @@ class CaimanSeriesExtensions:
         **kwargs
             any kwargs to pass to the backend
         """
+        if get_parent_raw_data_path() is None:
+            raise ValueError(
+                "parent raw data path is not set, you must set it using:\n"
+                "`set_parent_raw_data_path()`"
+            )
+
         if backend not in COMPUTE_BACKENDS:
             raise KeyError(
                 f"Invalid or unavailable `backend`, choose from the following backends:\n"
