@@ -46,6 +46,7 @@ class MCorrExtensions:
         View the raw movie and mcorr movie side by side
 
         .. code-block:: python
+
             from mesmerize_core import load_batch
 
             # needs fastplotlib and must be run in a notebook
@@ -83,7 +84,7 @@ class MCorrExtensions:
             gp.add_animdations([update_frame])
 
             VBox([gp.show(), slider])
-            
+
         """
         path = self.get_output_path()
         Yr, dims, T = load_memmap(str(path))
