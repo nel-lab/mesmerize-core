@@ -110,6 +110,45 @@ class CNMFExtensions:
         -------
         np.ndarray
             numpy memmap array of the input
+
+        Examples
+        --------
+
+        Get the input memmap and view it with random access scrolling
+
+        .. code-block:: python
+            from mesmerize_core import load_batch
+            from matplotlib import pyplot as plt
+
+            # needs fastplotlib and must be run in a notebook
+            from fastplotlib import Plot
+            from ipywidgets import IntSlider, VBox
+
+            df = load_batch("/path/to/batch_dataframe_file.pickle")
+
+            # assuming the 0th index is a cnmf item
+            movie = df.iloc[0].cnmf.get_input_memmap()
+
+            # plot a frame
+            plt.imshow(movie[0])
+            plt.show()
+
+            # the following requires fastplotlib and must be run in a new notebook cell
+            slider = IntSlider(value=0, min=0, max=movie.shape[0] - 1, step=1)
+            plot = Plot()
+
+            image_graphic = plot.image(movie[0], cmap="gnuplot2")
+
+            previous_slider_value = 0
+            def update_frame():  # runs on each rendering cycle
+                if slider.value == previous_slider_value:
+                    return
+                image_graphic.update_data(data=movie[slider.value])
+
+            plot.add_animations([update_frame])
+
+            VBox([plot.show(), slider])
+
         """
         movie_path = str(self._series.caiman.get_input_movie_path())
         if movie_path.endswith("mmap"):
@@ -125,10 +164,25 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_output_path(self) -> Path:
         """
+        Get the path to the cnmf hdf5 output file.
+
+        **Note:** You generally want to work with the other extensions instead of directly using the hdf5 file.
+
         Returns
         -------
         Path
             full path to the caiman-format CNMF hdf5 output file
+
+        Examples
+        --------
+
+        Load the CNMF model with estimates from the hdf5 file.
+
+        .. code-block:: python
+            from mesmerize_core import load_batch
+
+            df = load_batch("/path/to/batch_dataframe_file.pickle")
+
         """
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
@@ -148,6 +202,24 @@ class CNMFExtensions:
         -------
         CNMF
             Returns the Caiman CNMF object
+
+        Examples
+        --------
+
+        Load the CNMF model with estimates from the hdf5 file.
+
+        .. code-block:: python
+            from mesmerize_core import load_batch
+
+            df = load_batch("/path/to/batch_dataframe_file.pickle")
+
+            # assume the 0th index is a cnmf item
+            cnmf_obj = df.iloc[0].cnmf.get_output()
+
+            # see some estimates
+            print(cnmf_obj.estimates.C)
+            print(cnmf_obj.estimates.f)
+
         """
         # Need to create a cache object that takes the item's UUID and returns based on that
         # collective global cache
@@ -254,6 +326,58 @@ class CNMFExtensions:
             | (List[coordinates array], List[centers of masses array])
             | each array of coordinates is 2D, [xs, ys]
             | each center of mass is [x, y]
+
+        Examples
+        --------
+
+        This example loads the input movie and contours, and plots them with fastplotlib
+
+        .. code-block:: python
+            from mesmerize_core import load_batch
+            from matplotlib import pyplot as plt
+
+            # needs fastplotlib and must be run in a notebook
+            from fastplotlib import Plot
+            from ipywidgets import IntSlider, VBox
+
+            df = load_batch("/path/to/batch_dataframe_file.pickle")
+
+            # assuming the 0th index is a cnmf item
+            movie = df.iloc[0].cnmf.get_input_memmap()
+            contours, coms = df.iloc[0].cnmf.get_contours()
+
+            # plot a corr img and contours using matplotlib
+            plt.imshow(df.iloc[0].caiman.get_corr_image().T)
+            for coor in contours:
+                plt.scatter(coor[:, 0], coor[:, 1])
+            plt.show()
+
+            # the following requires fastplotlib and must be run in a new notebook cell
+            slider = IntSlider(value=0, min=0, max=movie.shape[0] - 1, step=1)
+            plot = Plot()
+
+            image_graphic = plot.image(movie[0].T, cmap="gnuplot2")
+            # note the movie frame is transposed, this is sometimes requires to get the contours to align
+
+            for coor in contours:
+                # line data has to be 3D
+                zs = np.ones(coor.shape[0])  # this will place it above the image graphic
+                c3d = [coor[:, 0], coor[:, 1], zs]
+                coors_3d = np.dstack(c3d)[0]
+
+                # make all the lines red, [R, G, B, A] array
+                colors = np.vstack([[1., 0., 0., 0.7]] * coors_3d.shape[0])
+                plot.line(data=coors_3d, colors=colors)
+
+            previous_slider_value = 0
+            def update_frame():  # runs on each rendering cycle
+                if slider.value == previous_slider_value:
+                    return
+                image_graphic.update_data(data=movie[slider.value].T)
+
+            plot.add_animations([update_frame])
+
+            VBox([plot.show(), slider])
         """
         cnmf_obj = self.get_output()
         contours = self._get_spatial_contours(cnmf_obj, component_indices)
@@ -302,6 +426,22 @@ class CNMFExtensions:
         -------
         np.ndarray
             shape is [n_components, n_frames]
+
+        Examples
+        --------
+
+        Plot the temporal components as a heatmap
+
+        .. code-block:: python
+            from mesmerize_core import load_batch
+            from seaborn import heatmap
+
+            df = load_batch("/path/to/batch_dataframe_file.pickle")
+
+            # assumes 0th index is a cnmf batch item
+            temporal = df.iloc[0].cnmf.get_temporal()
+
+            heatmap(temporal)
         """
         cnmf_obj = self.get_output()
 
@@ -323,6 +463,8 @@ class CNMFExtensions:
     ) -> np.ndarray:
         """
         Return the reconstructed movie with no background, (A * C)
+
+        | See the demo notebooks for examples
 
         Parameters
         ----------
