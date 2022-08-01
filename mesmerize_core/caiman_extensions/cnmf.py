@@ -117,6 +117,7 @@ class CNMFExtensions:
         Get the input memmap and view it with random access scrolling
 
         .. code-block:: python
+
             from mesmerize_core import load_batch
             from matplotlib import pyplot as plt
 
@@ -179,6 +180,7 @@ class CNMFExtensions:
         Load the CNMF model with estimates from the hdf5 file.
 
         .. code-block:: python
+
             from mesmerize_core import load_batch
 
             df = load_batch("/path/to/batch_dataframe_file.pickle")
@@ -209,6 +211,7 @@ class CNMFExtensions:
         Load the CNMF model with estimates from the hdf5 file.
 
         .. code-block:: python
+
             from mesmerize_core import load_batch
 
             df = load_batch("/path/to/batch_dataframe_file.pickle")
@@ -333,6 +336,7 @@ class CNMFExtensions:
         This example loads the input movie and contours, and plots them with fastplotlib
 
         .. code-block:: python
+
             from mesmerize_core import load_batch
             from matplotlib import pyplot as plt
 
@@ -433,6 +437,7 @@ class CNMFExtensions:
         Plot the temporal components as a heatmap
 
         .. code-block:: python
+
             from mesmerize_core import load_batch
             from seaborn import heatmap
 
