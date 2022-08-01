@@ -186,3 +186,40 @@ class Cache:
             return _return_wrapper(return_val, copy_bool=return_copy)
 
         return _use_cache
+
+    def invalidate(self, pre: bool = True, post: bool = True):
+        """
+        invalidate all cache entries associated to a single batch item
+
+        Parameters
+        ----------
+        pre: bool
+            invalidate before the decorated function has been fun
+
+        post: bool
+            invalidate after the decorated function has been fun
+
+        """
+        def _invalidate(func):
+            @wraps(func)
+            def __invalidate(instance, *args, **kwargs):
+                u = instance._series["uuid"]
+
+                if pre:
+                    self.cache.drop(
+                        self.cache.loc[self.cache["uuid"] == u].index,
+                        inplace=True
+                    )
+
+                rval = func(instance, *args, **kwargs)
+
+                if post:
+                    self.cache.drop(
+                        self.cache.loc[self.cache["uuid"] == u].index,
+                        inplace=True
+                    )
+
+                return rval
+
+            return __invalidate
+        return _invalidate
