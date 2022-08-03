@@ -191,9 +191,9 @@ shits = df.iloc[-1].mcorr.get_shifts()
 # We can continue from mcorr above and perform CNMF using the mcorr output
 
 # some params for CNMF
-params_cnmf =\
+params_cnmf =
 {
-    'main': # indicates that these are the "main" params for the CNMF algo
+    'main':  # indicates that these are the "main" params for the CNMF algo
         {
             'p': 1,
             'gnb': 2,
@@ -213,14 +213,14 @@ params_cnmf =\
             'cnn_lowest': 0.1,
             'decay_time': 0.4,
         },
-    'refit': True, # If `True`, run a second iteration of CNMF
+    'refit': True,  # If `True`, run a second iteration of CNMF
 }
 
 df.caiman.add_item(
-  algo='cnmf',
-  name='my_movie',
-  input_movie_path=df.iloc[0].mcorr.get_output_path(),  # use mcorr output from a previous item
-  params=params_cnmf
+    algo='cnmf',
+    name='my_movie',
+    input_movie_path=df.iloc[0].mcorr.get_output_path(),  # use mcorr output from a previous item
+    params=params_cnmf
 )
 
 # run this item
@@ -229,16 +229,16 @@ process.wait()
 
 # we can look at the spatial components for example
 # see th demo notebook for an example that uses fastplotlib to visualize contours with the movie
-coors = df.iloc[-1].cnmf.get_spatial_contours()
+coors = df.iloc[-1].cnmf.get_contours()
 
 # let's plot that on top of the correlation image
-corr_img = df.iloc[-1].caiman.get_correlation_image().T  # must be transposed to line up
+corr_img = df.iloc[-1].caiman.get_corr_image().T  # must be transposed to line up
 
 plt.imshow(corr_img, cmap='gray')
 
 # plot the contours
 for coor in coors:
-  plt.scatter(coor[:, 0], coor[:, 1], s=4)
+    plt.scatter(coor[:, 0], coor[:, 1], s=4)
 plt.show()
 
 # see the demo notebook to see how to visualize residuals, reconstructed movie, etc.
