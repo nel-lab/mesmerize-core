@@ -5,6 +5,8 @@
 
 Mesmerize core backend
 
+**News: there will be a workshop in ~late September, more info:** https://twitter.com/kushalkolar/status/1554927353251262464 
+
 **Note: We're currently waiting for the release of pandas v1.5 before the initial release of mesmerize-core**
 
 A batch management system for calcium imaging analysis using the CaImAn library. 
