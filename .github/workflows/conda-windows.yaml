@@ -32,11 +32,12 @@ jobs:
       run: |
         mamba env update -n base --file environment.yml
         caimanmanager.py install
-        pip install git+https://github.com/pandas-dev/pandas.git
+        pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
         pip install .
         
     - name: Test with pytest
       run: |
         mamba install pytest
-        $env:DOWNLOAD_GROUND_TRUTHS="1" pytest -s .
+        $env:DOWNLOAD_GROUND_TRUTHS="1"
+        pytest -s .
         
