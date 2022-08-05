@@ -89,12 +89,11 @@ class _BasePathExtensions:
             return self.get_batch_path().parent.joinpath(path)
 
         # else check if in parent raw data dir
-        if get_parent_raw_data_path() is not None:
+        elif get_parent_raw_data_path() is not None:
             if get_parent_raw_data_path().joinpath(path).exists():
                 return get_parent_raw_data_path().joinpath(path)
 
-        else:
-            raise FileNotFoundError(f"Could not resolve full path of:\n{path}")
+        raise FileNotFoundError(f"Could not resolve full path of:\n{path}")
 
     def split(self, path: Union[str, Path]):
         """
@@ -118,14 +117,13 @@ class _BasePathExtensions:
             )
 
         # else check if in parent raw data dir
-        if get_parent_raw_data_path() is not None:
+        elif get_parent_raw_data_path() is not None:
             if get_parent_raw_data_path() in path.parents:
                 return get_parent_raw_data_path(), path.relative_to(
                     get_parent_raw_data_path()
                 )
 
-        else:
-            raise NotADirectoryError(
+        raise NotADirectoryError(
                 f"Could not split `path`:\n{path}"
                 f"\nnot relative to either batch path:\n{self.get_batch_path()}"
                 f"\nor parent raw data path:\n{get_parent_raw_data_path()}"
