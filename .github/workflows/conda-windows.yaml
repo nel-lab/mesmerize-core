@@ -1,10 +1,10 @@
-name: Python Package using Conda
+name: Windows Conda
 
 on: [push]
 
 jobs:
   build-linux:
-    runs-on: windows-10
+    runs-on: windows-latest
     strategy:
       max-parallel: 5
 
