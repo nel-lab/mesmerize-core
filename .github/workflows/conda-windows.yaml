@@ -15,11 +15,13 @@ jobs:
       with:
         python-version: 3.9
     - name: Add conda to system path
+      shell: bash -l {0}
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
         
     - name: Install mamba
+      shell: bash -l {0}
       run: |
         conda install -c conda-forge mamba
         conda clean -a
@@ -29,6 +31,7 @@ jobs:
         #       mamba install -c conda-forge caiman
         
     - name: install mesmerize-core
+      shell: bash -l {0}
       run: |
         mamba env update -n base --file environment.yml
         caimanmanager.py install
@@ -36,8 +39,9 @@ jobs:
         pip install .
         
     - name: Test with pytest
+      shell: bash -l {0}
       run: |
         mamba install pytest
-        $env:DOWNLOAD_GROUND_TRUTHS="1"
-        pytest -s .
+        #$env:DOWNLOAD_GROUND_TRUTHS="1"
+        export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
         
