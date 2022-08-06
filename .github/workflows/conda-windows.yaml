@@ -3,34 +3,24 @@ name: Windows Conda
 on: [push]
 
 jobs:
-  build-linux:
+  build-windows:
     runs-on: windows-latest
     strategy:
       max-parallel: 5
-
+      
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v3
+    - uses: conda-incubator/setup-miniconda@v2
       with:
-        python-version: 3.9
-    - name: Add conda to system path
+        miniconda-version: "latest"
+        activate-environment: foo
+          
+    - name: install mamba
       shell: bash -l {0}
       run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
-        
-    - name: Install mamba
-      shell: bash -l {0}
-      run: |
-        source ~/.bash_profile
+        conda info
         conda install -c conda-forge mamba
         conda clean -a
-        
-        #   - name: install caiman
-        #     run: |
-        #       mamba install -c conda-forge caiman
-        
+
     - name: install mesmerize-core
       shell: bash -l {0}
       run: |
@@ -38,11 +28,10 @@ jobs:
         caimanmanager.py install
         pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
         pip install .
-        
+
     - name: Test with pytest
       shell: bash -l {0}
       run: |
         mamba install pytest
         #$env:DOWNLOAD_GROUND_TRUTHS="1"
         export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
-        
