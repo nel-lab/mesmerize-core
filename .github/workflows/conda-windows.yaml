@@ -23,6 +23,7 @@ jobs:
     - name: Install mamba
       shell: bash -l {0}
       run: |
+        source ~/.bash_profile
         conda install -c conda-forge mamba
         conda clean -a
         
