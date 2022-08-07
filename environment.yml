@@ -7,4 +7,3 @@ dependencies:
   - click
   - jupyterlab
   - pydata-sphinx-theme
-  
