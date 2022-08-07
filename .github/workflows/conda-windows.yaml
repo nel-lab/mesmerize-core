@@ -1,69 +1,84 @@
 name: Windows Conda
 
-on: [push]
-
-jobs:
-  test:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install Conda environment from environment.yml
-        uses: mamba-org/provision-with-micromamba@main
-        with:
-          environment-file: environment.yml
-          environment-name: mescore
-          extra-specs: |
-            python=3.8
-
-      - name: install mesmerize
-        shell: bash -l {0}
-        run: |
-          micromamba activate mescore
-          caimanmanager.py install
-          micromamba install pytest
-          # pip install git+https://github.com/pandas-dev/pandas.git
-          pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp38-cp38-win_amd64.whl"
-          pip install .
-          
-      - name: pytests
-        shell: bash -l {0}
-        run: |
-          micromamba activate mescore
-          export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+# on: [push]
 
 # jobs:
-#   build-windows:
+#   test:
 #     runs-on: windows-latest
-#     strategy:
-#       max-parallel: 5
-      
 #     steps:
-#     - uses: conda-incubator/setup-miniconda@v2
-#       with:
-#         miniconda-version: "latest"
-#         activate-environment: foo
+#       - uses: actions/checkout@v2
+#       - name: Install Conda environment from environment.yml
+#         uses: mamba-org/provision-with-micromamba@main
+#         with:
+#           environment-file: environment.yml
+#           environment-name: mescore
+#           extra-specs: |
+#             python=3.9
+
+#       - name: install mesmerize
+#         shell: bash -l {0}
+#         run: |
+#           micromamba activate mescore
+#           caimanmanager.py install
+#           micromamba install pytest
+#           # pip install git+https://github.com/pandas-dev/pandas.git
+#           pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp38-cp38-win_amd64.whl"
+#           pip install .
           
-#     - name: install mamba
-#       shell: bash -l {0}
-#       run: |
-#         conda info
-#         conda install -c conda-forge mamba
-#         conda clean -a
+#       - name: pytests
+#         shell: bash -l {0}
+#         run: |
+#           micromamba activate mescore
+#           export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
-#     - name: install mesmerize-core
-#       shell: bash -l {0}
-#       run: |
-#         mamba env update --file environment.yml
-#         #mamba create -n mescore --file environment.yml
-#         # mamba env update -n foo --file environment.yml
-#         caimanmanager.py install
-#         pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
-#         pip install .
+# name: Python Package using Conda
 
-#     - name: Test with pytest
-#       shell: bash -l {0}
-#       run: |
-#         conda activate mescore
-#         mamba install pytest
-#         #$env:DOWNLOAD_GROUND_TRUTHS="1"
-#         export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+on:
+  pull_request:
+    branches:
+      - master
+      - dev
+  push:
+    branches: [ master ]
+
+jobs:
+  build-linux:
+    runs-on: windows-latest
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python '3.10'
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+    - name: Add conda to system path
+      shell: bash -l {0}
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+        
+    - name: Install mamba
+      shell: bash -l {0}
+      run: |
+        conda install -c conda-forge mamba
+        conda clean -a
+        
+        #   - name: install caiman
+        #     run: |
+        #       mamba install -c conda-forge caiman
+        
+    - name: install mesmerize-core
+      shell: bash -l {0}
+      run: |
+        mamba env update -n base --file environment.yml
+        caimanmanager.py install
+        pip install git+https://github.com/pandas-dev/pandas.git
+        pip install .
+        
+    - name: Test with pytest
+      shell: bash -l {0}
+      run: |
+        mamba install pytest
+        DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
