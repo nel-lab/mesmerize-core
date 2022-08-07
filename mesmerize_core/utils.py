@@ -236,6 +236,7 @@ def make_runfile(
 
     else:
         with open(sh_file, "w") as f:
+            f.write("$ErrorActionPreference = 'SilentlyContinue'\n")
             for k, v in os.environ.items():  # copy the current environment
                 if regex.match("^.*[\(\)]", str(k)) or regex.match("^.*[\(\)]", str(v)):
                     continue
