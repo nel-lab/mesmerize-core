@@ -37,8 +37,7 @@ jobs:
           caimanmanager.py install
           pip install https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl
           pip install .
-          conda activate mescore
-          export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+          DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
 # on: [push]
 
