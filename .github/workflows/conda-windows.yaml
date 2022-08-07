@@ -12,8 +12,9 @@ jobs:
         with:
           environment-file: environment.yml
           environment-name: mescore
+          extra-specs: |
+            python=3.9
 
-        
       - name: install mesmerize
         shell: bash -l {0}
         run: |
@@ -22,6 +23,7 @@ jobs:
           micromamba install pytest
           pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
           pip install .
+          
       - name: pytests
         shell: bash -l {0}
         run: |
