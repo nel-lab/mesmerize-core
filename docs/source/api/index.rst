@@ -1,20 +1,17 @@
 #############
-API Ref
+API Reference
 #############
-
-CaImAn extensions for use with pandas DataFrames.
 
 .. toctree::
    :maxdepth: 3
-
-   CaImAn Extensions
-   =================
+   :caption: CaImAn Extensions
 
    common
    mcorr
    cnmf
 
-   Functions
-   =========
+.. toctree::
+   :maxdepth: 2
+   :caption: Functions
 
    functions

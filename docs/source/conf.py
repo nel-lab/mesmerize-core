@@ -20,12 +20,11 @@ from typing import *
 # -- Project information -----------------------------------------------------
 
 project = 'mesmerize-core'
-copyright = '2022, Kushal Kolar, Arjun Putcha, Caitlin Lewis'
-author = 'Kushal Kolar, Arjun Putcha, Caitlin Lewis'
+copyright = '2022, Kushal Kolar, Caitlin Lewis, Arjun Putcha'
+author = 'Kushal Kolar, Caitlin Lewis, Arjun Putcha'
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -97,11 +96,8 @@ def _setup_navbar_side_toctree(app: Any):
     app.connect("html-page-context", add_class_toctree_function)
 
 
-
 def setup(app: Any):
     for setup_function in [
         _setup_navbar_side_toctree,
     ]:
         setup_function(app)
-
-

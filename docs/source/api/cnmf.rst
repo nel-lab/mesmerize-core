@@ -1,5 +1,7 @@
+.. _api_extenions_cnmf:
+
 CNMF
-====
+****
 
 **Acessor:** ``cnmf``
 

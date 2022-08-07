@@ -77,7 +77,7 @@ class CaimanDataFrameExtensions:
         Parameters
         ----------
         algo: str
-            Name of the algorithm to run, see `ALGO_MODULES` dict
+            Name of the algorithm to run, one of ``"mcorr"``, ``"cnmf"`` or ``"cnmfe"``
 
         name: str
             User set name for the batch item

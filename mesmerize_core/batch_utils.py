@@ -150,6 +150,20 @@ def load_batch(path: Union[str, Path]) -> pd.DataFrame:
 
     Returns
     -------
+    pd.DataFrame
+        batch dataframe loaded from the specified path
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        from mesmerize_core import *
+
+        df = load_batch("/path/to/batch.pickle")
+
+        # view dataframe
+        df.head()
 
     """
     # global CURRENT_BATCH_PATH
@@ -180,6 +194,15 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
     -------
     pd.DataFrame
         New empty batch DataFrame
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        from mesmerize_core import *
+
+        df = create_batch("/path/to/new_batch.pickle")
 
     """
     path = validate_path(path)

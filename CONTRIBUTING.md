@@ -8,11 +8,11 @@ Contributions are welcome!
 
 2. Clone the repo and install according to the development instructions. Replace the URL For the repo on `nel-lab` to the fork on your account: https://github.com/nel-lab/mesmerize-core#for-development
 
-3. Checkout the `dev` branch, and then checkout your feature or bug fix branch:
+3. Checkout the `master` branch, and then checkout your feature or bug fix branch:
 
 ```bash
 cd mesmerize-core
-git checkout dev
+git checkout master
 git checkout -b my-new-feature-branch
 # make some changes, lint with black, and commit
 black .
@@ -25,7 +25,7 @@ git push origin my-new-feature-branch
 
 ```bash
 cd mesmerize-core
-DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
 
-5. Finally make a PR against the `dev` branch, the PR will also run tests using our CI pipeline to make sure tests pass. We will get back to your with any further suggestions!
+5. Finally make a PR against the `master` branch, the PR will also run tests using our CI pipelines to make sure tests pass on all platforms. We will get back to your with any further suggestions!
