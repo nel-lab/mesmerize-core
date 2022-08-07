@@ -469,8 +469,6 @@ class CNMFExtensions:
         """
         Return the reconstructed movie with no background, (A * C)
 
-        | See the demo notebooks for examples
-
         Parameters
         ----------
         component_indices: optional, Union[np.ndarray, str]
@@ -495,6 +493,56 @@ class CNMFExtensions:
         -------
         np.ndarray
             shape is [n_frames, x_pixels, y_pixels]
+
+        Examples
+        --------
+
+        This example uses fastplotlib to display the reconstructed movie from a CNMF item that has already been run.
+
+        | **fastplotlib code must be run in a notebook**
+
+        | See the demo notebooks for more detailed examples.
+
+        .. code-block:: python
+
+            from mesmerize_core import *
+            from fastplotlib import Plot
+            from ipywidgets import VBox, IntSlider
+
+            # load existing batch
+            df = load_batch("/path/to/batch.pickle")
+
+            # get the first reconstructed frame using only "good" components
+            # assumes the last index, `-1`, is a cnmf item
+            frame0 = df.iloc[-1].cnmf.get_rcm(component_indices="good", frame_indices=0)[0]
+
+            plot = Plot()
+
+            # add an image graphic to the plot
+            # we set some contrast limits with `vmin` and `vmax`, adjust these if the video doesn't look right
+            graphic = plot.image(frame0, cmap="gnuplot2", vmin=0, vmax=100)
+
+            # we need the number of frames in this movie, we can just get the length of the temporal components
+            n_frames = df.iloc[-1].cnmf.get_temporal().shape[1]
+
+            # make a frame slider
+            frame_slider = IntSlider(value=0, min=0, max=n_frames - 1, step=1)
+
+            # update the image graphic when the slider moves
+            previous_index = 0
+            def update_frame():
+                if previous_index == frame_slider.value:
+                    return
+
+                new_frame = df.iloc[-1].cnmf.get_rcm(component_indices="good", frame_indices=frame_slider.value)[0]
+                graphic.update_data(new_frame)
+
+                previous_index = frame_slider.value
+
+            plot.add_animations([update_frame])
+
+            VBox([plot.show(), frame_slider])
+
         """
         cnmf_obj = self.get_output()
 
@@ -574,6 +622,52 @@ class CNMFExtensions:
         -------
         np.ndarray
             shape is [n_frames, x_pixels, y_pixels]
+
+        Examples
+        --------
+
+        This example uses fastplotlib to display the residuals movie from a CNMF item that has already been run.
+
+        | **fastplotlib code must be run in a notebook**
+
+        | See the demo notebooks for more detailed examples.
+
+        .. code-block:: python
+
+            from mesmerize_core import *
+            from fastplotlib import Plot
+            from ipywidgets import VBox, IntSlider
+
+            # load existing batch
+            df = load_batch("/path/to/batch.pickle")
+
+            # get the residuals for the first frame
+            # assumes the last index, `-1`, is a cnmf item
+            frame0 = df.iloc[-1].cnmf.get_residuals(frame_indices=0)[0]
+
+            plot = Plot()
+
+            # add an image graphic to the plot
+            graphic = plot.image(frame0, cmap="gnuplot2")
+
+            # we need the number of frames in this movie, we can just get the length of the temporal components
+            n_frames = df.iloc[-1].cnmf.get_temporal().shape[1]
+
+            # make a frame slider
+            frame_slider = IntSlider(value=0, min=0, max=n_frames - 1, step=1)
+
+            # update the image graphic when the slider moves
+            previous_index = 0
+            def update_frame():
+                if previous_index == frame_slider.value:
+                    return
+
+                graphic.update_data(df.iloc[-1].cnmf.get_residuals(frame_indices=frame_slider.value)[0])
+                previous_index = frame_slider.value
+
+            plot.add_animations([update_frame])
+
+            VBox([plot.show(), frame_slider])
         """
 
         cnmf_obj = self.get_output()
