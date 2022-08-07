@@ -24,7 +24,7 @@ jobs:
     - name: install mesmerize-core
       shell: bash -l {0}
       run: |
-        mamba env create -n mescore --file environment.yml
+        mamba create -n mescore --file environment.yml
         # mamba env update -n foo --file environment.yml
         caimanmanager.py install
         pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
