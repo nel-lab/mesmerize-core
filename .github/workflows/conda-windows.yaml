@@ -21,7 +21,7 @@ jobs:
           micromamba activate mescore
           caimanmanager.py install
           micromamba install pytest
-          pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
+          pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1188.g8c7b0b2684/pandas-1.5.0.dev0%2B1188.g8c7b0b2684-cp310-cp310-win_amd64.whl"
           pip install .
           
       - name: pytests
