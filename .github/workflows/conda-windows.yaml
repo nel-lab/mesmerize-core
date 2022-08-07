@@ -3,38 +3,51 @@ name: Windows Conda
 on: [push]
 
 jobs:
-  build-windows:
+  test:
     runs-on: windows-latest
-    strategy:
-      max-parallel: 5
-      
     steps:
-    - uses: conda-incubator/setup-miniconda@v2
-      with:
-        miniconda-version: "latest"
-        activate-environment: foo
+      - uses: actions/checkout@v2
+      - name: Install Conda environment from environment.yml
+        uses: mamba-org/provision-with-micromamba@main
+        
+      - name: Run Python
+        shell: bash -l {0}
+        run: |
+          caimanmanager.py install
+
+# jobs:
+#   build-windows:
+#     runs-on: windows-latest
+#     strategy:
+#       max-parallel: 5
+      
+#     steps:
+#     - uses: conda-incubator/setup-miniconda@v2
+#       with:
+#         miniconda-version: "latest"
+#         activate-environment: foo
           
-    - name: install mamba
-      shell: bash -l {0}
-      run: |
-        conda info
-        conda install -c conda-forge mamba
-        conda clean -a
+#     - name: install mamba
+#       shell: bash -l {0}
+#       run: |
+#         conda info
+#         conda install -c conda-forge mamba
+#         conda clean -a
 
-    - name: install mesmerize-core
-      shell: bash -l {0}
-      run: |
-        mamba env update --file environment.yml
-        #mamba create -n mescore --file environment.yml
-        # mamba env update -n foo --file environment.yml
-        caimanmanager.py install
-        pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
-        pip install .
+#     - name: install mesmerize-core
+#       shell: bash -l {0}
+#       run: |
+#         mamba env update --file environment.yml
+#         #mamba create -n mescore --file environment.yml
+#         # mamba env update -n foo --file environment.yml
+#         caimanmanager.py install
+#         pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl"
+#         pip install .
 
-    - name: Test with pytest
-      shell: bash -l {0}
-      run: |
-        conda activate mescore
-        mamba install pytest
-        #$env:DOWNLOAD_GROUND_TRUTHS="1"
-        export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+#     - name: Test with pytest
+#       shell: bash -l {0}
+#       run: |
+#         conda activate mescore
+#         mamba install pytest
+#         #$env:DOWNLOAD_GROUND_TRUTHS="1"
+#         export DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
