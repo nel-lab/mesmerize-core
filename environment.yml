@@ -6,3 +6,5 @@ dependencies:
   - requests
   - click
   - jupyterlab
+  - pydata-sphinx-theme
+  
