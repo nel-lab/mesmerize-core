@@ -11,9 +11,8 @@ from mesmerize_core import (
     CaimanDataFrameExtensions,
     CaimanSeriesExtensions,
     set_parent_raw_data_path,
-    get_full_raw_data_path,
 )
-from mesmerize_core.batch_utils import DATAFRAME_COLUMNS, COMPUTE_BACKEND_SUBPROCESS
+from mesmerize_core.batch_utils import DATAFRAME_COLUMNS, COMPUTE_BACKEND_SUBPROCESS, get_full_raw_data_path
 from uuid import uuid4
 from typing import *
 import pytest
