@@ -15,7 +15,7 @@ import re as regex
 from pathlib import Path
 from warnings import warn
 import sys
-import tempfile
+from tempfile import NamedTemporaryFile
 from subprocess import check_call
 
 if os.name == "nt":
@@ -240,7 +240,7 @@ def make_runfile(
             for k, v in os.environ.items():  # copy the current environment
                 if regex.match("^.*[\(\)]", str(k)) or regex.match("^.*[\(\)]", str(v)):
                     continue
-                 with NamedTemporaryFile(suffix=".ps1", delete=False) as tmp:
+                with NamedTemporaryFile(suffix=".ps1", delete=False) as tmp:
                     try:  # windows powershell is stupid so make sure all the env var names work
                         tmp.write(f'$env:{k}="{v}";\n')
                         tmp.close()
