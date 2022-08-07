@@ -10,10 +10,9 @@ Welcome to mesmerize-core's documentation!
    :maxdepth: 2
    :caption: Contents:
    
-   ./api/extensions
-   
-
-
+   Installation
+   Examples <examples>
+   API <api/index>
 
 Indices and tables
 ==================
