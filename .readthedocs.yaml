@@ -8,8 +8,6 @@ sphinx:
   configuration: docs/source/conf.py
 python:
   install:
-  extra_requirements:
-   - pydata-sphinx-theme
   - method: pip
     path: .
 conda:
