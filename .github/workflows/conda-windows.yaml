@@ -29,9 +29,11 @@ jobs:
         conda info
         conda install -c conda-forge mamba
         conda clean -a
+        
+    - name: setup tmate session
+      uses: mxschmitt/action-tmate@v3
 
     - name: install mesmerize-core
-      uses: mxschmitt/action-tmate@v3
       shell: bash -l {0}
       run: |
         #mamba create -n mescore --file environment.yml
