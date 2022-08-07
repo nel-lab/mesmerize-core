@@ -13,6 +13,7 @@ from mesmerize_core import (
     set_parent_raw_data_path,
 )
 from mesmerize_core.batch_utils import DATAFRAME_COLUMNS, COMPUTE_BACKEND_SUBPROCESS, get_full_raw_data_path
+from mesmerize_core.utils import IS_WINDOWS
 from uuid import uuid4
 from typing import *
 import pytest
@@ -119,6 +120,8 @@ def download_data(fname: str):
 
 
 def teardown_module():
+    if IS_WINDOWS:  # because windows is stupid with permissions
+        return
     clear_tmp()
 
 

@@ -5,5 +5,4 @@ dependencies:
   - pandas
   - requests
   - click
-  - jupyterlab
-  - pydata-sphinx-theme
+

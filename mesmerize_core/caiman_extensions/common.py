@@ -150,8 +150,10 @@ class CaimanSeriesExtensions:
 
         # Get the dir that contains the input movie
         parent_path = self._series.paths.resolve(self._series.input_movie_path).parent
-
-        self.process = Popen(runfile_path, cwd=parent_path)
+        if not IS_WINDOWS:
+            self.process = Popen(runfile_path, cwd=parent_path)
+        else:
+            self.process = Popen(f"powershell {runfile_path}", cwd=parent_path)
         return self.process
 
     def _run_slurm(
@@ -199,8 +201,12 @@ class CaimanSeriesExtensions:
         batch_path = self._series.paths.get_batch_path()
 
         # Create the runfile in the batch dir using this Series' UUID as the filename
+        if IS_WINDOWS:
+            runfile_ext = ".ps1"
+        else:
+            runfile_ext = ".runfile"
         runfile_path = str(
-            batch_path.parent.joinpath(self._series["uuid"] + ".runfile")
+            batch_path.parent.joinpath(self._series["uuid"] + runfile_ext)
         )
 
         args_str = f"--batch-path {batch_path} --uuid {self._series.uuid}"
@@ -208,7 +214,7 @@ class CaimanSeriesExtensions:
             args_str += f" --data-path {get_parent_raw_data_path()}"
 
         # make the runfile
-        runfile = make_runfile(
+        runfile_path = make_runfile(
             module_path=os.path.abspath(
                 ALGO_MODULES[self._series["algo"]].__file__
             ),  # caiman algorithm
@@ -217,7 +223,7 @@ class CaimanSeriesExtensions:
         )
         try:
             self.process = getattr(self, f"_run_{backend}")(
-                runfile, **kwargs
+                runfile_path, **kwargs
             )
         except:
             with open(runfile_path, "r") as f:
