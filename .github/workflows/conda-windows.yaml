@@ -12,8 +12,8 @@ jobs:
         with:
           environment-file: environment.yml
           environment-name: mescore
-           extra-specs: |
-             python=3.8
+          extra-specs: |
+            python=3.8
 
       - name: install mesmerize
         shell: bash -l {0}
