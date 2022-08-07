@@ -1,0 +1,41 @@
+name: Windows Conda
+
+on:
+  pull_request:
+    branches:
+      - master
+      - dev
+  push:
+    branches: [ master ]
+
+jobs:
+  example-6:
+    name: Ex6 Mamba
+    runs-on: "windows-latest"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.9
+          mamba-version: "*"
+          channels: conda-forge,defaults
+          channel-priority: true
+          activate-environment: mescore
+          environment-file: environment.yml
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
+          printenv | sort
+          
+      - shell: bash -l {0}
+        run: |
+          conda activate mescore
+          mamba install pytest
+          caimanmanager.py install
+          pip install https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1172.ga7c5773d19/pandas-1.5.0.dev0%2B1172.ga7c5773d19-cp39-cp39-win_amd64.whl
+          pip install .
+          DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+

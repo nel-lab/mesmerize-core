@@ -13,6 +13,7 @@ from shutil import move as move_file
 # prevent circular import
 if __name__ == "__main__":
     from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core.utils import IS_WINDOWS
 
 
 @click.command()
@@ -97,7 +98,8 @@ def main(batch_path, uuid, data_path: str = None):
         d = dict()
 
         cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
-
+        if IS_WINDOWS:
+            Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
         move_file(fname_new, cnmf_memmap_path)
 
         cnmf_hdf5_path = output_path.relative_to(output_dir.parent)

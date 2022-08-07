@@ -11,6 +11,7 @@ from shutil import move as move_file
 
 if __name__ == "__main__":
     from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core.utils import IS_WINDOWS
 
 
 @click.command()
@@ -104,7 +105,8 @@ def main(batch_path, uuid, data_path: str = None):
                 )
 
         cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
-
+        if IS_WINDOWS:
+            Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
         move_file(fname_new, cnmf_memmap_path)
 
         cnmfe_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
