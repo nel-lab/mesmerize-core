@@ -1,8 +1,7 @@
 channels:
   - conda-forge
 dependencies:
-  - caiman
+  - caiman >= 1.9.11
   - pandas
   - requests
   - click
-
