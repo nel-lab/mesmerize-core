@@ -12,8 +12,8 @@ jobs:
         with:
           environment-file: environment.yml
           environment-name: mescore
-          extra-specs: |
-            python=3.10
+#           extra-specs: |
+#             python=3.10
 
       - name: install mesmerize
         shell: bash -l {0}
@@ -21,7 +21,8 @@ jobs:
           micromamba activate mescore
           caimanmanager.py install
           micromamba install pytest
-          pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1188.g8c7b0b2684/pandas-1.5.0.dev0%2B1188.g8c7b0b2684-cp310-cp310-win_amd64.whl"
+          pip install git+https://github.com/pandas-dev/pandas.git
+          # pip install "https://pypi.anaconda.org/scipy-wheels-nightly/simple/pandas/1.5.0.dev0%2B1188.g8c7b0b2684/pandas-1.5.0.dev0%2B1188.g8c7b0b2684-cp310-cp310-win_amd64.whl"
           pip install .
           
       - name: pytests
