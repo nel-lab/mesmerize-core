@@ -15,7 +15,8 @@ import re as regex
 from pathlib import Path
 from warnings import warn
 import sys
-
+import tempfile
+from subprocess import check_call
 
 if os.name == "nt":
     IS_WINDOWS = True
@@ -236,12 +237,18 @@ def make_runfile(
 
     else:
         with open(sh_file, "w") as f:
-            f.write("$ErrorActionPreference = 'SilentlyContinue'\n")
             for k, v in os.environ.items():  # copy the current environment
                 if regex.match("^.*[\(\)]", str(k)) or regex.match("^.*[\(\)]", str(v)):
                     continue
-                f.write(f'$env:{k}="{v}";\n')
-
+                 with NamedTemporaryFile(suffix=".ps1", delete=False) as tmp:
+                    try:  # windows powershell is stupid so make sure all the env var names work
+                        tmp.write(f'$env:{k}="{v}";\n')
+                        tmp.close()
+                        check_call(f"powershell {tmp.name}")
+                        os.unlink(tmp.name)
+                    except:
+                        continue
+                f.write(f'$env:{k}="{v}";\n')  # write only env vars that powershell likes
             f.write(f"{sys.executable} {module_path} {args_str}")
 
     st = os.stat(sh_file)
