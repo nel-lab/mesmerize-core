@@ -14,6 +14,7 @@ from typing import *
 import re as regex
 from pathlib import Path
 from warnings import warn
+import sys
 
 
 if os.name == "nt":
@@ -236,9 +237,11 @@ def make_runfile(
     else:
         with open(sh_file, "w") as f:
             for k, v in os.environ.items():  # copy the current environment
+                if regex.match("^.*[\(\)]", str(k)) or regex.match("^.*[\(\)]", str(v)):
+                    continue
                 f.write(f'$env:{k}="{v}";\n')
 
-            f.write(f"python {module_path} {args_str}")
+            f.write(f"{sys.executable} {module_path} {args_str}")
 
     st = os.stat(sh_file)
     os.chmod(sh_file, st.st_mode | S_IEXEC)
