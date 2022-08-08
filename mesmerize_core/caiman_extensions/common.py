@@ -22,27 +22,66 @@ from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimenta
 from caiman import load_memmap
 
 
+class BatchItemNotRunError(Exception):
+    pass
+
+
+class BatchItemUnsuccessfulError(Exception):
+    pass
+
+
+class WrongAlgorithmExtensionError(Exception):
+    pass
+
+
 def validate(algo: str = None):
     def dec(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             if self._series["outputs"] is None:
-                raise ValueError("Item has not been run")
+                raise BatchItemNotRunError("Item has not been run")
 
             if algo is not None:
                 if algo not in self._series["algo"]:
-                    raise ValueError(
+                    raise WrongAlgorithmExtensionError(
                         f"<{algo} extension called for a <{self._series}> item"
                     )
 
             if not self._series["outputs"]["success"]:
                 tb = self._series["outputs"]["traceback"]
-                raise ValueError(f"Batch item was unsuccessful, traceback from subprocess:\n{tb}")
+                raise BatchItemUnsuccessfulError(f"Batch item was unsuccessful, traceback from subprocess:\n{tb}")
             return func(self, *args, **kwargs)
 
         return wrapper
 
     return dec
+
+
+def _index_parser(func):
+    @wraps(func)
+    def _parser(instance, *args, **kwargs):
+        if "index" in kwargs.keys():
+            index: Union[int, str, UUID] = kwargs["index"]
+        elif len(args) > 0:
+            index = args[0]  # always first positional arg
+
+        if isinstance(index, (UUID, str)):
+            _index = instance._df[instance._df["uuid"] == str(index)].index
+            if _index.size == 0:
+                raise ValueError(f"No batch item found with uuid: {index}")
+
+            index = _index.item()
+
+        if not isinstance(index, int):
+            raise TypeError(f"`index` argument must be of type `int`, `str`, or `UUID`")
+
+        if "index" in kwargs.keys():
+            kwargs["index"] = index
+        else:
+            args = (index, *args[1:])
+
+        return func(instance, *args, **kwargs)
+    return _parser
 
 
 @pd.api.extensions.register_dataframe_accessor("caiman")
@@ -124,6 +163,7 @@ class CaimanDataFrameExtensions:
         # Save DataFrame to disk
         self._df.to_pickle(self._df.paths.get_batch_path())
 
+    @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True):
         """
         Remove a batch item from the DataFrame and delete all data associated
@@ -142,15 +182,6 @@ class CaimanDataFrameExtensions:
         -------
 
         """
-        if isinstance(index, (UUID, str)):
-            _index = self._df[self._df["uuid"] == str(index)].index
-            if _index.size == 0:
-                raise ValueError(f"No batch item found with uuid: {index}")
-
-            index = _index.item()
-
-        if not isinstance(index, int):
-            raise TypeError(f"`index` argument must be of type `int`, `str`, or `UUID`")
 
         u = self._df.iloc[index]["uuid"]
 
@@ -169,6 +200,81 @@ class CaimanDataFrameExtensions:
         self._df.reset_index(drop=True, inplace=True)
         # Save new df to disc
         self._df.to_pickle(self._df.paths.get_batch_path())
+
+    @_index_parser
+    def get_children(self, index: Union[int, str, UUID]) -> List[UUID]:
+        """
+        For the **motion correction** batch item at the provided ``index``,
+        returns a list of UUIDs for **CNMF(E)** batch items that use the
+        output of this motion correction batch item.
+
+        | Note: Only Motion Correction items have children, CNMF(E) items do not have children.
+
+        Parameters
+        ----------
+        index: Union[int, str, UUID]
+            the index of the mcorr item to get the children of
+
+        Returns
+        -------
+        List[UUID]
+            List of UUIDs of child CNMF items
+
+        """
+
+        if not self._df.iloc[index]["algo"] == "mcorr":
+            raise TypeError(
+                "`caiman.get_children()` extension maybe only be used with "
+                "mcorr batch items, CNMF(E) items do not have children."
+            )
+
+        # get the output path for this mcorr item
+        output_path = self._df.iloc[index].mcorr.get_output_path()
+
+        # see if this output path shows up in the input_movie_path of any other batch item
+        children = list()
+        for i, r in self._df.iterrows():
+            try:
+                _potential_child = r.caiman.get_input_movie_path()
+            except FileNotFoundError:  # assume it is not a child anyways
+                continue
+            if _potential_child == output_path:
+                children.append(r["uuid"])
+        return children
+
+    @_index_parser
+    def get_parent(self, index: Union[int, str, UUID]) -> Union[UUID, None]:
+        """
+        Get the UUID of the batch item whose output was used as
+        the input for the batch item at the provided ``index``.
+
+        | If a parent exists, it is always an mcorr batch item
+
+        Parameters
+        ----------
+        index: Union[int, str, UUID]
+            the index of the batch item to get the parent of
+
+        Returns
+        -------
+        Union[UUID, None]
+            | if ``UUID``, this is the UUID of the batch item whose output was used for the input of the batch item at
+            the provided ``index``
+            | if ``None``, the batch item at the provided ``index`` has no parent within the batch dataframe.
+
+        """
+        input_movie_path = self._df.iloc[index].caiman.get_input_movie_path()
+
+        for i, r in self._df.iterrows():
+            if not r["algo"] == "mcorr":
+                continue
+            try:
+                _potential_parent = r.mcorr.get_output_path()
+            except (FileNotFoundError, BatchItemUnsuccessfulError, BatchItemNotRunError):
+                continue  # can't be a parent if it was unsuccessful
+
+            if _potential_parent == input_movie_path:
+                return r["uuid"]
 
 
 @pd.api.extensions.register_series_accessor("caiman")
