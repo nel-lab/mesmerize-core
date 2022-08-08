@@ -4,6 +4,7 @@ from pathlib import Path
 from subprocess import Popen
 from typing import Union, List, Optional
 from uuid import UUID, uuid4
+from shutil import rmtree
 
 import numpy as np
 import pandas as pd
@@ -123,10 +124,48 @@ class CaimanDataFrameExtensions:
         # Save DataFrame to disk
         self._df.to_pickle(self._df.paths.get_batch_path())
 
-    def remove_item(self, index):
+    def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True):
+        """
+        Remove a batch item from the DataFrame and delete all data associated
+        to that batch item from disk if ``remove_data=True``
+
+        Parameters
+        ----------
+        index: Union[int, str, UUID]
+            The index of the batch item to remove from the DataFrame
+
+        remove_data: bool
+            If ``True`` removes all output data associated to the batch item from disk.
+            | the input movie located at ``input_movie_path`` is not affect.
+
+        Returns
+        -------
+
+        """
+        if isinstance(index, (UUID, str)):
+            _index = self._df[self._df["uuid"] == str(index)].index
+            if _index.size == 0:
+                raise ValueError(f"No batch item found with uuid: {index}")
+
+            index = _index.item()
+
+        if not isinstance(index, int):
+            raise TypeError(f"`index` argument must be of type `int`, `str`, or `UUID`")
+
+        u = self._df.iloc[index]["uuid"]
+
+        if remove_data:
+            try:
+                rmtree(self._df.paths.get_batch_path().parent.joinpath(u))
+            except PermissionError:
+                raise PermissionError(
+                    "You do not have permissions to remove the "
+                    "output data for the batch item, aborting."
+                )
+
         # Drop selected index
         self._df.drop([index], inplace=True)
-        # Reset indeces so there are no 'jumps'
+        # Reset indices so there are no 'jumps'
         self._df.reset_index(drop=True, inplace=True)
         # Save new df to disc
         self._df.to_pickle(self._df.paths.get_batch_path())
