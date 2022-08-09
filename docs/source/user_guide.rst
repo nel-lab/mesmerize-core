@@ -98,7 +98,7 @@ Basic structure of using ``add_item()``:
 
     df.caiman.add_item(
         algo=<name of algorithm, mcorr, cnmf, or cnmfe>,
-        name=<a name for you to keep track of this item>,
+        item_name=<a name for you to keep track of this item>,
         input_movie_path="/path/to/input_movie.tif",
         params=<params dict for algo>,
     )
@@ -128,12 +128,12 @@ Example:
 
     df.caiman.add_item(
         algo="mcorr",
-        name="movie_from_fav_brain",
+        item_name="movie_from_fav_brain",
         input_movie_path="/path/to/fav_movie.tif",
         params=mcorr_params
     )
 
-You can add multiple "batch items" using the same **input movie** and set the same **name** but use different **params**. This enables you to perform a gridsearch to find the optimal **params** for your **input movie**.
+You can add multiple "batch items" using the same **input movie** and set the same **item_name** but use different **params**. This enables you to perform a gridsearch to find the optimal **params** for your **input movie**.
 
 You can run a batch item using the ``run()`` extension on an individual ``DataFrame`` row, technically called a pandas ``Series``. At the moment the only supported backend is ``subprocess``, the "batch item" is run using the corresponding algorithm in an external subprocess so you can continue using your notebook, i.e. calling ``run()`` is non-blocking. ``run()`` returns a ``subprocess.Popen`` instance.
 

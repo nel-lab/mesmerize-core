@@ -32,7 +32,7 @@ def main(batch_path, uuid, data_path: str = None):
     input_movie_path = str(df.paths.resolve(item["input_movie_path"]))
 
     # because caiman doesn't let you specify filename to save memmap files
-    # create dir with uuid as the dir name
+    # create dir with uuid as the dir item_name
     output_dir = Path(batch_path).parent.joinpath(str(uuid))
     caiman_temp_dir = str(output_dir)
     os.makedirs(caiman_temp_dir, exist_ok=True)

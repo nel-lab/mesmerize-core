@@ -22,7 +22,7 @@ COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend, not yet implemented
 
 COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM]
 
-DATAFRAME_COLUMNS = ["algo", "name", "input_movie_path", "params", "outputs", "comments", "uuid"]
+DATAFRAME_COLUMNS = ["algo", "item_name", "input_movie_path", "params", "outputs", "comments", "uuid"]
 
 
 def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
