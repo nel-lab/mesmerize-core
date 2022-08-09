@@ -93,7 +93,7 @@ def auto_colormap(
         Numbers of colors to return
 
     cmap: str
-        name of colormap
+        item_name of colormap
 
     output: Union[str, type]
         option: "float" or ``float`` returns RGBA values between 0-1: [R, G, B, A],

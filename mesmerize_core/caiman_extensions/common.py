@@ -113,7 +113,7 @@ class CaimanDataFrameExtensions:
 
         return df_u.squeeze()
 
-    def add_item(self, algo: str, name: str, input_movie_path: str, params: dict):
+    def add_item(self, algo: str, item_name: str, input_movie_path: str, params: dict):
         """
         Add an item to the DataFrame to organize parameters
         that can be used to run a CaImAn algorithm
@@ -123,7 +123,7 @@ class CaimanDataFrameExtensions:
         algo: str
             Name of the algorithm to run, one of ``"mcorr"``, ``"cnmf"`` or ``"cnmfe"``
 
-        name: str
+        item_name: str
             User set name for the batch item
 
         input_movie_path: str
@@ -150,7 +150,7 @@ class CaimanDataFrameExtensions:
         s = pd.Series(
             {
                 "algo": algo,
-                "name": name,
+                "item_name": item_name,
                 "input_movie_path": str(input_movie_path),
                 "params": params,
                 "outputs": None,  # to store dict of output information, such as output file paths

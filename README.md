@@ -38,7 +38,7 @@ For visualization we recommend [`mesmerize-viz`](https://github.com/kushalkolar/
 
 ```bash
 # create an env, can be same env you use for mesmerize-napari or another viz tool like fastplotlib
-conda create --name mesmerize-core python=3.10
+conda create --item_name mesmerize-core python=3.10
 
 # install mamba
 conda install -c conda-forge mamba

@@ -158,13 +158,13 @@ def test_mcorr():
     print(input_movie_path)
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[algo],
     )
 
     assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["item_name"] == f"test-{algo}"
     assert df.iloc[-1]["params"] == test_params[algo]
     assert df.iloc[-1]["outputs"] is None
     try:
@@ -347,13 +347,13 @@ def test_cnmf():
 
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[algo],
     )
 
     assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["item_name"] == f"test-{algo}"
     assert df.iloc[-1]["params"] == test_params[algo]
     assert df.iloc[-1]["outputs"] is None
     try:
@@ -392,13 +392,13 @@ def test_cnmf():
     input_movie_path = df.iloc[-1].mcorr.get_output_path()
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[algo],
     )
 
     assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["item_name"] == f"test-{algo}"
     assert df.iloc[-1]["params"] == test_params[algo]
     assert df.iloc[-1]["outputs"] is None
     try:
@@ -711,7 +711,7 @@ def test_cnmfe():
     print(input_movie_path)
     df.caiman.add_item(
         algo="mcorr",
-        name=f"test-cnmfe-mcorr",
+        item_name=f"test-cnmfe-mcorr",
         input_movie_path=input_movie_path,
         params=test_params["mcorr"],
     )
@@ -728,13 +728,13 @@ def test_cnmfe():
     print(input_movie_path)
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[param_name],
     )
 
     assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["item_name"] == f"test-{algo}"
     assert df.iloc[-1]["params"] == test_params[param_name]
     assert df.iloc[-1]["outputs"] is None
     try:
@@ -806,13 +806,13 @@ def test_cnmfe():
 
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[param_name],
     )
 
     assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["item_name"] == f"test-{algo}"
     assert df.iloc[-1]["params"] == test_params[param_name]
     assert df.iloc[-1]["outputs"] is None
     try:
@@ -1118,21 +1118,21 @@ def test_remove_item():
     print(input_movie_path)
     df.caiman.add_item(
         algo="mcorr",
-        name=f"test0",
+        item_name=f"test0",
         input_movie_path=small_movie_path,
         params=test_params["mcorr"],
     )
 
     df.caiman.add_item(
         algo="mcorr",
-        name=f"test1",
+        item_name=f"test1",
         input_movie_path=small_movie_path,
         params=test_params["mcorr"],
     )
 
     df.caiman.add_item(
         algo="cnmf",
-        name=f"test2",
+        item_name=f"test2",
         input_movie_path=small_movie_path,
         params=test_params["cnmf"],
     )
@@ -1142,7 +1142,7 @@ def test_remove_item():
     diff_params["main"]["merge_thr"] = 0.85
     df.caiman.add_item(
         algo="cnmf",
-        name=f"test3",
+        item_name=f"test3",
         input_movie_path=small_movie_path,
         params=diff_params,
     )
@@ -1183,9 +1183,9 @@ def test_remove_item():
 
     # shouldn't affect data at other indices
     assert path0.exists()
-    assert df.iloc[0]["name"] == f"test0"
-    assert df.iloc[1]["name"] == f"test2"
-    assert df.iloc[2]["name"] == f"test3"
+    assert df.iloc[0]["item_name"] == f"test0"
+    assert df.iloc[1]["item_name"] == f"test2"
+    assert df.iloc[2]["item_name"] == f"test3"
     assert df.iloc[0].mcorr.get_output_path().exists()
     df.iloc[0].mcorr.get_output()
     assert df.iloc[1].cnmf.get_output_path().exists()
@@ -1221,13 +1221,13 @@ def test_cache():
 
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[algo],
     )
 
     assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["item_name"] == f"test-{algo}"
     assert df.iloc[-1]["params"] == test_params[algo]
     assert df.iloc[-1]["outputs"] is None
     try:
@@ -1265,13 +1265,13 @@ def test_cache():
     input_movie_path = df.iloc[-1].mcorr.get_output_path()
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[algo],
     )
 
     assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
+    assert df.iloc[-1]["item_name"] == f"test-{algo}"
     assert df.iloc[-1]["params"] == test_params[algo]
     assert df.iloc[-1]["outputs"] is None
     try:
@@ -1376,7 +1376,7 @@ def test_cache():
     print(input_movie_path)
     df.caiman.add_item(
         algo="mcorr",
-        name=f"test-cnmfe-mcorr",
+        item_name=f"test-cnmfe-mcorr",
         input_movie_path=input_movie_path,
         params=test_params["mcorr"],
     )
@@ -1392,7 +1392,7 @@ def test_cache():
 
     df.caiman.add_item(
         algo=algo,
-        name=f"test-{algo}",
+        item_name=f"test-{algo}",
         input_movie_path=input_movie_path,
         params=test_params[param_name],
     )
