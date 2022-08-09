@@ -27,6 +27,8 @@ from zipfile import ZipFile
 from pprint import pprint
 from mesmerize_core.caiman_extensions import cnmf
 import time
+import tifffile
+from copy import deepcopy
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
@@ -1107,62 +1109,99 @@ def test_remove_item():
     algo = "mcorr"
     df, batch_path = _create_tmp_batch()
     input_movie_path = get_datafile(algo)
+
+    # make small version of movie for quick testing
+    movie = tifffile.imread(input_movie_path)
+    small_movie_path = input_movie_path.parent.joinpath("small_movie.tif")
+    tifffile.imwrite(small_movie_path, movie[:1001])
+
     print(input_movie_path)
     df.caiman.add_item(
-        algo=algo,
-        name=f"test-{algo}",
-        input_movie_path=input_movie_path,
-        params=test_params[algo],
-    )
-
-    assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test-{algo}"
-    assert df.iloc[-1]["params"] == test_params[algo]
-    assert df.iloc[-1]["outputs"] is None
-    try:
-        UUID(df.iloc[-1]["uuid"])
-    except:
-        pytest.fail("Something wrong with setting UUID for batch items")
-
-    assert (
-            get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
-            == vid_dir.joinpath(f"{algo}.tif")
-            == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
+        algo="mcorr",
+        name=f"test0",
+        input_movie_path=small_movie_path,
+        params=test_params["mcorr"],
     )
 
     df.caiman.add_item(
-        algo=algo,
-        name=f"test1-{algo}",
-        input_movie_path=input_movie_path,
-        params=test_params[algo],
+        algo="mcorr",
+        name=f"test1",
+        input_movie_path=small_movie_path,
+        params=test_params["mcorr"],
     )
 
-    assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["name"] == f"test1-{algo}"
-    assert df.iloc[-1]["params"] == test_params[algo]
-    assert df.iloc[-1]["outputs"] is None
-    try:
-        UUID(df.iloc[-1]["uuid"])
-    except:
-        pytest.fail("Something wrong with setting UUID for batch items")
-
-    assert (
-            get_full_raw_data_path(df.iloc[-1]["input_movie_path"])
-            == vid_dir.joinpath(f"{algo}.tif")
-            == vid_dir.joinpath(df.iloc[-1]["input_movie_path"])
+    df.caiman.add_item(
+        algo="cnmf",
+        name=f"test2",
+        input_movie_path=small_movie_path,
+        params=test_params["cnmf"],
     )
-    # Check removing specific rows works
-    assert df.iloc[0]["name"] == f"test-{algo}"
-    assert df.iloc[1]["name"] == f"test1-{algo}"
-    assert df.empty == False
-    df.caiman.remove_item(index=1)
-    assert df.iloc[0]["name"] == f"test-{algo}"
-    assert df.isin([f"test1-{algo}"]).any().any() == False
-    assert df.empty == False
-    df.caiman.remove_item(index=0)
-    assert df.isin([f"test-{algo}"]).any().any() == False
-    assert df.isin([f"test1-{algo}"]).any().any() == False
-    assert df.empty == True
+
+    diff_params = deepcopy(test_params["cnmf"])
+    diff_params["main"]["gSig"] = (6, 6)
+    diff_params["main"]["merge_thr"] = 0.85
+    df.caiman.add_item(
+        algo="cnmf",
+        name=f"test3",
+        input_movie_path=small_movie_path,
+        params=diff_params,
+    )
+
+    for i, r in df.iterrows():
+        proc = r.caiman.run()
+        proc.wait()
+
+    df = load_batch(df.paths.get_batch_path())
+
+    # make sure we can get mcorr movie output of 0th and 1st indices
+    path0 = df.iloc[0].mcorr.get_output_path()
+    path0_input = df.iloc[0].caiman.get_input_movie_path()
+    assert path0.exists()
+    df.iloc[0].mcorr.get_output()
+    # index 1
+    path1 = df.iloc[1].mcorr.get_output_path()
+    path1_input = df.iloc[1].caiman.get_input_movie_path()
+    assert path1.exists()
+    df.iloc[1].mcorr.get_output()
+
+    # make sure we can get cnmf output of 2nd and 3rd indices
+    path2 = df.iloc[2].cnmf.get_output_path()
+    assert path2.exists()
+    df.iloc[2].cnmf.get_output()
+    data2 = df.iloc[2].cnmf.get_temporal()
+    path3 = df.iloc[3].cnmf.get_output_path()
+    assert path3.exists()
+    df.iloc[3].cnmf.get_output()
+    data3 = df.iloc[3].cnmf.get_temporal()
+
+    # remove index 1
+    df.caiman.remove_item(index=1, remove_data=True)
+    assert (path1.exists() == False)
+    assert df.isin([f"test1"]).any().any() == False
+    # input movie path should be unaffected
+    assert path1_input.exists()
+
+    # shouldn't affect data at other indices
+    assert path0.exists()
+    assert df.iloc[0]["name"] == f"test0"
+    assert df.iloc[1]["name"] == f"test2"
+    assert df.iloc[2]["name"] == f"test3"
+    assert df.iloc[0].mcorr.get_output_path().exists()
+    df.iloc[0].mcorr.get_output()
+    assert df.iloc[1].cnmf.get_output_path().exists()
+    df.iloc[1].cnmf.get_output()
+    # check that the earlier data from index 2, now index 1, is equal
+    np.testing.assert_array_equal(data2, df.iloc[1].cnmf.get_temporal())
+    assert df.iloc[2].cnmf.get_output_path().exists()
+    df.iloc[2].cnmf.get_output()
+    # check that the earlier data from index 3, now index 2, is equal
+    np.testing.assert_array_equal(data3,  df.iloc[2].cnmf.get_temporal())
+    np.testing.assert_raises(
+        AssertionError,
+        np.testing.assert_array_equal,
+        data2,
+        df.iloc[2].cnmf.get_temporal()
+    )
 
 
 def test_cache():
@@ -1401,10 +1440,3 @@ def test_cache():
     output2 = df.iloc[1].cnmf.get_output(return_copy=False)
     assert(hex(id(output)) == hex(id(output2)))
     assert(hex(id(cnmf.cache.get_cache().iloc[-1]["return_val"])) == hex(id(output)))
-
-
-
-
-
-
-
