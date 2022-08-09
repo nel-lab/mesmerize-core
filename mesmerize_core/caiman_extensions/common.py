@@ -34,6 +34,10 @@ class WrongAlgorithmExtensionError(Exception):
     pass
 
 
+class DependencyError(Exception):
+    pass
+
+
 def validate(algo: str = None):
     def dec(func):
         @wraps(func)
@@ -164,7 +168,7 @@ class CaimanDataFrameExtensions:
         self._df.to_pickle(self._df.paths.get_batch_path())
 
     @_index_parser
-    def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True):
+    def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
         """
         Remove a batch item from the DataFrame and delete all data associated
         to that batch item from disk if ``remove_data=True``
@@ -178,10 +182,25 @@ class CaimanDataFrameExtensions:
             If ``True`` removes all output data associated to the batch item from disk.
             | the input movie located at ``input_movie_path`` is not affect.
 
+        safe_removal: bool
+            | if ``True``, this batch item is not removed and raises an exception if the output of this batch
+            item is the input to another batch item. For example, if this is a *motion correction* batch item whose
+            output is used as the input movie for a *CNMF* batch item.
+            | if ``False``, this batch item is removed even if its output is the input to another batch item
+
         Returns
         -------
 
         """
+        
+        if safe_removal:
+            children = self.get_children(index)
+            if len(children) > 0:
+                raise DependencyError(
+                    f"This batch item's output is used as the input for batch items with the following UUIDs:\n"
+                    f"{children}\n"
+                    f"If you still want to force removal of this batch item use `safe_removal=False`"
+                )
 
         u = self._df.iloc[index]["uuid"]
 
@@ -204,8 +223,8 @@ class CaimanDataFrameExtensions:
     @_index_parser
     def get_children(self, index: Union[int, str, UUID]) -> List[UUID]:
         """
-        For the **motion correction** batch item at the provided ``index``,
-        returns a list of UUIDs for **CNMF(E)** batch items that use the
+        For the *motion correction* batch item at the provided ``index``,
+        returns a list of UUIDs for *CNMF(E)* batch items that use the
         output of this motion correction batch item.
 
         | Note: Only Motion Correction items have children, CNMF(E) items do not have children.
