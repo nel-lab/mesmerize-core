@@ -282,7 +282,7 @@ class CNMFExtensions:
 
     @staticmethod
     def _get_spatial_contours(
-        cnmf_obj: CNMF, component_indices
+        cnmf_obj: CNMF, component_indices, swap_dim
     ):
 
         dims = cnmf_obj.dims
@@ -291,10 +291,13 @@ class CNMFExtensions:
             dims = cnmf_obj.estimates.dims
 
         # need to transpose these
-        dims = dims[1], dims[0]
+        if swap_dim:
+            dims = dims[1], dims[0]
+        else:
+            dims = dims[0], dims[1]
 
         contours = caiman_get_contours(
-            cnmf_obj.estimates.A[:, component_indices], dims, swap_dim=True
+            cnmf_obj.estimates.A[:, component_indices], dims, swap_dim=swap_dim
         )
 
         return contours
@@ -303,7 +306,10 @@ class CNMFExtensions:
     @_component_indices_parser
     @cache.use_cache
     def get_contours(
-        self, component_indices: Union[np.ndarray, str] = None, return_copy=True
+            self,
+            component_indices: Union[np.ndarray, str] = None,
+            swap_dim: bool = True,
+            return_copy=True
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
@@ -316,6 +322,9 @@ class CNMFExtensions:
             | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
             | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
+
+        swap_dim: bool
+            swap the x and y coordinates, use if the contours don't align with the cells in your image
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
@@ -384,7 +393,7 @@ class CNMFExtensions:
             VBox([plot.show(), slider])
         """
         cnmf_obj = self.get_output()
-        contours = self._get_spatial_contours(cnmf_obj, component_indices)
+        contours = self._get_spatial_contours(cnmf_obj, component_indices, swap_dim)
 
         coordinates = list()
         coms = list()
