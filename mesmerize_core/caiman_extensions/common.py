@@ -20,6 +20,7 @@ from ..batch_utils import (
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from caiman import load_memmap
+from .movie_readers import MovieReader
 
 
 class BatchItemNotRunError(Exception):
@@ -406,7 +407,24 @@ class CaimanSeriesExtensions:
         return self._series.paths.resolve(self._series["input_movie_path"])
 
     @warning_experimental()
-    def get_input_movie(self) -> Union[np.ndarray, pims.FramesSequence]:
+    def get_input_movie(self, reader: str = None) -> Union[np.ndarray, pims.FramesSequence]:
+        """
+        Get the input movie
+
+        Parameters
+        ----------
+        reader: str
+            one of ``None``, or registered ``MovieReader``
+            | if ``None`` reader is chosen based on file extension
+
+        Returns
+        -------
+
+        """
+        if reader is not None:
+            Reader = MovieReader().get_reader(reader)
+            return Reader(self.get_input_movie_path())
+
         extension = self.get_input_movie_path().suffixes[-1]
 
         if extension in [".tiff", ".tif", ".btf"]:
