@@ -1367,7 +1367,7 @@ def test_cache():
     df.iloc[-1].cnmf.get_output()
     end2 = time.time()
     assert (len(cnmf.cache.get_cache().index) == 0)
-    assert(abs((end-start)-(end2-start2)) < 0.01)
+    assert(abs((end-start)-(end2-start2)) < 0.05)
 
     # test to check that separate cache items are being returned for different batch items
     # must add another item to the batch, running cnmfe
