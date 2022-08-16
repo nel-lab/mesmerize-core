@@ -192,6 +192,8 @@ You can add multiple "batch items" using the same **input movie** and set the sa
 
 You can run a batch item using the ``run()`` extension on an individual ``DataFrame`` row (i.e. ``Series``). At the moment the only supported backend is ``subprocess``, the "batch item" is run using the corresponding algorithm in an external subprocess so you can continue using your notebook, i.e. calling ``run()`` is non-blocking. ``run()`` returns a `subprocess.Popen <https://docs.python.org/3/library/subprocess.html#popen-objects>`_ instance.
 
+You can set the maximum number of processes to spawn using the ``MESMERIZE_N_PROCESSES`` environment variable. By default it will use ``n_cpus - 1``.
+
 Example:
 
 .. code-block:: python
