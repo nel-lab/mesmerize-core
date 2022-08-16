@@ -185,8 +185,7 @@ class CNMFExtensions:
         ----------
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
-            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
-            strange unexpected behavior.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
             | In general you want a copy of the cached value.
 
         Returns
@@ -242,8 +241,7 @@ class CNMFExtensions:
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
-            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
-            strange unexpected behavior.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
             | In general you want a copy of the cached value.
 
         Returns
@@ -317,8 +315,7 @@ class CNMFExtensions:
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
-            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
-            strange unexpected behavior.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
             | In general you want a copy of the cached value.
 
         Returns
@@ -420,8 +417,7 @@ class CNMFExtensions:
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
-            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
-            strange unexpected behavior.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
             | In general you want a copy of the cached value.
 
         Returns
@@ -780,8 +776,7 @@ class CNMFExtensions:
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
-            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
-            strange unexpected behavior.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
             | In general you want a copy of the cached value.
 
         Returns

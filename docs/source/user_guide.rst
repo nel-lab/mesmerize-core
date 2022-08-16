@@ -4,14 +4,14 @@ The demo notebook is the best place to start: https://github.com/nel-lab/mesmeri
 
 This guide provides some more details on the API and concepts for using the ``mesmerize-core`` framework.
 
-Mesmerize-core is a framework that interfaces with`CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms, helps with data organization, and provides useful functions for evaluation and visualization. It is a collection of "pandas extensions", which are functions that operate on `pandas DataFrames <https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe>`_. This enables you to create a "psuedo-database" of your calcium imaging data and `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ generated output files.
+Mesmerize-core is a framework that interfaces with `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms, helps with data organization, and provides useful functions for evaluation and visualization. It is a collection of "pandas extensions" -- functions that operate on `pandas DataFrames <https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe>`_. This enables you to create a "psuedo-database" of your calcium imaging data and `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ generated output files. No database setup or experience is required, it operates purely on ``pandas`` and standard file systems.
 
 Since this framework uses ``pandas`` extensions, you should be relatively comfortable with basic pandas operations. If you're familiar with ``numpy`` then ``pandas`` will be easy, here's a quick start guide from the pandas docs: https://pandas.pydata.org/docs/user_guide/10min.html
 
 Accessors and Extensions
 ========================
 
-There are 3 *accessors* that the ``mesmerize-core`` API provides, ``caiman``, ``mcorr`` and ``cnmf``. These allow you to perform operations on a ``pandas.DataFrame`` or invidual DataFrame rows, which are called ``pandas.Series``. In ``mesmerize-core`` the individual rows, ``pandas.Series``, contain data that pertains to a single **batch item**.
+There are 3 *accessors* that the ``mesmerize-core`` API provides, ``caiman``, ``mcorr`` and ``cnmf``. These allow you to perform operations on a ``pandas.DataFrame`` or invidual DataFrame rows, which are called ``pandas.Series``. In ``mesmerize-core`` the individual rows contain data that pertain to a single **batch item**.
 
 A **batch item** is the combination of:
 
@@ -20,7 +20,7 @@ A **batch item** is the combination of:
 * algorithm
 * output data (depends on algorithm)
 * a user defined name for your convenience, multiple batch items can have the same name
-* UUID (universally unique identifier), a 128 integer that is uniquely identifies this batch item and is used to organize the output data. **You must never modify the UUID, they are computer generated**.
+* UUID (universally unique identifier), a 128 bit integer that uniquely identifies a batch item and is used to organize the output data. **You must never modify the UUID, they are computer generated**.
 
 **Examples:**
 
@@ -48,7 +48,7 @@ For example the ``caiman.add_item()`` extension operates on a DataFrame, so you 
 
 .. code-block:: python
 
-    # imports and load/create a dataframe
+    # imports
     from mesmerize_core import *
     
     # load an existing DataFrame
@@ -63,11 +63,11 @@ For example the ``caiman.add_item()`` extension operates on a DataFrame, so you 
     df.caiman.add_item(<args>)
 
 
-In contrast some common extensions, such as ``cnmf.get_contours()`` operate on ``pandas.Series``, i.e. individual DataFrame *rows*. All the motion correction and CNMF extensions are also ``Series`` extensions. You will need to using indexing to get the ``pandas.Series`` (row) that you want.
+In contrast some common extensions, such as ``cnmf.get_contours()`` operate on ``pandas.Series``, i.e. individual DataFrame *rows*. All the motion correction and CNMF extensions are ``Series`` extensions. You will need to using indexing on the DataFrame to get the ``pandas.Series`` (row) that you want.
 
 .. code-block:: python
 
-    # imports and load/create a dataframe
+    # imports
     from mesmerize_core import *
     
     # load an existing DataFrame
@@ -85,11 +85,9 @@ In contrast some common extensions, such as ``cnmf.get_contours()`` operate on `
 
 
 Use of the ``mcorr`` and ``cnmf`` accessors isn't limited to indexing through ``iloc[n]``, you can use any combination of pandas indexing that results in a ``pandas.Series``.
-    
-    
-.. note:: Using the wrong accessor and extension on a batch item (row/pandas ``Series``) will raise an exception. For example,  you cannot use ``cnmf.get_contours()`` on a motion correction batch item.
 
-Some ``common`` extensions are valid for getting outputs from motion correction and CNMF. For example the correlation Image can be obtained regardless of motion correction or CNMF using the common ``caiman`` accessor on a dataframe row.
+
+Some ``common`` extensions are valid for getting outputs from motion correction and CNMF. For example the correlation image can be obtained regardless of motion correction or CNMF using the common ``caiman`` accessor on a dataframe row.
 
 .. code-block:: python
 
@@ -103,6 +101,8 @@ Some ``common`` extensions are valid for getting outputs from motion correction 
 
     plt.imshow(corr_img)
 
+    
+.. note:: Using the wrong accessor and extension on a batch item (row/pandas ``Series``) will raise an exception. For example,  you cannot use ``cnmf.get_contours()`` on a motion correction batch item.
 
 **More examples**
 
@@ -155,6 +155,9 @@ Basic structure of using ``add_item()``:
         params=<params dict for algo>,
     )
 
+    
+See the :ref:`API reference <api_extenions_common>` for more details.
+
 Example:
 
 .. code-block:: python
@@ -187,7 +190,7 @@ Example:
 
 You can add multiple "batch items" using the same **input movie** and set the same **item_name** but use different **params**. This enables you to perform a gridsearch to find the optimal **params** for your **input movie**.
 
-You can run a batch item using the ``run()`` extension on an individual ``DataFrame`` row, technically called a pandas ``Series``. At the moment the only supported backend is ``subprocess``, the "batch item" is run using the corresponding algorithm in an external subprocess so you can continue using your notebook, i.e. calling ``run()`` is non-blocking. ``run()`` returns a ``subprocess.Popen`` instance.
+You can run a batch item using the ``run()`` extension on an individual ``DataFrame`` row (i.e. ``Series``). At the moment the only supported backend is ``subprocess``, the "batch item" is run using the corresponding algorithm in an external subprocess so you can continue using your notebook, i.e. calling ``run()`` is non-blocking. ``run()`` returns a `subprocess.Popen <https://docs.python.org/3/library/subprocess.html#popen-objects>`_ instance.
 
 Example:
 
@@ -199,7 +202,7 @@ Example:
 
 You can run an entire DataFrame from the 0th index (i.e. first row) to the last index (-1), or run certain ranges just by using for loops. I would recommend a pandas tutorial if this sounds complicated (pandas concepts and syntax are similar to numpy).
 
-.. warning:: You MUST call ``wait()`` on the ``subprocess.Popen`` instance after the ``run()`` call, otherwise you will spawn hundres of processes for multiple batch items simultaneously!
+.. warning:: You **MUST** call ``wait()`` on the ``subprocess.Popen`` instance after the ``run()`` call, otherwise you will spawn hundreds of processes for multiple batch items simultaneously!
 
 .. code-block:: python
 
@@ -243,13 +246,13 @@ Removes the batch item i.e. row within the DataFrame (a.k.a ``pandas.Series``), 
 
 The batch item to remove is indicated by an ``int`` index or ``UUID`` (either as a ``str`` or ``UUID`` object).
 
-**get_children()**
+**caiman.get_children()**
 
 Get the list of UUIDs of all batch items that use the output of the batch item passed to ``get_children()``. For example, you can get the UUIDs of all downstream CNMF batch items that use the output from a given mcorr batch item.
 
 Note: This feature is experimental and its behavior may change in future releases.
 
-**get_parent()**
+**caiman.get_parent()**
 
 Get the UUID of the parent batch item. For example, you can pass the UUID of a CNMF batch item to ``get_parent()`` to get the UUID of the mcorr batch item whose output was used as the input for the CNMF batch item.
 

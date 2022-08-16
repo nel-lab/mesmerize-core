@@ -1,5 +1,5 @@
-Functions
-*********
+Utility Functions
+*****************
 
 Top level functions available when you import ``mesmerize-core``
 

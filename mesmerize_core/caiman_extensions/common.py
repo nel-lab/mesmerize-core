@@ -180,11 +180,11 @@ class CaimanDataFrameExtensions:
             The index of the batch item to remove from the DataFrame
 
         remove_data: bool
-            | if ``True`` removes all output data associated to the batch item from disk.
-            | the input movie located at ``input_movie_path`` is not affected.
+            if ``True`` removes all output data associated to the batch item from disk.
+            The input movie located at ``input_movie_path`` is not affected.
 
         safe_removal: bool
-            | if ``True``, this batch item is not removed and raises an exception if the output of this batch
+            if ``True``, this batch item is not removed and raises an exception if the output of this batch
             item is the input to another batch item. For example, if this is a *motion correction* batch item whose
             output is used as the input movie for a *CNMF* batch item.
 
