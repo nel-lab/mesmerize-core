@@ -9,6 +9,7 @@ import pandas as pd
 import traceback
 from pathlib import Path
 from shutil import move as move_file
+import os
 
 # prevent circular import
 if __name__ == "__main__":
@@ -38,7 +39,13 @@ def main(batch_path, uuid, data_path: str = None):
     print("cnmf params", params)
 
     # adapted from current demo notebook
-    n_processes = psutil.cpu_count() - 1
+    if "MESMERIZE_N_PROCESSES" in os.environ.keys():
+        try:
+            n_processes = int(os.environ["MESMERIZE_N_PROCESSES"])
+        except:
+            n_processes = psutil.cpu_count() - 1
+    else:
+        n_processes = psutil.cpu_count() - 1
     # Start cluster for parallel processing
     c, dview, n_processes = cm.cluster.setup_cluster(
         backend="local", n_processes=n_processes, single_thread=False
