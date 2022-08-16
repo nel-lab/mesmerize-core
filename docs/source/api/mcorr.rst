@@ -1,4 +1,4 @@
-.. _api_extenions_mcorr:
+.. _api_extensions_mcorr:
 
 Motion Correction
 *****************

@@ -1,4 +1,4 @@
-.. _api_extenions_cnmf:
+.. _api_extensions_cnmf:
 
 CNMF
 ****

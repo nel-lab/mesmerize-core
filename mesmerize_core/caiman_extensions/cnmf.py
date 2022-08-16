@@ -174,17 +174,6 @@ class CNMFExtensions:
         Path
             full path to the caiman-format CNMF hdf5 output file
 
-        Examples
-        --------
-
-        Load the CNMF model with estimates from the hdf5 file.
-
-        .. code-block:: python
-
-            from mesmerize_core import load_batch
-
-            df = load_batch("/path/to/batch_dataframe_file.pickle")
-
         """
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
@@ -490,11 +479,13 @@ class CNMFExtensions:
         frame_indices: optional, Union[Tuple[int, int], int]
             (start_frame, stop_frame), return frames in this range including
             the ``start_frame`` upto and not including the ``stop_frame``
+
             | if single int, return only for single frame indicated
             | if ``None`` or not provided returns all frames, **not recommended**
 
         temporal_components: optional, np.ndarray
             temporal components to use as ``C`` for computing reconstructed movie.
+
             | uses ``cnmf.estimates.C`` if not provided
             | useful if you want to create the reconstructed movie using dF/Fo, z-scored data, etc.
 
@@ -583,13 +574,14 @@ class CNMFExtensions:
             frame_indices: Union[Tuple[int, int], int] = None,
     ) -> np.ndarray:
         """
-        Return the reconstructed background, (b * f)
+        Return the reconstructed background, ``(b * f)``
 
         Parameters
         ----------
         frame_indices: optional, Union[Tuple[int, int], int]
             (start_frame, stop_frame), return frames in this range including
             the ``start_frame`` upto and not including the ``stop_frame``
+
             | if single int, return only for single frame indicated
             | if ``None`` or not provided returns all frames, **not recommended**
 
@@ -617,7 +609,7 @@ class CNMFExtensions:
             frame_indices: Union[Tuple[int, int], int] = None,
     ) -> np.ndarray:
         """
-        Return residuals, raw movie - (A * C) - (b * f)
+        Return residuals, ``raw movie - (A * C) - (b * f)``
 
         Parameters
         ----------
@@ -716,11 +708,11 @@ class CNMFExtensions:
 
         Warnings
         --------
-        Overwrites the existing cnmf hdf5 outfile file for this batch item
+        Overwrites the existing cnmf hdf5 output file for this batch item
 
         Parameters
         ----------
-        quantile_min: float
+        quantileMin: float
             quantile used to estimate the baseline (values in [0,100])
             used only if 'flag_auto' is False, i.e. ignored by default
 
@@ -766,24 +758,54 @@ class CNMFExtensions:
         cnmf_obj.save(str(cnmf_obj_path))
 
     @validate("cnmf")
+    @_component_indices_parser
     @cache.use_cache
-    def get_detrend_dfof(self):
+    def get_detrend_dfof(
+            self,
+            component_indices: Union[np.ndarray, str] = None,
+            return_copy: bool = True
+    ):
+        """
+        Get the detrended dF/F0 curves after calling ``run_detrend_dfof``.
+        Basically ``CNMF.estimates.F_dff``.
+
+        Parameters
+        ----------
+        component_indices: optional, Union[np.ndarray, str]
+            | indices of the components to include
+            | if ``np.ndarray``, uses these indices in the provided array
+            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
+            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
+            | if not provided, ``None``, or ``"all"`` uses all components
+
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in
+            strange unexpected behavior.
+            | In general you want a copy of the cached value.
+
+        Returns
+        -------
+        np.ndarray
+            shape is [n_components, n_frames]
+
+        """
         cnmf_obj = self.get_output()
         if cnmf_obj.estimates.F_dff is None:
             raise AttributeError("You must run ``cnmf.run_detrend_dfof()`` first")
 
-        return cnmf_obj.estimates.F_dff
+        return cnmf_obj.estimates.F_dff[component_indices]
 
     @validate("cnmf")
     @_check_permissions
     @cache.invalidate()
     def run_eval(self, params: dict) -> None:
         """
-        Run component evaluation
+        Run component evaluation. This basically changes the indices for good and bad components.
 
         Warnings
         --------
-        Overwrites the existing cnmf hdf5 outfile file for this batch item
+        Overwrites the existing cnmf hdf5 output file for this batch item
 
         Parameters
         ----------
