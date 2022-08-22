@@ -56,7 +56,7 @@ def warning_experimental(more_info: str = ""):
         def fn(self, *args, **kwargs):
             warn(
                 f"You are trying to use the following experimental feature, "
-                f"this maybe change in the future without warning:\n"
+                f"this may change in the future without warning:\n"
                 f"{func.__qualname__}\n"
                 f"{more_info}\n",
                 FutureWarning,

@@ -10,10 +10,10 @@ from functools import wraps
 import os
 from copy import deepcopy
 
-from .common import validate
+from ._utils import validate
 from .cache import Cache
 
-cache = Cache()
+cnmf_cache = Cache()
 
 
 # this decorator MUST be called BEFORE caching decorators!
@@ -178,7 +178,7 @@ class CNMFExtensions:
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
     @validate("cnmf")
-    @cache.use_cache
+    @cnmf_cache.use_cache
     def get_output(self, return_copy=True) -> CNMF:
         """
         Parameters
@@ -218,7 +218,7 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @_component_indices_parser
-    @cache.use_cache
+    @cnmf_cache.use_cache
     def get_masks(
         self, component_indices: Union[np.ndarray, str] = None, threshold: float = 0.01, return_copy=True
     ) -> np.ndarray:
@@ -291,7 +291,7 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @_component_indices_parser
-    @cache.use_cache
+    @cnmf_cache.use_cache
     def get_contours(
             self,
             component_indices: Union[np.ndarray, str] = None,
@@ -396,7 +396,7 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @_component_indices_parser
-    @cache.use_cache
+    @cnmf_cache.use_cache
     def get_temporal(
         self, component_indices: Union[np.ndarray, str] = None, add_background: bool = False, return_copy=True
     ) -> np.ndarray:
@@ -687,7 +687,7 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @_check_permissions
-    @cache.invalidate()
+    @cnmf_cache.invalidate()
     def run_detrend_dfof(
             self,
             quantileMin: float = 8,
@@ -755,7 +755,7 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @_component_indices_parser
-    @cache.use_cache
+    @cnmf_cache.use_cache
     def get_detrend_dfof(
             self,
             component_indices: Union[np.ndarray, str] = None,
@@ -793,7 +793,7 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @_check_permissions
-    @cache.invalidate()
+    @cnmf_cache.invalidate()
     def run_eval(self, params: dict) -> None:
         """
         Run component evaluation. This basically changes the indices for good and bad components.

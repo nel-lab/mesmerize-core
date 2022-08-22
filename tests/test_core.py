@@ -1206,7 +1206,7 @@ def test_remove_item():
 
 def test_cache():
     print("*** Testing cache ***")
-    cnmf.cache.clear_cache()
+    cnmf.cnmf_cache.clear_cache()
 
     set_parent_raw_data_path(vid_dir)
     algo = "mcorr"
@@ -1295,10 +1295,10 @@ def test_cache():
     # test that cache values are returned when calls are made to same function
 
     # testing that cache size limits work
-    cnmf.cache.set_maxsize("1M")
+    cnmf.cnmf_cache.set_maxsize("1M")
     cnmf_output = df.iloc[-1].cnmf.get_output()
     hex_get_output = hex(id(cnmf_output))
-    cache = cnmf.cache.get_cache()
+    cache = cnmf.cnmf_cache.get_cache()
     hex1 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
     # assert(hex(id(df.iloc[-1].cnmf.get_output(copy=False))) == hex1)
     # assert(hex_get_output != hex1)
@@ -1325,7 +1325,7 @@ def test_cache():
     assert (cache[cache["function"] == "get_output"].index.size == 1)
     # after adding enough items for cache to exceed max size, cache should remove least recently used items until
     # size is back under max
-    assert (len(cnmf.cache.get_cache().index) == 17)
+    assert (len(cnmf.cnmf_cache.get_cache().index) == 17)
     # the time stamp to get_output the second time should be greater than the original time
     # stamp because the cached item is being returned and therefore will have been accessed more recently
     assert (time_stamp2 > time_stamp1)
@@ -1334,14 +1334,14 @@ def test_cache():
     assert (hex1 == hex2)
 
     # test clear_cache()
-    cnmf.cache.clear_cache()
-    assert (len(cnmf.cache.get_cache().index) == 0)
+    cnmf.cnmf_cache.clear_cache()
+    assert (len(cnmf.cnmf_cache.get_cache().index) == 0)
 
     # checking that cache is cleared, checking speed at which item is returned
     start = time.time()
     df.iloc[-1].cnmf.get_output()
     end = time.time()
-    assert (len(cnmf.cache.get_cache().index) == 1)
+    assert (len(cnmf.cnmf_cache.get_cache().index) == 1)
 
     # second call to item now added to cache, time to return item should be must faster than before because item has
     # now been cached
@@ -1351,22 +1351,22 @@ def test_cache():
     assert(end2-start2 < end-start)
 
     # testing clear_cache() again, length of dataframe should be zero
-    cnmf.cache.clear_cache()
-    assert (len(cnmf.cache.get_cache().index) == 0)
+    cnmf.cnmf_cache.clear_cache()
+    assert (len(cnmf.cnmf_cache.get_cache().index) == 0)
 
     # test setting maxsize as 0, should effectively disable the cache...additionally, time to return an item called
     # twice should roughly be the same because item is not being stored in the cache
     # cache length should remain zero throughout calls to extension functions
-    cnmf.cache.set_maxsize(0)
+    cnmf.cnmf_cache.set_maxsize(0)
     start = time.time()
     df.iloc[-1].cnmf.get_output()
     end = time.time()
-    assert (len(cnmf.cache.get_cache().index) == 0)
+    assert (len(cnmf.cnmf_cache.get_cache().index) == 0)
 
     start2 = time.time()
     df.iloc[-1].cnmf.get_output()
     end2 = time.time()
-    assert (len(cnmf.cache.get_cache().index) == 0)
+    assert (len(cnmf.cnmf_cache.get_cache().index) == 0)
     assert(abs((end-start)-(end2-start2)) < 0.05)
 
     # test to check that separate cache items are being returned for different batch items
@@ -1402,12 +1402,12 @@ def test_cache():
 
     df = load_batch(batch_path)
 
-    cnmf.cache.set_maxsize("1M")
+    cnmf.cnmf_cache.set_maxsize("1M")
 
     df.iloc[1].cnmf.get_output() # cnmf output
     df.iloc[-1].cnmf.get_output() # cnmfe output
 
-    cache = cnmf.cache.get_cache()
+    cache = cnmf.cnmf_cache.get_cache()
 
     # checking that both outputs from different batch items are added to the cache
     assert(len(cache.index) == 2)
@@ -1439,4 +1439,4 @@ def test_cache():
     output = df.iloc[1].cnmf.get_output(return_copy=False)
     output2 = df.iloc[1].cnmf.get_output(return_copy=False)
     assert(hex(id(output)) == hex(id(output2)))
-    assert(hex(id(cnmf.cache.get_cache().iloc[-1]["return_val"])) == hex(id(output)))
+    assert(hex(id(cnmf.cnmf_cache.get_cache().iloc[-1]["return_val"])) == hex(id(output)))
