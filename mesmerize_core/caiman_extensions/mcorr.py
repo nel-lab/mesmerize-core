@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from caiman import load_memmap
 
-from .common import validate
+from ._utils import validate
 from typing import *
 from .cache import Cache
 

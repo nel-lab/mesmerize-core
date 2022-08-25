@@ -1,5 +1,4 @@
 import os
-from functools import partial, wraps
 from pathlib import Path
 from subprocess import Popen
 from typing import Union, List, Optional
@@ -10,83 +9,18 @@ import numpy as np
 import pandas as pd
 import pims
 
+from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError
+from ._utils import validate, _index_parser
 from ..batch_utils import (
     COMPUTE_BACKENDS,
     COMPUTE_BACKEND_SUBPROCESS,
     ALGO_MODULES,
     get_parent_raw_data_path,
-    PathsDataFrameExtension,
-    PathsSeriesExtension,
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from caiman import load_memmap
 from .movie_readers import MovieReader
-
-
-class BatchItemNotRunError(Exception):
-    pass
-
-
-class BatchItemUnsuccessfulError(Exception):
-    pass
-
-
-class WrongAlgorithmExtensionError(Exception):
-    pass
-
-
-class DependencyError(Exception):
-    pass
-
-
-def validate(algo: str = None):
-    def dec(func):
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            if self._series["outputs"] is None:
-                raise BatchItemNotRunError("Item has not been run")
-
-            if algo is not None:
-                if algo not in self._series["algo"]:
-                    raise WrongAlgorithmExtensionError(
-                        f"<{algo} extension called for a <{self._series}> item"
-                    )
-
-            if not self._series["outputs"]["success"]:
-                tb = self._series["outputs"]["traceback"]
-                raise BatchItemUnsuccessfulError(f"Batch item was unsuccessful, traceback from subprocess:\n{tb}")
-            return func(self, *args, **kwargs)
-
-        return wrapper
-
-    return dec
-
-
-def _index_parser(func):
-    @wraps(func)
-    def _parser(instance, *args, **kwargs):
-        if "index" in kwargs.keys():
-            index: Union[int, str, UUID] = kwargs["index"]
-        elif len(args) > 0:
-            index = args[0]  # always first positional arg
-
-        if isinstance(index, (UUID, str)):
-            _index = instance._df[instance._df["uuid"] == str(index)].index
-            if _index.size == 0:
-                raise ValueError(f"No batch item found with uuid: {index}")
-
-            index = _index.item()
-
-        if not isinstance(index, int):
-            raise TypeError(f"`index` argument must be of type `int`, `str`, or `UUID`")
-
-        if "index" in kwargs.keys():
-            kwargs["index"] = index
-        else:
-            args = (index, *args[1:])
-
-        return func(instance, *args, **kwargs)
-    return _parser
+from .cnmf import cnmf_cache
 
 
 @pd.api.extensions.register_dataframe_accessor("caiman")
@@ -223,6 +157,7 @@ class CaimanDataFrameExtensions:
         # Save new df to disc
         self._df.to_pickle(self._df.paths.get_batch_path())
 
+    @warning_experimental()
     @_index_parser
     def get_children(self, index: Union[int, str, UUID]) -> List[UUID]:
         """
@@ -264,6 +199,7 @@ class CaimanDataFrameExtensions:
                 children.append(r["uuid"])
         return children
 
+    @warning_experimental()
     @_index_parser
     def get_parent(self, index: Union[int, str, UUID]) -> Union[UUID, None]:
         """
@@ -336,6 +272,7 @@ class CaimanSeriesExtensions:
         #
         # Popen(submission_command.split(" "))
 
+    @cnmf_cache.invalidate()
     def run(
         self,
         backend: Optional[str] = COMPUTE_BACKEND_SUBPROCESS, **kwargs
