@@ -194,15 +194,16 @@ class CaimanDataFrameExtensions:
         -------
 
         """
-        
-        if safe_removal:
-            children = self.get_children(index)
-            if len(children) > 0:
-                raise DependencyError(
-                    f"This batch item's output is used as the input for batch items with the following UUIDs:\n"
-                    f"{children}\n"
-                    f"If you still want to force removal of this batch item use `safe_removal=False`"
-                )
+
+        if self._df.iloc[index]["algo"] == "mcorr":
+            if safe_removal:
+                children = self.get_children(index)
+                if len(children) > 0:
+                    raise DependencyError(
+                        f"This batch item's output is used as the input for batch items with the following UUIDs:\n"
+                        f"{children}\n"
+                        f"If you still want to force removal of this batch item use `safe_removal=False`"
+                    )
 
         u = self._df.iloc[index]["uuid"]
 
