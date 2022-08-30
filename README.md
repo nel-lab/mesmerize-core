@@ -24,7 +24,7 @@ API Documentation is available at: https://mesmerize-core.readthedocs.io/
 
 # Visualization
 
-For visualization we recommend [`mesmerize-viz`](https://github.com/kushalkolar/mesmerize-viz) which contains a standard set of visualizations (a WIP), or [`fastplotlib`](https://github.com/kushalkolar/fastplotlib). You can also use the `mesmerize-napari` plugin for smaller datasets.
+For visualization we recommend [`mesmerize-viz`](https://github.com/kushalkolar/mesmerize-viz) which contains a standard set of visualizations (a WIP), or [`fastplotlib`](https://github.com/kushalkolar/fastplotlib). You can also use the [`mesmerize-napari`](https://github.com/nel-lab/mesmerize-napari) plugin for small datasets.
 
 # Overview
 
