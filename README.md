@@ -20,7 +20,8 @@ See the demo notebook at `notebooks/mcorr_cnmf.ipynb` for more details. Note tha
 
 We recommend starting out with the demo notebook ```notebooks/mcorr_cnmf.ipynb```
 
-API Documentation is available at: https://mesmerize-core.readthedocs.io/
+Documentation is available at: https://mesmerize-core.readthedocs.io/ \
+User guide: https://mesmerize-core.readthedocs.io/en/latest/user_guide.html
 
 # Visualization
 
@@ -106,10 +107,6 @@ pip install pytest
 MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
 
-# Examples demonstrating the API
+# Examples
 
-List of API examples: https://mesmerize-core.readthedocs.io/en/latest/examples.html
-
-**See `notebooks/mcorr_cnmf.ipynb` for more detailed examples.** Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
-
-
+**See `notebooks/mcorr_cnmf.ipynb` for detailed examples.** Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
