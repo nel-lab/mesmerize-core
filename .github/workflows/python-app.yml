@@ -41,8 +41,6 @@ jobs:
 
     - name: Install mesmerize-core
       run: |
-        pip install -r requirements.txt
-        pip install pytest
         pip install .        
         
     - name: Test with pytest

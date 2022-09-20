@@ -38,10 +38,9 @@ jobs:
       run: |
         mamba env update -n base --file environment.yml
         caimanmanager.py install
-        pip install "pandas==1.5.0rc0"
         pip install .
         
     - name: Test with pytest
       run: |
-        mamba install pytest
         DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+

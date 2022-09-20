@@ -35,6 +35,5 @@ jobs:
           conda activate mescore
           mamba install pytest
           caimanmanager.py install
-          pip install "pandas==1.5.0rc0"
           pip install .
           DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
