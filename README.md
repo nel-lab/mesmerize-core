@@ -49,6 +49,10 @@ https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-8
 
 ### This is all possible within jupyter notebooks using `fastplotlib`!
 
+# Examples
+
+**See `notebooks/mcorr_cnmf.ipynb` for detailed examples.** Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
+
 # Installation
 
 ## For development
@@ -56,7 +60,7 @@ https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-8
 ### conda
 
 ```bash
-# create an env, can be same env you use for mesmerize-napari or another viz tool like fastplotlib
+# create an env
 conda create --item_name mesmerize-core python=3.10
 
 # install mamba
@@ -73,9 +77,6 @@ cd mesmerize-core
 # update env with environment file
 mamba env update -n mesmerize-core --file environment.yml
 
-# temporary until pandas v1.5.0 is released
-pip install git+https://github.com/pandas-dev/pandas.git
-
 # install caimanmanager
 caimanmanager.py install
 
@@ -89,7 +90,8 @@ MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
 ### python venvs
 ```bash
-# create a new env, can be the same env that you use for mesmerize-napari or another viz tool like fastplotlib
+# create a new env
+# tested on python3.9 and 3.10
 python3.10 -m venv ~/python-venvs/mesmerize-core
 source ~/python-venvs/mesmerize-core/bin/activate
 
@@ -106,25 +108,12 @@ pip install -r requirements.txt
 pip install .
 caimanmanager.py install
 
-# clone this repo
+# clone this repo and install mesmerize-core
 cd ..
 git clone https://github.com/nel-lab/mesmerize-core.git
 cd mesmerize-core
-
-# get dependencies
-pip install -r requirements.txt
-
-# temporary until pandas v1.5.0 is released
-pip install git+https://github.com/pandas-dev/pandas.git
-
-# install mesmerize-core
 pip install -e .
 
-# install pytest and run tests
-pip install pytest
+# run tests to make sure everything works
 MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
-
-# Examples
-
-**See `notebooks/mcorr_cnmf.ipynb` for detailed examples.** Note that running the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualizations.
