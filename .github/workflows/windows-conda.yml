@@ -9,7 +9,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build-windows:
     name: windows conda
     runs-on: "windows-latest"
     steps:
@@ -35,6 +35,5 @@ jobs:
           conda activate mescore
           mamba install pytest
           caimanmanager.py install
-          pip install "pandas==1.5.0rc0"
           pip install .
           DOWNLOAD_GROUND_TRUTHS=1 pytest -s .

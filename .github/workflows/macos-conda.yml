@@ -1,4 +1,4 @@
-name: Linux Conda
+name: MacOS Conda
 
 on:
   pull_request:
@@ -9,8 +9,8 @@ on:
     branches: [ master ]
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
+  build-macos-conda:
+    runs-on: macos-latest
     strategy:
       max-parallel: 5
 
@@ -38,10 +38,9 @@ jobs:
       run: |
         mamba env update -n base --file environment.yml
         caimanmanager.py install
-        pip install "pandas==1.5.0rc0"
         pip install .
         
     - name: Test with pytest
       run: |
-        mamba install pytest
         DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+
