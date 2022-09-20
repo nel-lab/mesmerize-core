@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from subprocess import Popen
 from typing import Union, List, Optional
@@ -6,6 +7,7 @@ from uuid import UUID, uuid4
 from shutil import rmtree
 from itertools import chain
 from collections import Counter
+from time import time
 
 import numpy as np
 import pandas as pd
@@ -108,6 +110,21 @@ class CaimanDataFrameExtensions:
 
         # Save DataFrame to disk
         self._df.to_pickle(self._df.paths.get_batch_path())
+
+    def save_to_disk(self):
+        """
+        Saves DataFrame to disk, copies to a backup before overwriting existing file.
+        """
+        path: Path = self._df.paths.get_batch_path()
+        bak = path.with_suffix(path.suffix + f"bak.{time()}")
+
+        shutil.copyfile(path, bak)
+        try:
+            self._df.to_pickle(path)
+            os.remove(bak)
+        except:
+            shutil.copyfile(bak, path)
+            raise IOError(f"Could not save dataframe to disk.")
 
     @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
