@@ -4,6 +4,8 @@ from subprocess import Popen
 from typing import Union, List, Optional
 from uuid import UUID, uuid4
 from shutil import rmtree
+from itertools import chain
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -81,6 +83,11 @@ class CaimanDataFrameExtensions:
         # get relative path
         input_movie_path = self._df.paths.split(input_movie_path)[1]
 
+        # convert lists to tuples so that get_params_diffs works
+        for k in list(params["main"].keys()):
+            if isinstance(params["main"][k], list):
+                params["main"][k] = tuple(params["main"][k])
+
         # Create a pandas Series (Row) with the provided arguments
         s = pd.Series(
             {
@@ -149,6 +156,8 @@ class CaimanDataFrameExtensions:
                     "You do not have permissions to remove the "
                     "output data for the batch item, aborting."
                 )
+            except FileNotFoundError:
+                pass
 
         # Drop selected index
         self._df.drop([index], inplace=True)
@@ -156,6 +165,51 @@ class CaimanDataFrameExtensions:
         self._df.reset_index(drop=True, inplace=True)
         # Save new df to disc
         self._df.to_pickle(self._df.paths.get_batch_path())
+
+    @warning_experimental()
+    def get_params_diffs(self, algo: str, item_name: str) -> pd.Series:
+        """
+        Get the parameters that differ for a given `item_name` run with a given `algo`
+
+        Parameters
+        ----------
+        algo: str
+            algorithm, one of "mcorr", "cnmf", or "cnmfe"
+
+        item_name: str
+            The item name for which to get the parameter diffs
+
+        Returns
+        -------
+        pd.Series
+            pandas Series (rows) with dicts containing only the
+            parameters that vary between batch items for the given
+            `item_name`. The returned index corresponds to the
+            index of the original DataFrame
+
+        """
+        sub_df = self._df[self._df["item_name"] == item_name]
+        sub_df = sub_df[sub_df["algo"] == algo]
+
+        if sub_df.index.size == 0:
+            raise NameError(f"The given `item_name`: {item_name}, does not exist in the DataFrame")
+
+        all_variants = set(
+            tuple(
+                chain.from_iterable(
+                    [
+                        tuple(p["main"].items()) for p in sub_df.params.values
+                    ]
+                )
+            )
+        )
+
+        counts = Counter([av[0] for av in all_variants])
+        variants_exist = [param[0] for param in counts.items() if param[1] > 1]
+
+        diffs = sub_df["params"].apply(lambda p: {k: p["main"][k] for k in variants_exist})
+
+        return diffs
 
     @warning_experimental()
     @_index_parser
