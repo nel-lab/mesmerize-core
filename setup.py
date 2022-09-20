@@ -45,6 +45,7 @@ setup(
     version=ver,
     install_requires=install_requires,
     packages=find_packages(),
+    include_package_data=True,
     url="https://github.com/nel-lab/mesmerize-core",
     license="Apache-Software-License",
     author="Kushal Kolar, Caitlin Lewis, Arjun Putcha",
