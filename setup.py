@@ -43,6 +43,7 @@ setup(
     long_description=readme,
     classifiers=classifiers,
     version=ver,
+    install_requires=install_requires,
     packages=find_packages(),
     url="https://github.com/nel-lab/mesmerize-core",
     license="Apache-Software-License",
