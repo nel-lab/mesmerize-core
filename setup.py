@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 install_requires = [
-    "pandas>=1.5.0"
+    "pandas>=1.5.0",
     "pytest",
     "requests",
     "tqdm",
