@@ -92,16 +92,17 @@ MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
 ### python venvs
 ```bash
-# create a new env
+# create a new env in some directory
 # tested on python3.9 and 3.10
-python3.10 -m venv ~/python-venvs/mesmerize-core
-source ~/python-venvs/mesmerize-core/bin/activate
+python3.10 -m venv python-venvs/mesmerize-core
+source python-venvs/mesmerize-core/bin/activate
 
 # get latest pip setuptools and wheel
 pip install --upgrade setuptools wheel pip
 
 # cd into or make a dir that has your repos
-cd ~/repos
+mkdir repos
+cd repos
 
 # install caiman
 git clone https://github.com/flatironinstitute/CaImAn.git
