@@ -59,7 +59,15 @@ https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-8
 
 ## For users
 
-These instructions will install `mesmerize-core`. For visualization please see the `fastplotlib` repo: https://github.com/kushalkolar/fastplotlib 
+These instructions will install `mesmerize-core`.
+
+For visualization install `fastplotlib` like this:
+
+```bash
+pip install git+https://github.com/kushalkolar/fastplotlib.git
+```
+
+You may need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#install-vulkan-drivers
 
 ### Conda
 
