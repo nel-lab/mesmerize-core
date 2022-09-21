@@ -41,6 +41,7 @@ setup(
     name="mesmerize-core",
     description="High level pandas-based API for batch analysis of Calcium Imaging data using CaImAn",
     long_description=readme,
+    long_description_content_type='text/markdown',
     classifiers=classifiers,
     version=ver,
     install_requires=install_requires,
