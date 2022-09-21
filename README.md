@@ -63,7 +63,7 @@ https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-8
 
 ```bash
 # create an env
-conda create --item_name mesmerize-core python=3.10
+conda create --name mesmerize-core python=3.10
 
 # install mamba
 conda install -c conda-forge mamba
