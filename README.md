@@ -57,40 +57,116 @@ https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-8
 
 # Installation
 
-## For development
+## For users
 
-### conda
+These instructions will install `mesmerize-core`. For visualization please see the `fastplotlib` repo: https://github.com/kushalkolar/fastplotlib 
+
+### Conda
+
+A ready-to-use conda package is currently a WIP, the quirks of tensorflow and windows are holding us back. Meanwhile you can still install `mesmerize-core` using `conda` by first installing `caiman` and then installing `mesmerize-core`.
 
 ```bash
-# create an env
-conda create --name mesmerize-core python=3.10
-
-# install mamba
+# install mamba in your base environment
 conda install -c conda-forge mamba
 conda clean -a
 
-# activate env
+# create a new environment
+conda create --name mesmerize-core python=3.10
+
+# activate environment
 conda activate mesmerize-core
+conda clean -a
 
 # clone this repo
 git clone https://github.com/nel-lab/mesmerize-core.git
 cd mesmerize-core
 
 # update env with environment file
+# this installs caiman as well
 mamba env update -n mesmerize-core --file environment.yml
 
 # install caimanmanager
 caimanmanager.py install
 
 # install mesmerize-core
-pip install -e .
+pip install .
 
-# install pytest and run tests
+# install pytest and run tests to make sure everything works properly
+mamba install pytest
+MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+```
+
+### python virtual environments
+
+```bash
+# create a new env in some directory
+# tested on python3.9 and 3.10
+python3.10 -m venv python-venvs/mesmerize-core
+source python-venvs/mesmerize-core/bin/activate
+
+# get latest pip setuptools and wheel
+pip install --upgrade setuptools wheel pip
+
+# cd into or make a dir that has your repos
+mkdir repos
+cd repos
+
+# install caiman
+git clone https://github.com/flatironinstitute/CaImAn.git
+cd CaImAn
+pip install -r requirements.txt
+pip install .
+caimanmanager.py install
+
+# install mesmerize-core
+pip install mesmerize-core
+
+# you should now be able to import mesmerize_core
+# start ipython
+ipython
+
+# run in ipython
+import mesmerize_core
+mesmerize_core.__version__
+```
+
+## For development
+
+### conda
+
+```bash
+# install mamba in your base environment
+conda install -c conda-forge mamba
+conda clean -a
+
+# create a new environment
+conda create --name mesmerize-core python=3.10
+
+# activate environment
+conda activate mesmerize-core
+conda clean -a
+
+# clone this repo
+git clone https://github.com/nel-lab/mesmerize-core.git
+cd mesmerize-core
+
+# update env with environment file
+# this installs caiman as well
+mamba env update -n mesmerize-core --file environment.yml
+
+# install caimanmanager
+caimanmanager.py install
+
+# install mesmerize-core
+pip install .
+
+# install pytest and run tests to make sure everything works properly
 mamba install pytest
 MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 ```
 
 ### python venvs
+
 ```bash
 # create a new env in some directory
 # tested on python3.9 and 3.10
