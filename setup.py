@@ -26,7 +26,7 @@ with open(Path(__file__).parent.joinpath("mesmerize_core", "VERSION"), "r") as f
 classifiers = \
     [
         "Programming Language :: Python :: 3",
-        "LICENSE :: OSI APPROVED :: APACHE SOFTWARE LICENSE",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: POSIX :: Linux",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows :: Windows 10",
