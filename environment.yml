@@ -10,5 +10,5 @@ dependencies:
   - pims
   - psutil
   - pytest
-  - pydata-sphinx-theme
+  - pydata-sphinx-theme < 0.10.0
 
