@@ -1,12 +1,14 @@
 # mesmerize-core
 
-![Python Package](https://github.com/nel-lab/mesmerize-core/actions/workflows/python-app.yml/badge.svg) ![Conda install](https://github.com/nel-lab/mesmerize-core/actions/workflows/python-package-conda.yml/badge.svg) [![Documentation Status](https://readthedocs.org/projects/mesmerize-core/badge/?version=latest)](https://mesmerize-core.readthedocs.io/en/latest/?badge=latest)
+[![Linux pip](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-pip.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-pip.yml)
+[![Linux Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-conda.yml)
+[![MacOS Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/macos-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/macos-conda.yml)
+[![Windows Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml)
+[![Documentation Status](https://readthedocs.org/projects/mesmerize-core/badge/?version=latest)](https://mesmerize-core.readthedocs.io/en/latest/?badge=latest)
 
-Mesmerize core backend
+### Mesmerize core backend
 
 **News: there will be a workshop in ~late September, more info:** https://twitter.com/kushalkolar/status/1554927353251262464 
-
-**Note: We're currently waiting for the release of pandas v1.5 before the initial release of mesmerize-core**
 
 A batch management system for calcium imaging analysis using the CaImAn library. 
 It contains `pandas.DataFrame` and `pandas.Series` extensions that interface with CaImAn for running the various algorithms and organizing input & output data.
