@@ -79,7 +79,11 @@ conda install -c conda-forge mamba
 conda clean -a
 
 # create a new environment
+
+# on linux and mac you can use python=3.10
 conda create --name mesmerize-core python=3.10
+# on windows you MUST use python=3.9
+conda create --name mesmerize-core python=3.9
 
 # activate environment
 conda activate mesmerize-core
@@ -147,8 +151,10 @@ mesmerize_core.__version__
 conda install -c conda-forge mamba
 conda clean -a
 
-# create a new environment
+# on linux and mac you can use python=3.10
 conda create --name mesmerize-core python=3.10
+# on windows you MUST use python=3.9
+conda create --name mesmerize-core python=3.9
 
 # activate environment
 conda activate mesmerize-core
