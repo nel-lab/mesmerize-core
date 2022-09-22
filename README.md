@@ -5,6 +5,7 @@
 [![MacOS Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/macos-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/macos-conda.yml)
 [![Windows Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml)
 [![Documentation Status](https://readthedocs.org/projects/mesmerize-core/badge/?version=latest)](https://mesmerize-core.readthedocs.io/en/latest/?badge=latest)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/mesmerize-core.svg)](https://anaconda.org/conda-forge/mesmerize-core)
 
 ### Mesmerize core backend
 
@@ -59,9 +60,9 @@ https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-8
 
 ## For users
 
-These instructions will install `mesmerize-core`.
+The instructions below will install `mesmerize-core`.
 
-For visualization install `fastplotlib` like this:
+For visualization install `fastplotlib` like this into the same environment as `mesmerize-core`:
 
 ```bash
 pip install git+https://github.com/kushalkolar/fastplotlib.git
@@ -71,41 +72,55 @@ You may need to install Vulkan drivers depending on your system, see the `fastpl
 
 ### Conda
 
-A ready-to-use conda package is currently a WIP, the quirks of tensorflow and windows are holding us back. Meanwhile you can still install `mesmerize-core` using `conda` by first installing `caiman` and then installing `mesmerize-core`.
+`mesmerize-core` is availabe as a conda package which also gives you CaImAn! These instructions will give you a working `mesmerize-core` along with `caiman` in the same environment.
+
+1. Install `mamba` into your base environment. Skip this step if you have `mamba`. This step may take 10 minutes and display several messages like "Solving environment: failed with..." but it should eventually install `mamba`.
+```bash
+conda install -c conda-forge mamba
+
+# this command helps prevent things from being slow
+conda clean -a
+```
+
+2. Create a new environment
 
 ```bash
-# install mamba in your base environment
-conda install -c conda-forge mamba
-conda clean -a
-
-# create a new environment
-
 # on linux and mac you can use python=3.10
 conda create --name mesmerize-core python=3.10
 # on windows you MUST use python=3.9
 conda create --name mesmerize-core python=3.9
+```
+3. Activate environment. You can only use `mesmerize-core` in the environment that it's installed into.
 
-# activate environment
+```bash
 conda activate mesmerize-core
 conda clean -a
+```
 
-# clone this repo
-git clone https://github.com/nel-lab/mesmerize-core.git
-cd mesmerize-core
+4. Install `mesmerize-core`
 
-# update env with environment file
-# this installs caiman as well
-mamba env update -n mesmerize-core --file environment.yml
+```bash
+mamba install -c conda-forge mesmerize-core
+```
 
-# install caimanmanager
+5. Install `caimanmanager`
+
+```bash
 caimanmanager.py install
+```
 
-# install mesmerize-core
-pip install .
+6. Run `ipython` and verify that `mesmerize_core` is installed:
 
-# install pytest and run tests to make sure everything works properly
-mamba install pytest
-MESMERIZE_KEEP_TEST_DATA=1 DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+```bash
+# run in ipython
+import mesmerize_core
+mesmerize_core.__version__
+```
+
+7. Install `fastplotlib` for visualization into the same environment (run this in the anaconda prompt, not ipython)
+
+```bash
+pip install git+https://github.com/kushalkolar/fastplotlib.git
 ```
 
 ### python virtual environments
