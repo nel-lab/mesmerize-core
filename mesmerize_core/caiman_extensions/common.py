@@ -469,6 +469,19 @@ class CaimanSeriesExtensions:
 
     @validate()
     def get_projection(self, proj_type: str) -> np.ndarray:
+        """
+        Return the ``max``, ``mean``, or ``std`` (standard deviation) projection
+        
+        Parameters
+        ----------
+        proj_type: str
+            one of ``"max"``, ``"mean"``, ``"std"``
+
+        Returns
+        -------
+        np.ndarray
+            ``max``, ``mean``, or ``std`` projection
+        """
         path = self._series.paths.resolve(
             self._series["outputs"][f"{proj_type}-projection-path"]
         )
