@@ -35,8 +35,12 @@ def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
         Full parent data path
     """
     global PARENT_DATA_PATH
-    path = validate_path(path)
-    PARENT_DATA_PATH = Path(path)
+    path = Path(validate_path(path))
+    if not path.is_dir():
+        raise NotADirectoryError(
+            "The directory passed to `set_parent_raw_data_path()` does not exist.\n"
+        )
+    PARENT_DATA_PATH = path
 
     return PARENT_DATA_PATH
 
