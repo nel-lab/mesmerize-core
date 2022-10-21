@@ -52,7 +52,7 @@ class CaimanDataFrameExtensions:
 
         return df_u.squeeze()
 
-    def add_item(self, algo: str, item_name: str, input_movie_path: str, params: dict):
+    def add_item(self, algo: str, item_name: str, input_movie_path: Union[str, pd.Series], params: dict):
         """
         Add an item to the DataFrame to organize parameters
         that can be used to run a CaImAn algorithm
@@ -77,6 +77,14 @@ class CaimanDataFrameExtensions:
                 "parent raw data path is not set, you must set it using:\n"
                 "`set_parent_raw_data_path()`"
             )
+
+        if isinstance(input_movie_path, pd.Series):
+            if not input_movie_path["algo"] == "mcorr":
+                raise ValueError(
+                    "`input_movie_path` argument must be an input movie path "
+                    "as a `str` or `Path` object, or a mcorr batch item."
+                )
+            input_movie_path = input_movie_path.mcorr.get_output_path()
 
         # make sure path is within batch dir or parent raw data path
         input_movie_path = self._df.paths.resolve(input_movie_path)
