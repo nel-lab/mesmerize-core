@@ -20,6 +20,7 @@ from ..batch_utils import (
     COMPUTE_BACKEND_SUBPROCESS,
     ALGO_MODULES,
     get_parent_raw_data_path,
+    load_batch
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from caiman import load_memmap
@@ -119,11 +120,26 @@ class CaimanDataFrameExtensions:
         # Save DataFrame to disk
         self._df.to_pickle(self._df.paths.get_batch_path())
 
-    def save_to_disk(self):
+    def save_to_disk(self, max_index_diff: int = 0):
         """
         Saves DataFrame to disk, copies to a backup before overwriting existing file.
         """
         path: Path = self._df.paths.get_batch_path()
+
+        disk_df = load_batch(path)
+
+        # check that max_index_diff is not exceeded
+        if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
+            raise IndexError(
+                f"The number of rows in the DataFrame on disk differs more "
+                f"than has been allowed by the `max_index_diff` kwarg which "
+                f"is set to <{max_index_diff}>. This is to prevent overwriting "
+                f"the full DataFrame with a sub-DataFrame. If you still wish "
+                f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
+                f"with `max_index_diff` set to the highest allowable difference "
+                f"in row number."
+            )
+
         bak = path.with_suffix(path.suffix + f"bak.{time()}")
 
         shutil.copyfile(path, bak)
