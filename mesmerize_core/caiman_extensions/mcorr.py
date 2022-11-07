@@ -31,9 +31,33 @@ class MCorrExtensions:
         return self._series.paths.resolve(self._series["outputs"]["mcorr-output-path"])
 
     @validate("mcorr")
-    def get_output(self) -> np.ndarray:
+    def get_output(self, mode: str = "r") -> np.ndarray:
         """
         Get the motion corrected output as a memmaped numpy array, allows fast random-access scrolling.
+
+        Parameters
+        ----------
+
+        mode: str
+            passed to numpy.memmap
+
+            one of: `{'r+', 'r', 'w+', 'c'}`
+
+            The file is opened in this mode:
+
+            +------+-------------------------------------------------------------+
+            | 'r'  | Open existing file for reading only.                        |
+            +------+-------------------------------------------------------------+
+            | 'r+' | Open existing file for reading and writing.                 |
+            +------+-------------------------------------------------------------+
+            | 'w+' | Create or overwrite existing file for reading and writing.  |
+            +------+-------------------------------------------------------------+
+            | 'c'  | Copy-on-write: assignments affect data in memory, but       |
+            |      | changes are not saved to disk.  The file on disk is         |
+            |      | read-only.                                                  |
+            +------+-------------------------------------------------------------+
+
+
 
         Returns
         -------
@@ -87,7 +111,7 @@ class MCorrExtensions:
 
         """
         path = self.get_output_path()
-        Yr, dims, T = load_memmap(str(path))
+        Yr, dims, T = load_memmap(str(path), mode=mode)
         mc_movie = np.reshape(Yr.T, [T] + list(dims), order="F")
         return mc_movie
 

@@ -86,9 +86,31 @@ class CNMFExtensions:
         self._series = s
 
     @validate("cnmf")
-    def get_cnmf_memmap(self) -> np.ndarray:
+    def get_cnmf_memmap(self, mode: str = "r") -> np.ndarray:
         """
         Get the CNMF C-order memmap
+
+        Parameters
+        ----------
+
+        mode: str
+            passed to numpy.memmap
+
+            one of: `{'r+', 'r', 'w+', 'c'}`
+
+            The file is opened in this mode:
+
+            +------+-------------------------------------------------------------+
+            | 'r'  | Open existing file for reading only.                        |
+            +------+-------------------------------------------------------------+
+            | 'r+' | Open existing file for reading and writing.                 |
+            +------+-------------------------------------------------------------+
+            | 'w+' | Create or overwrite existing file for reading and writing.  |
+            +------+-------------------------------------------------------------+
+            | 'c'  | Copy-on-write: assignments affect data in memory, but       |
+            |      | changes are not saved to disk.  The file on disk is         |
+            |      | read-only.                                                  |
+            +------+-------------------------------------------------------------+
 
         Returns
         -------
@@ -97,7 +119,7 @@ class CNMFExtensions:
         """
         path = self._series.paths.resolve(self._series["outputs"]["cnmf-memmap-path"])
         # Get order f images
-        Yr, dims, T = load_memmap(str(path))
+        Yr, dims, T = load_memmap(str(path), mode=mode)
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
         return images
 
