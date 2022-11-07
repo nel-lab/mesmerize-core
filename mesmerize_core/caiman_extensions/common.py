@@ -20,6 +20,7 @@ from ..batch_utils import (
     COMPUTE_BACKEND_SUBPROCESS,
     ALGO_MODULES,
     get_parent_raw_data_path,
+    load_batch
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from caiman import load_memmap
@@ -52,7 +53,7 @@ class CaimanDataFrameExtensions:
 
         return df_u.squeeze()
 
-    def add_item(self, algo: str, item_name: str, input_movie_path: str, params: dict):
+    def add_item(self, algo: str, item_name: str, input_movie_path: Union[str, pd.Series], params: dict):
         """
         Add an item to the DataFrame to organize parameters
         that can be used to run a CaImAn algorithm
@@ -77,6 +78,14 @@ class CaimanDataFrameExtensions:
                 "parent raw data path is not set, you must set it using:\n"
                 "`set_parent_raw_data_path()`"
             )
+
+        if isinstance(input_movie_path, pd.Series):
+            if not input_movie_path["algo"] == "mcorr":
+                raise ValueError(
+                    "`input_movie_path` argument must be an input movie path "
+                    "as a `str` or `Path` object, or a mcorr batch item."
+                )
+            input_movie_path = input_movie_path.mcorr.get_output_path()
 
         # make sure path is within batch dir or parent raw data path
         input_movie_path = self._df.paths.resolve(input_movie_path)
@@ -111,11 +120,26 @@ class CaimanDataFrameExtensions:
         # Save DataFrame to disk
         self._df.to_pickle(self._df.paths.get_batch_path())
 
-    def save_to_disk(self):
+    def save_to_disk(self, max_index_diff: int = 0):
         """
         Saves DataFrame to disk, copies to a backup before overwriting existing file.
         """
         path: Path = self._df.paths.get_batch_path()
+
+        disk_df = load_batch(path)
+
+        # check that max_index_diff is not exceeded
+        if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
+            raise IndexError(
+                f"The number of rows in the DataFrame on disk differs more "
+                f"than has been allowed by the `max_index_diff` kwarg which "
+                f"is set to <{max_index_diff}>. This is to prevent overwriting "
+                f"the full DataFrame with a sub-DataFrame. If you still wish "
+                f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
+                f"with `max_index_diff` set to the highest allowable difference "
+                f"in row number."
+            )
+
         bak = path.with_suffix(path.suffix + f"bak.{time()}")
 
         shutil.copyfile(path, bak)
