@@ -11,7 +11,7 @@
 
 ### Mesmerize core backend
 
-**News: there will be a workshop in ~late September, more info:** https://twitter.com/kushalkolar/status/1554927353251262464 
+**News: there will be an in-person workshop in January 2023, more info:** https://indico.flatironinstitute.org/event/3293/
 
 A batch management system for calcium imaging analysis using the CaImAn library. 
 It contains `pandas.DataFrame` and `pandas.Series` extensions that interface with CaImAn for running the various algorithms and organizing input & output data.
@@ -31,6 +31,8 @@ User guide: https://mesmerize-core.readthedocs.io/en/latest/user_guide.html
 Please use the GitHub issue tracker for any issues. For smaller questions or discussion use gitter.
 
 gitter: https://gitter.im/mesmerize_discussion/mesmerize-viz
+
+Video tutorial/virtual workshop from September 2022: https://www.youtube.com/watch?v=0AGiAaslJdk
 
 # Overview
 
