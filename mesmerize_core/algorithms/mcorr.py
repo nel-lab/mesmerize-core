@@ -17,6 +17,8 @@ if __name__ == "__main__":
     from mesmerize_core import set_parent_raw_data_path, load_batch
 
 
+print(f"__name__ is {__name__}")
+
 @click.command()
 @click.option("--batch-path", type=str)
 @click.option("--uuid", type=str)
