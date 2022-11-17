@@ -12,7 +12,7 @@ from shutil import move as move_file
 import os
 
 # prevent circular import
-if __name__ == "__main__":  # when running in subprocess
+if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
     from mesmerize_core.utils import IS_WINDOWS
 else:  # when running with local backend
