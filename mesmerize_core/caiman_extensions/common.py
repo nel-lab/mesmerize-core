@@ -18,7 +18,7 @@ from ._utils import validate, _index_parser
 from ..batch_utils import (
     COMPUTE_BACKENDS,
     COMPUTE_BACKEND_SUBPROCESS,
-    ALGO_MODULES,
+    COMPUTE_BACKEND_LOCAL,
     get_parent_raw_data_path,
     load_batch
 )
@@ -26,6 +26,14 @@ from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimenta
 from caiman import load_memmap
 from .movie_readers import MovieReader
 from .cnmf import cnmf_cache
+from .. import algorithms
+
+
+ALGO_MODULES = {
+    "cnmf": algorithms.cnmf,
+    "mcorr": algorithms.mcorr,
+    "cnmfe": algorithms.cnmfe,
+}
 
 
 @pd.api.extensions.register_dataframe_accessor("caiman")
@@ -331,6 +339,12 @@ class CaimanDataFrameExtensions:
                 return r["uuid"]
 
 
+class DummyProcess:
+    """Dummy process for local backend"""
+    def wait(self):
+        pass
+
+
 @pd.api.extensions.register_series_accessor("caiman")
 class CaimanSeriesExtensions:
     """
@@ -340,6 +354,22 @@ class CaimanSeriesExtensions:
     def __init__(self, s: pd.Series):
         self._series = s
         self.process: Popen = None
+
+    def _run_local(
+            self,
+            algo: str,
+            batch_path: Path,
+            uuid: UUID,
+            data_path: Union[Path, None],
+    ):
+        algo_module = getattr(algorithms, algo)
+        algo_module.run_algo(
+            batch_path=str(batch_path),
+            uuid=str(uuid),
+            data_path=str(data_path)
+        )
+
+        return DummyProcess()
 
     def _run_subprocess(
         self,
@@ -369,8 +399,8 @@ class CaimanSeriesExtensions:
 
     @cnmf_cache.invalidate()
     def run(
-        self,
-        backend: Optional[str] = COMPUTE_BACKEND_SUBPROCESS, **kwargs
+            self,
+            backend: Optional[str] = None, **kwargs
     ):
         """
         Run a CaImAn algorithm in an external process using the chosen backend
@@ -392,6 +422,12 @@ class CaimanSeriesExtensions:
                 "`set_parent_raw_data_path()`"
             )
 
+        if backend is None:
+            if not IS_WINDOWS:
+                backend = COMPUTE_BACKEND_SUBPROCESS
+            else:
+                backend = COMPUTE_BACKEND_LOCAL
+
         if backend not in COMPUTE_BACKENDS:
             raise KeyError(
                 f"Invalid or unavailable `backend`, choose from the following backends:\n"
@@ -399,6 +435,15 @@ class CaimanSeriesExtensions:
             )
 
         batch_path = self._series.paths.get_batch_path()
+
+        if backend == COMPUTE_BACKEND_LOCAL:
+            print(f"Running {self._series.uuid} with local backend")
+            return self._run_local(
+                algo=self._series["algo"],
+                batch_path=batch_path,
+                uuid=self._series["uuid"],
+                data_path=get_parent_raw_data_path(),
+            )
 
         # Create the runfile in the batch dir using this Series' UUID as the filename
         if IS_WINDOWS:

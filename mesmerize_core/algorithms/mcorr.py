@@ -13,15 +13,13 @@ from shutil import move as move_file
 
 
 # prevent circular import
-if __name__ == "__main__":
+if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
+else:  # when running with local backend
+    from ..batch_utils import set_parent_raw_data_path, load_batch
 
 
-@click.command()
-@click.option("--batch-path", type=str)
-@click.option("--uuid", type=str)
-@click.option("--data-path", type=str)
-def main(batch_path, uuid, data_path: str = None):
+def run_algo(batch_path, uuid, data_path: str = None):
     set_parent_raw_data_path(data_path)
 
     batch_path = Path(batch_path)
@@ -145,10 +143,20 @@ def main(batch_path, uuid, data_path: str = None):
         d = {"success": False, "traceback": traceback.format_exc()}
         print("mc failed, stored traceback in output")
 
+    cm.stop_server(dview=dview)
+
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
     # Save DataFrame to disk
     df.to_pickle(batch_path)
+
+
+@click.command()
+@click.option("--batch-path", type=str)
+@click.option("--uuid", type=str)
+@click.option("--data-path", type=str)
+def main(batch_path, uuid, data_path: str = None):
+    run_algo(batch_path, uuid, data_path)
 
 
 if __name__ == "__main__":
