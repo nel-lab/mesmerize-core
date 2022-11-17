@@ -13,7 +13,7 @@ from shutil import move as move_file
 
 
 # prevent circular import
-if __name__ == "__main__":
+if __name__ in ["__main__", "__mp_main__"]:
     from mesmerize_core import set_parent_raw_data_path, load_batch
 
 
