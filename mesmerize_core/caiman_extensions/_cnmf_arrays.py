@@ -85,8 +85,15 @@ class LazyArray(ABC):
     def _compute_at_indices(self, indices: Union[int, slice]) -> np.ndarray:
         pass
 
+    def __repr__(self):
+        return f"{self.__class__.__name__} @{hex(id(self))}\n" \
+               f"{self.__class__.__doc__}\n" \
+               f"shape [frames, x, y]: {self.shape}\n" \
+               f"n_components: {self.n_components}\n"
+
 
 class RCMArray(LazyArray):
+    """Lazy computes reconstructed movie, i.e. A ⊗ C, upon frame indexing"""
     def __init__(
             self,
             spatial: np.ndarray,
