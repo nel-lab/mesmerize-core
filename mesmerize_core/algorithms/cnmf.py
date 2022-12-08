@@ -36,7 +36,10 @@ def main(batch_path, uuid, data_path: str = None):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     params = item["params"]
-    print("cnmf params", params)
+    print(
+        f"************************************************************************\n\n"
+        f"Starting CNMF item:\n{item}\nWith params:{params}"
+    )
 
     # adapted from current demo notebook
     if "MESMERIZE_N_PROCESSES" in os.environ.keys():
@@ -84,11 +87,12 @@ def main(batch_path, uuid, data_path: str = None):
         print("fitting images")
         cnm = cnm.fit(images)
         #
-        if params["refit"] is True:
-            print("refitting")
-            cnm = cnm.refit(images, dview=dview)
+        if "refit" in params.keys():
+            if params["refit"] is True:
+                print("refitting")
+                cnm = cnm.refit(images, dview=dview)
 
-        print("Eval")
+        print("performing eval")
         cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
         output_path = output_dir.joinpath(f"{uuid}.hdf5").resolve()
