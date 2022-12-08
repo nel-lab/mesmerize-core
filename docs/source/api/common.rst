@@ -5,7 +5,7 @@ Common
 
 Extensions that are used for both MCorr (motion correction) and CNMF(E)
 
-**Acessor:** ``common``
+**Accessor:** ``caiman``
 
 DataFrame Extensions
 ====================

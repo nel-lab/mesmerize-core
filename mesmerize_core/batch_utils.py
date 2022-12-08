@@ -4,23 +4,16 @@ from typing import Union
 
 import pandas as pd
 
-from .algorithms import cnmf, mcorr
-from .algorithms import cnmfe
 from .utils import validate_path
 
 CURRENT_BATCH_PATH: Path = None  # only one batch at a time
 PARENT_DATA_PATH: Path = None
 
-ALGO_MODULES = {
-    "cnmf": cnmf,
-    "mcorr": mcorr,
-    "cnmfe": cnmfe,
-}
-
 COMPUTE_BACKEND_SUBPROCESS = "subprocess"  #: subprocess backend
 COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend, not yet implemented
+COMPUTE_BACKEND_LOCAL = "local"
 
-COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM]
+COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM, COMPUTE_BACKEND_LOCAL]
 
 DATAFRAME_COLUMNS = ["algo", "item_name", "input_movie_path", "params", "outputs", "comments", "uuid"]
 
