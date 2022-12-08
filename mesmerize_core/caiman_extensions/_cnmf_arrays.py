@@ -18,11 +18,6 @@ class LazyArray(ABC):
 
     @property
     @abstractmethod
-    def n_components(self) -> int:
-        pass
-
-    @property
-    @abstractmethod
     def n_frames(self) -> int:
         pass
 
@@ -89,7 +84,6 @@ class LazyArray(ABC):
         return f"{self.__class__.__name__} @{hex(id(self))}\n" \
                f"{self.__class__.__doc__}\n" \
                f"shape [frames, x, y]: {self.shape}\n" \
-               f"n_components: {self.n_components}\n"
 
 
 class RCMArray(LazyArray):
@@ -130,10 +124,6 @@ class RCMArray(LazyArray):
     @property
     def shape(self) -> Tuple[int, int, int]:
         """
-        Shape of the reconstructed movie
-
-        Returns
-        -------
         Tuple[int]
             (n_frames, dims_x, dims_y)
         """
@@ -150,6 +140,11 @@ class RCMArray(LazyArray):
             return rcm[0]  # 2d single rame
         else:
             return rcm
+
+    def __repr__(self):
+        r = super().__repr__()
+        return f"{r}" \
+               f"n_components: {self.n_components}"
 
 
 class RBArray(LazyArray):
