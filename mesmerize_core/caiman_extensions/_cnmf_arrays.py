@@ -11,21 +11,53 @@ slice_or_int = Union[int, slice]
 class LazyArray(ABC):
     @property
     @abstractmethod
-    def shape(self):
+    def shape(self) -> Tuple[int, int, int]:
+        """
+        Tuple[int]
+            (n_frames, dims_x, dims_y)
+        """
         pass
 
     @property
     def ndim(self) -> int:
+        """
+        int
+            Number of dimensions
+        """
         return len(self.shape)
 
     @property
     @abstractmethod
-    def dtype(self):
+    def dtype(self) -> str:
+        """
+        str
+            data type
+        """
         pass
+
+    @property
+    def nbytes(self) -> int:
+        """
+        int
+            number of bytes for the fully computed array
+        """
+        return np.dtype(self.dtype).itemsize * self.shape[1] * self.shape[2] * self.n_frames
+
+    @property
+    def nbytes_gb(self) -> float:
+        """
+        float
+            number of gigabytes for the fully computed array
+        """
+        return self.nbytes / 1e9
 
     @property
     @abstractmethod
     def n_frames(self) -> int:
+        """
+        int
+            number of frames
+        """
         pass
 
     def as_numpy(self):
@@ -40,7 +72,7 @@ class LazyArray(ABC):
             f"\nYou are trying to create a numpy.ndarray from a LazyArray, "
             f"this is not recommended and could take a while.\n\n"
             f"Estimated size of final numpy array: "
-            f"{(self[0].data.nbytes * self.n_frames) / 1e9:.2f} GB"
+            f"{self.nbytes_gb:.2f} GB"
         )
         a = np.zeros(shape=self.shape, dtype=self.dtype)
 
@@ -136,6 +168,8 @@ class RCMArray(LazyArray):
 
         self._shape: Tuple[int, int, int] = (temporal.shape[1], *frame_dims)
 
+        self._dtype = self[0].dtype.name  # not the best implementation for now
+
     @property
     def spatial(self) -> np.ndarray:
         return self._spatial
@@ -154,15 +188,11 @@ class RCMArray(LazyArray):
 
     @property
     def shape(self) -> Tuple[int, int, int]:
-        """
-        Tuple[int]
-            (n_frames, dims_x, dims_y)
-        """
         return self._shape
 
     @property
     def dtype(self) -> str:
-        return self[0].dtype.name  # not the best implementation for now
+        return self._dtype
 
     def _compute_at_indices(self, indices: Union[int, Tuple[int, int]]) -> np.ndarray:
         rcm = self.spatial.dot(
