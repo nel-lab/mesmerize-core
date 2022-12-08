@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from typing import *
+from warnings import warn
+from pathlib import Path
 
 
 slice_or_int = Union[int, slice]
@@ -18,7 +20,36 @@ class LazyArray(ABC):
 
     @property
     @abstractmethod
+    def dtype(self):
+        pass
+
+    @property
+    @abstractmethod
     def n_frames(self) -> int:
+        pass
+
+    def as_numpy(self):
+        """
+        NOT RECOMMENDED, THIS COULD BE EXTREMELY LARGE. Convert to a standard numpy array in RAM.
+
+        Returns
+        -------
+        np.ndarray
+        """
+        warn(
+            f"\nYou are trying to create a numpy.ndarray from a LazyArray, "
+            f"this is not recommended and could take a while.\n\n"
+            f"Estimated size of final numpy array: "
+            f"{(self[0].data.nbytes * self.n_frames) / 1e9:.2f} GB"
+        )
+        a = np.zeros(shape=self.shape, dtype=self.dtype)
+
+        for i in range(self.n_frames):
+            a[i] = self[i]
+
+        return a
+
+    def save_hdf5(self, filename: Union[str, Path]):
         pass
 
     def __getitem__(
@@ -128,6 +159,10 @@ class RCMArray(LazyArray):
             (n_frames, dims_x, dims_y)
         """
         return self._shape
+
+    @property
+    def dtype(self) -> str:
+        return self[0].dtype.name  # not the best implementation for now
 
     def _compute_at_indices(self, indices: Union[int, Tuple[int, int]]) -> np.ndarray:
         rcm = self.spatial.dot(
