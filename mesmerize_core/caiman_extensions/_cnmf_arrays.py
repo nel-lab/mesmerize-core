@@ -13,6 +13,10 @@ class LazyArray(ABC):
         pass
 
     @property
+    def ndim(self) -> int:
+        return len(self.shape)
+
+    @property
     @abstractmethod
     def n_components(self) -> int:
         pass
@@ -131,9 +135,14 @@ class RCMArray(LazyArray):
     def _compute_at_indices(self, indices: Union[int, Tuple[int, int]]) -> np.ndarray:
         rcm = self.spatial.dot(
             self.temporal[:, indices]
-        )
+        ).reshape(
+            self.shape[1:] + (-1,), order="F"
+        ).transpose([2, 0, 1])
 
-        return rcm.reshape(self.shape[1:] + (-1,), order="F").transpose([2, 0, 1])
+        if rcm.shape[0] == 1:
+            return rcm[0]  # 2d single rame
+        else:
+            return rcm
 
 
 class RBArray(LazyArray):
