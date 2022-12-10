@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import numpy as np
 from shutil import move as move_file
+import time
 
 
 # prevent circular import
@@ -147,6 +148,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
+    # Add ran timestamp to ran_time column of series
+    df.loc[df["uuid"] == uuid, "ran_time"] = time.asctime(time.localtime(time.time()))
     # Save DataFrame to disk
     df.to_pickle(batch_path)
 

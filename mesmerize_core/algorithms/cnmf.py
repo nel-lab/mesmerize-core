@@ -10,6 +10,7 @@ import traceback
 from pathlib import Path
 from shutil import move as move_file
 import os
+import time
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -137,6 +138,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
+    # Add ran timestamp to ran_time column of series
+    df.loc[df["uuid"] == uuid, "ran_time"] = time.asctime(time.localtime(time.time()))
     # save dataframe to disc
     df.to_pickle(batch_path)
 
