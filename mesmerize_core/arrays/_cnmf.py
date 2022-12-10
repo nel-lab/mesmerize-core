@@ -1,3 +1,4 @@
+from itertools import product as iter_product
 from typing import *
 
 import numpy as np
@@ -31,19 +32,21 @@ class LazyArrayRCM(LazyArray):
         else:
             self._dtype = self[0].dtype.name
 
-        # precompute min and max vals
+        # precompute min and max vals for each component for spatial and temporal
         temporal_max = np.nanmax(self.temporal, axis=1)
         spatial_max = self.spatial.max(axis=0).toarray()
 
         temporal_min = np.nanmin(self.temporal, axis=1)
         spatial_min = self.spatial.min(axis=0).toarray()
 
-        self._max = np.nanmax(np.multiply(temporal_max, spatial_max))
-
-        self._min = min(
-            np.nanmin(np.multiply(temporal_max, spatial_min)),
-            np.nanmin(np.multiply(temporal_min, spatial_max))
-        )
+        prods = list()
+        for t, s in iter_product([temporal_min, temporal_max], [spatial_min, spatial_max]):
+            _p = np.multiply(t, s)
+            prods.append(np.nanmin(_p))
+            prods.append(np.nanmax(_p))
+        
+        self._max = np.max(prods)
+        self._min = np.min(prods)
 
     @property
     def spatial(self) -> np.ndarray:
