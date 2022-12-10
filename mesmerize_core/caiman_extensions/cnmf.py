@@ -12,7 +12,7 @@ from copy import deepcopy
 
 from ._utils import validate
 from .cache import Cache
-from ._cnmf_arrays import LazyArray, RCMArray
+from ._cnmf_arrays import LazyArray, LazyArrayRCM
 
 cnmf_cache = Cache()
 
@@ -555,7 +555,7 @@ class CNMFExtensions:
         spatial = cnmf_obj.estimates.A[:, component_indices]
         temporal = temporal_components[component_indices, :]
 
-        return RCMArray(spatial=spatial, temporal=temporal, frame_dims=dims)
+        return LazyArrayRCM(spatial=spatial, temporal=temporal, frame_dims=dims)
 
     @validate("cnmf")
     def get_rcb(

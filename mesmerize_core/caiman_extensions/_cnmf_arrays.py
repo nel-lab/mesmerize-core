@@ -9,6 +9,9 @@ slice_or_int = Union[int, slice]
 
 
 class LazyArray(ABC):
+    """
+    Base class for arrays that exhibit lazy computation upon indexing
+    """
     @property
     @abstractmethod
     def shape(self) -> Tuple[int, int, int]:
@@ -32,6 +35,24 @@ class LazyArray(ABC):
         """
         str
             data type
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def min(self) -> float:
+        """
+        int
+            min value of the array if it were fully computed
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def max(self) -> float:
+        """
+        float
+            max value of the array if it were fully computed
         """
         pass
 
@@ -146,17 +167,19 @@ class LazyArray(ABC):
     def __repr__(self):
         return f"{self.__class__.__name__} @{hex(id(self))}\n" \
                f"{self.__class__.__doc__}\n" \
+               f"Frames are computed only upon indexing\n" \
                f"shape [frames, x, y]: {self.shape}\n" \
 
 
-class RCMArray(LazyArray):
-    """Lazy computes reconstructed movie, i.e. A ⊗ C, upon frame indexing"""
+class LazyArrayRCM(LazyArray):
+    """LazyArray for reconstructed movie, i.e. A ⊗ C"""
     def __init__(
             self,
             spatial: np.ndarray,
             temporal: np.ndarray,
             frame_dims: Tuple[int, int],
     ):
+
         if spatial.shape[1] != temporal.shape[0]:
             raise ValueError(
                 f"Number of temporal components provided: `{temporal.shape[0]}` "
@@ -168,7 +191,25 @@ class RCMArray(LazyArray):
 
         self._shape: Tuple[int, int, int] = (temporal.shape[1], *frame_dims)
 
-        self._dtype = self[0].dtype.name  # not the best implementation for now
+        # determine dtype
+        if self.spatial.dtype == self.temporal.dtype:
+            self._dtype = self.temporal.dtype
+        else:
+            self._dtype = self[0].dtype.name
+
+        # precompute min and max vals
+        temporal_max = np.nanmax(self.temporal, axis=1)
+        spatial_max = self.spatial.max(axis=0).toarray()
+
+        temporal_min = np.nanmin(self.temporal, axis=1)
+        spatial_min = self.spatial.min(axis=0).toarray()
+
+        self._max = np.nanmax(np.multiply(temporal_max, spatial_max))
+
+        self._min = min(
+            np.nanmin(np.multiply(temporal_max, spatial_min)),
+            np.nanmin(np.multiply(temporal_min, spatial_max))
+        )
 
     @property
     def spatial(self) -> np.ndarray:
@@ -194,6 +235,14 @@ class RCMArray(LazyArray):
     def dtype(self) -> str:
         return self._dtype
 
+    @property
+    def min(self) -> float:
+        return self._min
+
+    @property
+    def max(self) -> float:
+        return self._max
+
     def _compute_at_indices(self, indices: Union[int, Tuple[int, int]]) -> np.ndarray:
         rcm = self.spatial.dot(
             self.temporal[:, indices]
@@ -202,7 +251,7 @@ class RCMArray(LazyArray):
         ).transpose([2, 0, 1])
 
         if rcm.shape[0] == 1:
-            return rcm[0]  # 2d single rame
+            return rcm[0]  # 2d single frame
         else:
             return rcm
 
@@ -211,10 +260,19 @@ class RCMArray(LazyArray):
         return f"{r}" \
                f"n_components: {self.n_components}"
 
+    def __eq__(self, other):
+        if not isinstance(other, LazyArrayRCM):
+            raise TypeError(f"cannot compute equality for against types that are not {self.__class__.__name__}")
 
-class RBArray(LazyArray):
+        if (self.spatial == other.spatial) and (self.temporal == other.temporal):
+            return True
+        else:
+            return False
+
+
+class LazyArrayRCB(LazyArray):
     pass
 
 
-class ResidualsArray(LazyArray):
+class LazyArrayResiduals(LazyArray):
     pass
