@@ -14,6 +14,15 @@ class LazyArray(ABC):
     """
     @property
     @abstractmethod
+    def dtype(self) -> str:
+        """
+        str
+            data type
+        """
+        pass
+
+    @property
+    @abstractmethod
     def shape(self) -> Tuple[int, int, int]:
         """
         Tuple[int]
@@ -22,19 +31,11 @@ class LazyArray(ABC):
         pass
 
     @property
-    def ndim(self) -> int:
+    @abstractmethod
+    def n_frames(self) -> int:
         """
         int
-            Number of dimensions
-        """
-        return len(self.shape)
-
-    @property
-    @abstractmethod
-    def dtype(self) -> str:
-        """
-        str
-            data type
+            number of frames
         """
         pass
 
@@ -57,33 +58,49 @@ class LazyArray(ABC):
         pass
 
     @property
+    def ndim(self) -> int:
+        """
+        int
+            Number of dimensions
+        """
+        return len(self.shape)
+
+    @property
     def nbytes(self) -> int:
         """
         int
-            number of bytes for the fully computed array
+            number of bytes for the array if it were fully computed
         """
-        return np.dtype(self.dtype).itemsize * self.shape[1] * self.shape[2] * self.n_frames
+        return np.prod(self.shape + (np.dtype(self.dtype).itemsize,))
 
     @property
     def nbytes_gb(self) -> float:
         """
         float
-            number of gigabytes for the fully computed array
+            number of gigabytes for the array if it were fully computed
         """
         return self.nbytes / 1e9
 
-    @property
     @abstractmethod
-    def n_frames(self) -> int:
+    def _compute_at_indices(self, indices: Union[int, slice]) -> np.ndarray:
         """
-        int
-            number of frames
+        Lazy computation logic goes here. Computes the array at the desired indices.
+
+        Parameters
+        ----------
+        indices: Union[int, slice]
+            the user's desired slice, i.e. slice object or int passed from `__getitem__()`
+
+        Returns
+        -------
+        np.ndarray
+            array at the indexed slice
         """
         pass
 
     def as_numpy(self):
         """
-        NOT RECOMMENDED, THIS COULD BE EXTREMELY LARGE. Convert to a standard numpy array in RAM.
+        NOT RECOMMENDED, THIS COULD BE EXTREMELY LARGE. Converts to a standard numpy array in RAM.
 
         Returns
         -------
@@ -119,16 +136,16 @@ class LazyArray(ABC):
             if len(item) > len(self.shape):
                 raise IndexError(
                     f"Cannot index more dimensions than exist in the array. "
-                    f"You have tried to index with {len(item)} dimensions, "
-                    f"only {len(self.shape)} exist in the array"
+                    f"You have tried to index with <{len(item)}> dimensions, "
+                    f"only <{len(self.shape)}> dimensions exist in the array"
                 )
 
             indexer = item[0]
 
         else:
             raise IndexError(
-                f"You index EagerArrays only using slice, integer, or tuple of slice and int, "
-                f"you have passed a: {type(item)}"
+                f"You can index LazyArrays only using slice, int, or tuple of slice and int, "
+                f"you have passed a: <{type(item)}>"
             )
 
         if isinstance(indexer, slice):
@@ -137,13 +154,13 @@ class LazyArray(ABC):
             if start is not None:
                 if start > self.n_frames:
                     raise IndexError(f"Cannot index beyond `n_frames`.\n"
-                                     f"Desired frame start index of {start} "
-                                     f"lies beyond `n_frames` {self.n_frames}")
+                                     f"Desired frame start index of <{start}> "
+                                     f"lies beyond `n_frames` <{self.n_frames}>")
             if stop is not None:
                 if stop > self.n_frames:
                     raise IndexError(f"Cannot index beyond `n_frames`.\n"
-                                     f"Desired frame stop index of {stop} "
-                                     f"lies beyond `n_frames` {self.n_frames}")
+                                     f"Desired frame stop index of <{stop}> "
+                                     f"lies beyond `n_frames` <{self.n_frames}>")
 
             # dimension_0 is always time
             frames = self._compute_at_indices(indexer)
@@ -159,10 +176,6 @@ class LazyArray(ABC):
 
         elif isinstance(indexer, int):
             return self._compute_at_indices(indexer)
-
-    @abstractmethod
-    def _compute_at_indices(self, indices: Union[int, slice]) -> np.ndarray:
-        pass
 
     def __repr__(self):
         return f"{self.__class__.__name__} @{hex(id(self))}\n" \
