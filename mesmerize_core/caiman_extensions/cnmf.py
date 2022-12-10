@@ -12,7 +12,9 @@ from copy import deepcopy
 
 from ._utils import validate
 from .cache import Cache
-from ._cnmf_arrays import LazyArray, LazyArrayRCM
+from ..arrays._cnmf import LazyArrayRCM
+from ..arrays._base import LazyArray
+
 
 cnmf_cache = Cache()
 
