@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from shutil import rmtree
 from itertools import chain
 from collections import Counter
-from time import time
+import time
 
 import numpy as np
 import pandas as pd
@@ -113,6 +113,8 @@ class CaimanDataFrameExtensions:
                 "input_movie_path": str(input_movie_path),
                 "params": params,
                 "outputs": None,  # to store dict of output information, such as output file paths
+                "added_time": time.asctime(time.localtime(time.time())),
+                "ran_time": None,
                 "comments": None,
                 "uuid": str(
                     uuid4()
