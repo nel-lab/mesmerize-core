@@ -113,7 +113,7 @@ class CaimanDataFrameExtensions:
                 "input_movie_path": str(input_movie_path),
                 "params": params,
                 "outputs": None,  # to store dict of output information, such as output file paths
-                "added_time": datetime.now().isoformat(timespec="milliseconds"),
+                "added_time": datetime.now().isoformat(timespec="seconds", sep="/"),
                 "ran_time": None,
                 "algo_duration": None,
                 "comments": None,
