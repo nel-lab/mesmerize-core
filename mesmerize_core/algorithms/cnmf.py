@@ -11,6 +11,7 @@ from pathlib import Path
 from shutil import move as move_file
 import os
 import time
+from datetime import datetime
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -22,6 +23,7 @@ else:  # when running with local backend
 
 
 def run_algo(batch_path, uuid, data_path: str = None):
+    algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
     df = load_batch(batch_path)
@@ -139,7 +141,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
     # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = time.asctime(time.localtime(time.time()))
+    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="milliseconds")
+    df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
     # save dataframe to disc
     df.to_pickle(batch_path)
 
