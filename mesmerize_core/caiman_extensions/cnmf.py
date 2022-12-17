@@ -123,67 +123,6 @@ class CNMFExtensions:
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
         return images
 
-    def get_input_memmap(self) -> np.ndarray:
-        """
-        Return the F-order memmap if the input to this
-        CNMF batch item was a mcorr output memmap
-
-        Returns
-        -------
-        np.ndarray
-            numpy memmap array of the input
-
-        Examples
-        --------
-
-        Get the input memmap and view it with random access scrolling
-
-        .. code-block:: python
-
-            from mesmerize_core import load_batch
-            from matplotlib import pyplot as plt
-
-            # needs fastplotlib and must be run in a notebook
-            from fastplotlib import Plot
-            from ipywidgets import IntSlider, VBox
-
-            df = load_batch("/path/to/batch_dataframe_file.pickle")
-
-            # assuming the 0th index is a cnmf item
-            movie = df.iloc[0].cnmf.get_input_memmap()
-
-            # plot a frame
-            plt.imshow(movie[0])
-            plt.show()
-
-            # the following requires fastplotlib and must be run in a new notebook cell
-            slider = IntSlider(value=0, min=0, max=movie.shape[0] - 1, step=1)
-            plot = Plot()
-
-            image_graphic = plot.image(movie[0], cmap="gnuplot2")
-
-            previous_slider_value = 0
-            def update_frame():  # runs on each rendering cycle
-                if slider.value == previous_slider_value:
-                    return
-                image_graphic.update_data(data=movie[slider.value])
-
-            plot.add_animations([update_frame])
-
-            VBox([plot.show(), slider])
-
-        """
-        movie_path = str(self._series.caiman.get_input_movie_path())
-        if movie_path.endswith("mmap"):
-            Yr, dims, T = load_memmap(movie_path)
-            images = np.reshape(Yr.T, [T] + list(dims), order="F")
-            return images
-        else:
-            raise TypeError(
-                f"Input movie for CNMF was not a memmap, path to input movie is:\n"
-                f"{movie_path}"
-            )
-
     @validate("cnmf")
     def get_output_path(self) -> Path:
         """
@@ -364,7 +303,7 @@ class CNMFExtensions:
             df = load_batch("/path/to/batch_dataframe_file.pickle")
 
             # assuming the 0th index is a cnmf item
-            movie = df.iloc[0].cnmf.get_input_memmap()
+            movie = df.iloc[0].caiman.get_input_movie()
             contours, coms = df.iloc[0].cnmf.get_contours()
 
             # plot a corr img and contours using matplotlib
@@ -697,7 +636,7 @@ class CNMFExtensions:
         if isinstance(frame_indices, int):
             frame_indices = (frame_indices, frame_indices + 1)
 
-        raw_movie = self.get_input_memmap()
+        raw_movie = self._series.caiman.get_input_movie()
 
         reconstructed_movie = self.get_rcm(component_indices="all", frame_indices=frame_indices)
 
@@ -866,7 +805,7 @@ class CNMFExtensions:
 
         cnmf_obj.params.quality.update(params)
         cnmf_obj.estimates.filter_components(
-            imgs=self.get_input_memmap(),
+            imgs=self._series.caiman.get_input_movie(),
             params=cnmf_obj.params
         )
 

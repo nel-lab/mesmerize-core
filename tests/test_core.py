@@ -487,9 +487,8 @@ def test_cnmf():
     )
     numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
 
-    print("testing cnmf.get_input_memmap()")
-    # test to check cnmf get_input_memmap()
-    cnmf_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
+    print("testing caiman.get_input_movie() for cnmf")
+    cnmf_input_mmap = df.iloc[-1].caiman.get_input_movie()
     cnmf_input_mmap_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "cnmf_input_mmap.npy")
     )
@@ -584,11 +583,6 @@ def test_cnmf():
     numpy.testing.assert_allclose(
         cnmf_residuals, cnmf_residuals_actual, rtol=1e3, atol=1e-10
     )
-    # cnmf_residuals_orig_minus_AouterC_minus_bouterf = df.iloc[
-    #                                                        -1].cnmf.get_input_memmap() - cnmf_reconstructed_movie_AouterC - cnmf_reconstructed_background
-    # numpy.testing.assert_allclose(
-    #     cnmf_residuals, cnmf_residuals_orig_minus_AouterC_minus_bouterf, rtol=1e3, atol=1e-10
-    # )
 
     # test to check caiman get_input_movie_path(), should be output of previous mcorr
     assert (
@@ -911,8 +905,8 @@ def test_cnmfe():
     )
     numpy.testing.assert_array_equal(cnmfe_mmap_output, cnmfe_mmap_output_actual)
 
-    # test to check cnmf get_input_memmap()
-    cnmfe_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
+    # test to check input memmap paths
+    cnmfe_input_mmap = df.iloc[-1].caiman.get_input_movie()
     cnmfe_input_mmap_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_full_input_mmap.npy")
     )
@@ -1011,11 +1005,6 @@ def test_cnmfe():
     numpy.testing.assert_allclose(
         cnmfe_residuals, cnmfe_residuals_actual, rtol=1e3, atol=1e-10
     )
-    # cnmfe_residuals_orig_minus_AouterC_minus_bouterf = df.iloc[-1].cnmf.get_input_memmap() - cnmfe_reconstructed_movie_AouterC - cnmfe_reconstructed_background
-    # numpy.testing.assert_allclose(
-    #     cnmfe_residuals, cnmfe_residuals_orig_minus_AouterC_minus_bouterf, rtol=1e3, atol=1e-10
-    # )
-
 
     # test to check passing optional ixs components to various functions
     ixs_components = numpy.array([1, 4, 7, 3])

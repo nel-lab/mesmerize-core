@@ -2,7 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from subprocess import Popen
-from typing import Union, List, Optional
+from typing import *
 from uuid import UUID, uuid4
 from shutil import rmtree
 from itertools import chain
@@ -11,7 +11,6 @@ from time import time
 
 import numpy as np
 import pandas as pd
-import pims
 
 from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError
 from ._utils import validate, _index_parser
@@ -23,10 +22,9 @@ from ..batch_utils import (
     load_batch
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
-from caiman import load_memmap
-from .movie_readers import MovieReader
 from .cnmf import cnmf_cache
 from .. import algorithms
+from ..movie_readers import default_reader
 
 
 ALGO_MODULES = {
@@ -487,32 +485,30 @@ class CaimanSeriesExtensions:
         return self._series.paths.resolve(self._series["input_movie_path"])
 
     @warning_experimental()
-    def get_input_movie(self, reader: str = None) -> Union[np.ndarray, pims.FramesSequence]:
+    def get_input_movie(self, reader: callable = None) -> Union[np.ndarray, Any]:
         """
         Get the input movie
 
         Parameters
         ----------
-        reader: str
-            one of ``None``, or registered ``MovieReader``
-            | if ``None`` reader is chosen based on file extension
+        reader: callable
+            a function that return an array-like
 
         Returns
         -------
 
         """
+        path_str = str(self.get_input_movie_path())
+
         if reader is not None:
-            Reader = MovieReader().get_reader(reader)
-            return Reader(self.get_input_movie_path())
+            if not callable(reader):
+                raise TypeError(
+                    f"reader must be a callable type, such as a function"
+                )
 
-        extension = self.get_input_movie_path().suffixes[-1]
+            return reader(path_str)
 
-        if extension in [".tiff", ".tif", ".btf"]:
-            return pims.open(str(self.get_input_movie_path()))
-
-        elif extension in [".mmap", ".memmap"]:
-            Yr, dims, T = load_memmap(str(self.get_input_movie_path()))
-            return np.reshape(Yr.T, [T] + list(dims), order="F")
+        return default_reader(path_str)
 
     @validate()
     def get_corr_image(self) -> np.ndarray:
