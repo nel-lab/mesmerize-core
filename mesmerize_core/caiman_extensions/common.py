@@ -8,6 +8,7 @@ from shutil import rmtree
 from itertools import chain
 from collections import Counter
 from time import time
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -156,6 +157,32 @@ class CaimanDataFrameExtensions:
             shutil.copyfile(bak, path)
             raise IOError(f"Could not save dataframe to disk.")
 
+    def backup_dataframe(self, filename: str = None) -> Path:
+        """
+        Backup the DataFrame to a new pickle file within the same batch directory.
+        By default the ``filename`` will be ``<orig_filename>.YYYY-MM-DD-HH:MM:SS.bak``
+
+        .. warning: **This only backs up the DataFrame pickle file. It DOES NOT backup the mcorr & cnmf data files!**
+
+        Parameters
+        ----------
+        filename: Optional[str]
+            If provided this filename is used instead of the default with the datetimestamp
+
+        Returns
+        -------
+            Path
+            Path to the backup file.
+
+        """
+        path = self._df.paths.get_batch_path()
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+        back_path = path.with_suffix(path.suffix + f".bak.{timestamp}")
+
+        shutil.copyfile(path, back_path)
+
+        return back_path
+
     @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
         """
@@ -260,34 +287,43 @@ class CaimanDataFrameExtensions:
 
     @warning_experimental()
     @_index_parser
-    def get_children(self, index: Union[int, str, UUID]) -> List[UUID]:
+    def get_children(self, identifier: Union[pd.Series, str, UUID]) -> pd.DataFrame:
         """
-        For the *motion correction* batch item at the provided ``index``,
-        returns a list of UUIDs for *CNMF(E)* batch items that use the
+        For the provided **motion correction** batch item identifier,
+        returns a DataFrame of *CNMF(E)* batch items that use the
         output of this motion correction batch item.
+
+        | Provide the batch item directly as a pandas Series (row), or the batch item's uuid.
 
         | Note: Only Motion Correction items have children, CNMF(E) items do not have children.
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
-            the index of the mcorr item to get the children of
+        identifier: Union[pd.Series, str, UUID]
+            mcorr batch item as a pandas Series, or the uuid of the mcorr item to get the children of
 
         Returns
         -------
-        List[UUID]
-            List of UUIDs of child CNMF items
+        pd.DataFrame
+            DataFrame of child CNMF(E) batch items
 
         """
 
-        if not self._df.iloc[index]["algo"] == "mcorr":
+        item = self.uloc(identifier)
+
+        if not item["algo"] == "mcorr":
             raise TypeError(
                 "`caiman.get_children()` extension maybe only be used with "
                 "mcorr batch items, CNMF(E) items do not have children."
             )
 
         # get the output path for this mcorr item
-        output_path = self._df.iloc[index].mcorr.get_output_path()
+        try:
+            output_path = item.mcorr.get_output_path()
+        except BatchItemNotRunError:
+            raise BatchItemNotRunError("Batch item was not run, therefore it cannot have children.")
+        except BatchItemUnsuccessfulError:
+            raise BatchItemUnsuccessfulError("Batch item was unsuccessful, therefore it cannot have children.")
 
         # see if this output path shows up in the input_movie_path of any other batch item
         children = list()
@@ -298,32 +334,33 @@ class CaimanDataFrameExtensions:
                 continue
             if _potential_child == output_path:
                 children.append(r["uuid"])
-        return children
+
+        return self._df[self._df["uuid"].isin(children)]
 
     @warning_experimental()
     @_index_parser
-    def get_parent(self, index: Union[int, str, UUID]) -> Union[UUID, None]:
+    def get_parent(self, identifier: Union[pd.DataFrame, str, UUID]) -> Union[pd.Series, None]:
         """
-        Get the UUID of the batch item whose output was used as
+        Get the row of the batch item whose output was used as
         the input for the batch item at the provided ``index``.
 
         | If a parent exists, it is always an mcorr batch item
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
+        identifier: Union[int, str, UUID]
             the index of the batch item to get the parent of
 
         Returns
         -------
-        Union[UUID, None]
-            | if ``UUID``, this is the UUID of the batch item whose output was used for the input of the batch item at
-            the provided ``index``
+        Union[pd.Series, None]
+            | if ``pd.Series``, this is the row of the batch item whose output was used
+             for the input of the batch item at the provided ``index``
 
             | if ``None``, the batch item at the provided ``index`` has no parent within the batch dataframe.
 
         """
-        input_movie_path = self._df.iloc[index].caiman.get_input_movie_path()
+        input_movie_path = self.uloc(identifier).caiman.get_input_movie_path()
 
         for i, r in self._df.iterrows():
             if not r["algo"] == "mcorr":
@@ -334,7 +371,7 @@ class CaimanDataFrameExtensions:
                 continue  # can't be a parent if it was unsuccessful
 
             if _potential_parent == input_movie_path:
-                return r["uuid"]
+                return r
 
 
 class DummyProcess:

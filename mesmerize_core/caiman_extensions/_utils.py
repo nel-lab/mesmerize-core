@@ -1,6 +1,7 @@
 from functools import wraps
 from typing import Union
 from uuid import UUID
+import pandas as pd
 
 from mesmerize_core.caiman_extensions._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, \
     WrongAlgorithmExtensionError
@@ -30,27 +31,40 @@ def validate(algo: str = None):
 
 
 def _index_parser(func):
+    """
+    Parses uuid identifier that can be passed in various ways and returns it as a UUID string regardless of input type.
+    """
     @wraps(func)
     def _parser(instance, *args, **kwargs):
-        if "index" in kwargs.keys():
-            index: Union[int, str, UUID] = kwargs["index"]
+        if "identifier" in kwargs.keys():
+            u: Union[int, str, UUID] = kwargs["index"]
         elif len(args) > 0:
-            index = args[0]  # always first positional arg
+            u = args[0]  # always first positional arg
 
-        if isinstance(index, (UUID, str)):
-            _index = instance._df[instance._df["uuid"] == str(index)].index
+        if not isinstance(u, (pd.Series, UUID, str)):
+            raise TypeError(
+                "Passed index must be one of the following types:\n"
+                "`pandas.Series`, `UUID`, `str`"
+            )
+
+        # if the batch item itself was passed
+        if isinstance(u, pd.Series):
+            u = u["uuid"]
+
+        # if the passed `index` is already a UUID
+        if isinstance(u, (UUID, str)):
+            _index = instance._df[instance._df["uuid"] == str(u)].index
+
+            # make sure it exists in the dataframe
             if _index.size == 0:
-                raise ValueError(f"No batch item found with uuid: {index}")
+                raise ValueError(f"No batch item found with uuid: {u}")
 
-            index = _index.item()
+            u = str(u)
 
-        if not isinstance(index, int):
-            raise TypeError(f"`index` argument must be of type `int`, `str`, or `UUID`")
-
-        if "index" in kwargs.keys():
-            kwargs["index"] = index
+        if "identifier" in kwargs.keys():
+            kwargs["identifier"] = u
         else:
-            args = (index, *args[1:])
+            args = (u, *args[1:])
 
         return func(instance, *args, **kwargs)
     return _parser
