@@ -374,6 +374,7 @@ class CaimanSeriesExtensions:
     def _run_subprocess(
         self,
         runfile_path: str,
+        wait: bool,
         **kwargs
     ):
 
@@ -383,6 +384,10 @@ class CaimanSeriesExtensions:
             self.process = Popen(runfile_path, cwd=parent_path)
         else:
             self.process = Popen(f"powershell {runfile_path}", cwd=parent_path)
+
+        if wait:
+            self.process.wait()
+
         return self.process
 
     def _run_slurm(
@@ -390,7 +395,7 @@ class CaimanSeriesExtensions:
         runfile_path: str,
         **kwargs
     ):
-        raise NotImplementedError("Not just implemented, just a placeholder")
+        raise NotImplementedError("Not yet implemented, just a placeholder")
         # submission_command = (
         #     f'sbatch --ntasks=1 --cpus-per-task=16 --mem=90000 --wrap="{runfile_path}"'
         # )
@@ -400,7 +405,9 @@ class CaimanSeriesExtensions:
     @cnmf_cache.invalidate()
     def run(
             self,
-            backend: Optional[str] = None, **kwargs
+            backend: Optional[str] = None,
+            wait: bool = True,
+            **kwargs
     ):
         """
         Run a CaImAn algorithm in an external process using the chosen backend
@@ -413,6 +420,9 @@ class CaimanSeriesExtensions:
         backend: str, optional
             One of the available backends, default on Linux & Mac is ``"subprocess"``. Default on Windows is
             ``"local"`` since Windows is inconsistent in the way it launches subprocesses
+
+        wait: bool, default ``True``
+            if using the ``"subprocess"`` backend, call ``wait()`` on the ``Popen`` instance before returning it
 
         **kwargs
             any kwargs to pass to the backend
@@ -469,7 +479,7 @@ class CaimanSeriesExtensions:
         )
         try:
             self.process = getattr(self, f"_run_{backend}")(
-                runfile_path, **kwargs
+                runfile_path, wait=wait, **kwargs
             )
         except:
             with open(runfile_path, "r") as f:
