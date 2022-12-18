@@ -205,7 +205,7 @@ def test_mcorr():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -366,7 +366,7 @@ def test_cnmf():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -409,7 +409,7 @@ def test_cnmf():
     assert batch_dir.joinpath(df.iloc[-1]["input_movie_path"]) == input_movie_path
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -710,7 +710,7 @@ def test_cnmfe():
         params=test_params["mcorr"],
     )
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -743,7 +743,7 @@ def test_cnmfe():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -821,7 +821,7 @@ def test_cnmfe():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -1138,7 +1138,7 @@ def test_remove_item():
 
     for i, r in df.iterrows():
         proc = r.caiman.run()
-        proc.wait()
+        # proc.wait()
 
     df = load_batch(df.paths.get_batch_path())
 
@@ -1229,7 +1229,7 @@ def test_cache():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -1271,7 +1271,7 @@ def test_cache():
     assert batch_dir.joinpath(df.iloc[-1]["input_movie_path"]) == input_movie_path
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -1370,7 +1370,7 @@ def test_cache():
         params=test_params["mcorr"],
     )
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -1387,7 +1387,7 @@ def test_cache():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
