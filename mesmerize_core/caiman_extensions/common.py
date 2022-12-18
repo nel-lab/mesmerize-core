@@ -164,8 +164,9 @@ class CaimanDataFrameExtensions:
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
-            The index of the batch item to remove from the DataFrame
+        index: int, str or UUID
+            The index of the batch item to remove from the DataFrame as a numerical ``int`` index, ``str`` representing
+            a UUID, or a UUID object.
 
         remove_data: bool
             if ``True`` removes all output data associated to the batch item from disk.
@@ -270,14 +271,14 @@ class CaimanDataFrameExtensions:
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
-            the index of the mcorr item to get the children of
+        index: int, str, or UUID
+            the index of the mcorr item to get the children of, provided as a numerical ``int`` index, str representing
+            a UUID, or a UUID object
 
         Returns
         -------
         List[UUID]
             List of UUIDs of child CNMF items
-
         """
 
         if not self._df.iloc[index]["algo"] == "mcorr":
@@ -311,12 +312,13 @@ class CaimanDataFrameExtensions:
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
-            the index of the batch item to get the parent of
+        index: int, str, or UUID
+            the index of the batch item to get the parent of, provided as a numerical ``int`` index, str representing
+            a UUID, or a UUID object
 
         Returns
         -------
-        Union[UUID, None]
+        UUID or None
             | if ``UUID``, this is the UUID of the batch item whose output was used for the input of the batch item at
             the provided ``index``
 
@@ -408,8 +410,9 @@ class CaimanSeriesExtensions:
 
         Parameters
         ----------
-        backend: Optional[str]
-            One of the available backends, if none default is `COMPUTE_BACKEND_SUBPROCESS`
+        backend: str, optional
+            One of the available backends, default on Linux & Mac is ``"subprocess"``. Default on Windows is
+            ``"local"`` since Windows is inconsistent in the way it launches subprocesses
 
         **kwargs
             any kwargs to pass to the backend
@@ -492,7 +495,7 @@ class CaimanSeriesExtensions:
         Parameters
         ----------
         reader: callable
-            a function that return an array-like
+            a function that take the input movie path and return an array-like
 
         Returns
         -------

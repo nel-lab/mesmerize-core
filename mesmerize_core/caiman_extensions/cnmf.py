@@ -88,7 +88,8 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_cnmf_memmap(self, mode: str = "r") -> np.ndarray:
         """
-        Get the CNMF C-order memmap
+        Get the CNMF C-order memmap. This should NOT be used for viewing the
+        movie frames use ``caiman.get_input_movie()`` for that purpose.
 
         Parameters
         ----------
@@ -189,13 +190,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
-
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         threshold: float
             threshold
@@ -264,12 +264,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         swap_dim: bool
             swap the x and y coordinates, use if the contours don't align with the cells in your image
@@ -366,12 +366,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         add_background: bool
             if ``True``, add the temporal background, ``cnmf.estimates.C + cnmf.estimates.f``
@@ -660,7 +660,7 @@ class CNMFExtensions:
     ) -> None:
         """
         | Uses caiman's detrend_df_f.
-        | call ``cnmf.get_detrend_dfof()`` to get the values.
+        | call ``CNMF.get_detrend_dfof()`` to get the values.
         | Sets ``CNMF.estimates.F_dff``
 
         Warnings
@@ -728,12 +728,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
@@ -818,7 +818,7 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_good_components(self) -> np.ndarray:
         """
-        get the good component indices, ``CNMF.estimates.idx_components``
+        get the good component indices, ``Estimates.idx_components``
 
         Returns
         -------
@@ -833,7 +833,7 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_bad_components(self) -> np.ndarray:
         """
-        get the bad component indices, ``CNMF.estimates.idx_components_bad``
+        get the bad component indices, ``Estimates.idx_components_bad``
 
         Returns
         -------
