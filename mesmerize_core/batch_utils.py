@@ -24,7 +24,7 @@ def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
 
     Parameters
     ----------
-    path: Union[Path, str]
+    path: Path or str
         Full parent data path
     """
     global PARENT_DATA_PATH
@@ -41,10 +41,11 @@ def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
 def get_parent_raw_data_path() -> Path:
     """
     Get the global `PARENT_DATA_PATH`
+
     Returns
     -------
     Path
-        global `PARENT_DATA_PATH`
+        global `PARENT_DATA_PATH` as a Path object
 
     """
     global PARENT_DATA_PATH
@@ -59,6 +60,14 @@ class _BasePathExtensions:
         self._data.attrs["batch_path"] = Path(path)
 
     def get_batch_path(self) -> Path:
+        """
+        Get the full path to the batch dataframe file
+
+        Returns
+        -------
+        Path
+            full path to the batch dataframe file as a Path object
+        """
         if "batch_path" in self._data.attrs.keys():
             if self._data.attrs["batch_path"] is not None:
                 return self._data.attrs["batch_path"]
@@ -67,17 +76,18 @@ class _BasePathExtensions:
 
     def resolve(self, path: Union[str, Path]) -> Path:
         """
-        Resolve the full path of ``path`` if possible, first tries batch_dir then raw_data_dir
-        Last resort plain resolve.
+        Resolve the full path of the passed ``path`` if possible, first tries
+        "batch_dir" then "raw_data_dir".
 
         Parameters
         ----------
-        path: Union[str, Path]
+        path: str or Path
             The relative path to resolve
 
         Returns
         -------
-        Full path with the batch path or raw data path appended
+        Path
+            Full path with the batch path or raw data path appended
 
         """
         path = Path(path)
@@ -95,15 +105,16 @@ class _BasePathExtensions:
     def split(self, path: Union[str, Path]):
         """
         Split a full path into (batch_dir, relative_path) or (raw_data_dir, relative_path)
+
         Parameters
         ----------
-        path: Union[str, Path]
+        path: str or Path
             Full path to split with respect to batch_dir or raw_data_dir
 
         Returns
         -------
         Tuple[Path, Path]
-            (<batch_dir or raw_data_dir>, <relative_path>)
+            (<batch_dir> or <raw_data_dir>, <relative_path>)
 
         """
         path = Path(path)
@@ -139,11 +150,11 @@ class PathsSeriesExtension(_BasePathExtensions):
 
 def load_batch(path: Union[str, Path]) -> pd.DataFrame:
     """
-    Load the batch pickle file, also sets the global `CURRENT_BATCH_PATH`
+    Load the batch dataframe pickle file
 
     Parameters
     ----------
-    path: Union[str, Path])
+    path: str or Path
 
     Returns
     -------
@@ -163,12 +174,10 @@ def load_batch(path: Union[str, Path]) -> pd.DataFrame:
         df.head()
 
     """
-    # global CURRENT_BATCH_PATH
+
     path = validate_path(path)
 
     df = pd.read_pickle(Path(path))
-
-    # CURRENT_BATCH_PATH = pathlib.Path(batch_file)
 
     df.paths.set_batch_path(path)
 
@@ -181,11 +190,11 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
 
     Parameters
     ----------
-    path: Union[str. Path]
-        path to save the new batch DataFrame
+    path: str or Path
+        path to save the new batch DataFrame as a pickle file
 
     remove_existing: bool
-        If `True`, remove an existing batch DataFrame file if it exists at the given `path`
+        If ``True``, remove an existing batch DataFrame file if it exists at the given `path`, default ``False``
 
     Returns
     -------
@@ -219,9 +228,6 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
     df.paths.set_batch_path(path)
 
     df.to_pickle(path)
-
-    # global CURRENT_BATCH_PATH
-    # CURRENT_BATCH_PATH = path
 
     return df
 
