@@ -140,7 +140,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     # Add dictionary to output column of series
     df.loc[df["uuid"] == uuid, "outputs"] = [d]
     # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="/")
+    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
     df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
     # save dataframe to disc
     df.to_pickle(batch_path)
