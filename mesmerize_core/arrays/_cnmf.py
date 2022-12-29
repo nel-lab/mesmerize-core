@@ -48,6 +48,11 @@ class LazyArrayRCM(LazyArray):
         self._max = np.max(prods)
         self._min = np.min(prods)
 
+        temporal_mean = np.nanmean(self.temporal, axis=1)
+        self._mean_image = self.spatial.dot(temporal_mean).reshape(frame_dims, order="F")
+        self._max_image = self.spatial.dot(temporal_max).reshape(frame_dims, order="F")
+        self._min_image = self.spatial.dot(temporal_min).reshape(frame_dims, order="F")
+
     @property
     def spatial(self) -> np.ndarray:
         return self._spatial
@@ -79,6 +84,18 @@ class LazyArrayRCM(LazyArray):
     @property
     def max(self) -> float:
         return self._max
+
+    @property
+    def mean_image(self) -> np.ndarray:
+        return self._mean_image
+
+    @property
+    def max_image(self) -> np.ndarray:
+        return self._max_image
+
+    @property
+    def min_image(self) -> np.ndarray:
+        return self._min_image
 
     def _compute_at_indices(self, indices: Union[int, Tuple[int, int]]) -> np.ndarray:
         rcm = self.spatial.dot(
