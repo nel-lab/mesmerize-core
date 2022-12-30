@@ -156,6 +156,23 @@ class CaimanDataFrameExtensions:
             shutil.copyfile(bak, path)
             raise IOError(f"Could not save dataframe to disk.")
 
+    def reload_from_disk(self) -> pd.DataFrame:
+        """
+        Returns the DataFrame on disk.
+
+        Example:
+
+            .. code-block:: python
+
+                df = df.caiman.reload_from_disk()
+
+        Returns
+        -------
+        pd.DataFrame
+
+        """
+        return load_batch(self._df.paths.get_batch_path())
+
     @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
         """
