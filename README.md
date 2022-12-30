@@ -42,6 +42,8 @@ Video tutorial/virtual workshop from September 2022: https://www.youtube.com/wat
 
 For visualization we recommend [`mesmerize-viz`](https://github.com/kushalkolar/mesmerize-viz) which contains a standard set of visualizations (a WIP), or [`fastplotlib`](https://github.com/kushalkolar/fastplotlib). Here are some examples of visualizations using `fastplotlib`, these visualizations are all performed within jupyter notebooks therefore they will also work on cloud computing intrastructure!
 
+![interact](https://user-images.githubusercontent.com/9403332/210027293-ea836623-d035-4505-a186-b731126f382a.gif)
+
 ### View raw and motion corrected movie side by side:
 
 https://user-images.githubusercontent.com/9403332/191207398-39a027d7-079e-475b-baec-381f2d271652.mp4
