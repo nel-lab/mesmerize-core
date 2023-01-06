@@ -12,6 +12,9 @@ from copy import deepcopy
 
 from ._utils import validate
 from .cache import Cache
+from ..arrays import *
+from ..arrays._base import LazyArray
+
 
 cnmf_cache = Cache()
 
@@ -118,6 +121,7 @@ class CNMFExtensions:
         np.ndarray
             numpy memmap array used for CNMF
         """
+
         path = self._series.paths.resolve(self._series["outputs"]["cnmf-memmap-path"])
         # Get order f images
         Yr, dims, T = load_memmap(str(path), mode=mode)
@@ -137,6 +141,7 @@ class CNMFExtensions:
             full path to the caiman-format CNMF hdf5 output file
 
         """
+
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
     @validate("cnmf")
@@ -174,6 +179,7 @@ class CNMFExtensions:
             print(cnmf_obj.estimates.f)
 
         """
+
         # Need to create a cache object that takes the item's UUID and returns based on that
         # collective global cache
         return load_CNMF(self.get_output_path())
@@ -211,6 +217,7 @@ class CNMFExtensions:
             shape is [dim_0, dim_1, n_components]
 
         """
+
         cnmf_obj = self.get_output()
 
         dims = cnmf_obj.dims
@@ -339,6 +346,7 @@ class CNMFExtensions:
 
             VBox([plot.show(), slider])
         """
+
         cnmf_obj = self.get_output()
         contours = self._get_spatial_contours(cnmf_obj, component_indices, swap_dim)
 
@@ -403,6 +411,7 @@ class CNMFExtensions:
 
             heatmap(temporal)
         """
+
         cnmf_obj = self.get_output()
 
         C = cnmf_obj.estimates.C[component_indices]
@@ -415,14 +424,16 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @_component_indices_parser
+    @cnmf_cache.use_cache
     def get_rcm(
             self,
             component_indices: Union[np.ndarray, str] = None,
-            frame_indices: Union[Tuple[int, int], int] = None,
-            temporal_components: np.ndarray = None
-    ) -> np.ndarray:
+            temporal_components: np.ndarray = None,
+            return_copy=False
+    ) -> LazyArray:
         """
-        Return the reconstructed movie with no background, (A * C)
+        Return the reconstructed movie with no background, i.e. ``A ⊗ C``, as a ``LazyArray``.
+        This is an array that performs lazy computation of the reconstructed movie only upon indexing.
 
         Parameters
         ----------
@@ -433,23 +444,21 @@ class CNMFExtensions:
             | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
 
-        frame_indices: optional, Union[Tuple[int, int], int]
-            (start_frame, stop_frame), return frames in this range including
-            the ``start_frame`` upto and not including the ``stop_frame``
-
-            | if single int, return only for single frame indicated
-            | if ``None`` or not provided returns all frames, **not recommended**
-
         temporal_components: optional, np.ndarray
             temporal components to use as ``C`` for computing reconstructed movie.
 
             | uses ``cnmf.estimates.C`` if not provided
             | useful if you want to create the reconstructed movie using dF/Fo, z-scored data, etc.
 
+        return_copy: bool, default ``False``
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory
+            | ``False`` is used by default when returning ``LazyArrays`` for technical reasons
+
         Returns
         -------
-        np.ndarray
-            shape is [n_frames, x_pixels, y_pixels]
+        LazyArray
+            shape is [n_frames, x_dims, y_dims]
 
         Examples
         --------
@@ -463,44 +472,21 @@ class CNMFExtensions:
         .. code-block:: python
 
             from mesmerize_core import *
-            from fastplotlib import Plot
-            from ipywidgets import VBox, IntSlider
+            from fastplotlib.widgets import ImageWidget
 
             # load existing batch
             df = load_batch("/path/to/batch.pickle")
 
-            # get the first reconstructed frame using only "good" components
+            # get the reconstructed movie as LazyArray
             # assumes the last index, `-1`, is a cnmf item
-            frame0 = df.iloc[-1].cnmf.get_rcm(component_indices="good", frame_indices=0)[0]
+            # uses only the "good" components
+            rcm = df.iloc[-1].cnmf.get_rcm(component_indices="good")
 
-            plot = Plot()
-
-            # add an image graphic to the plot
-            # we set some contrast limits with `vmin` and `vmax`, adjust these if the video doesn't look right
-            graphic = plot.image(frame0, cmap="gnuplot2", vmin=0, vmax=100)
-
-            # we need the number of frames in this movie, we can just get the length of the temporal components
-            n_frames = df.iloc[-1].cnmf.get_temporal().shape[1]
-
-            # make a frame slider
-            frame_slider = IntSlider(value=0, min=0, max=n_frames - 1, step=1)
-
-            # update the image graphic when the slider moves
-            previous_index = 0
-            def update_frame():
-                if previous_index == frame_slider.value:
-                    return
-
-                new_frame = df.iloc[-1].cnmf.get_rcm(component_indices="good", frame_indices=frame_slider.value)[0]
-                graphic.update_data(new_frame)
-
-                previous_index = frame_slider.value
-
-            plot.add_animations([update_frame])
-
-            VBox([plot.show(), frame_slider])
-
+            # view with ImageWidget
+            iw = ImageWidget(data=rcm)
+            iw.show()
         """
+
         cnmf_obj = self.get_output()
 
         if temporal_components is None:
@@ -513,78 +499,34 @@ class CNMFExtensions:
                     f"does not equal number of spatial components provided: `{cnmf_obj.estimates.A.shape[1]}`"
                 )
 
-        if frame_indices is None:
-            frame_indices = (0, temporal_components.shape[1])
+        if cnmf_obj.estimates.dims is not None:
+            dims = cnmf_obj.estimates.dims
+        elif cnmf_obj.dims is not None:
+            dims = cnmf_obj.dims
+        else:
+            raise AttributeError(f"`dims` not found in the CNMF data, it is usually found in one of the following:\n"
+                                 f"`cnmf_obj.estimates.dims` or `cnmf_obj.dims`")
 
-        if isinstance(frame_indices, int):
-            frame_indices = (frame_indices, frame_indices + 1)
+        spatial = cnmf_obj.estimates.A[:, component_indices]
+        temporal = temporal_components[component_indices, :]
 
-        dn = cnmf_obj.estimates.A[:, component_indices].dot(
-            temporal_components[component_indices, frame_indices[0]: frame_indices[1]]
-        )
-
-        return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+        return LazyArrayRCM(spatial=spatial, temporal=temporal, frame_dims=dims)
 
     @validate("cnmf")
-    def get_rcb(
-            self,
-            frame_indices: Union[Tuple[int, int], int] = None,
-    ) -> np.ndarray:
+    @cnmf_cache.use_cache
+    def get_rcb(self,) -> LazyArray:
         """
-        Return the reconstructed background, ``(b * f)``
-
-        Parameters
-        ----------
-        frame_indices: optional, Union[Tuple[int, int], int]
-            (start_frame, stop_frame), return frames in this range including
-            the ``start_frame`` upto and not including the ``stop_frame``
-
-            | if single int, return only for single frame indicated
-            | if ``None`` or not provided returns all frames, **not recommended**
+        Return the reconstructed background, ``(b ⊗ f)``
 
         Returns
         -------
-        np.ndarray
-            shape is [n_frames, x_pixels, y_pixels]
-        """
-        cnmf_obj = self.get_output()
-
-        if frame_indices is None:
-            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
-
-        if isinstance(frame_indices, int):
-            frame_indices = (frame_indices, frame_indices + 1)
-
-        dn = cnmf_obj.estimates.b.dot(
-            cnmf_obj.estimates.f[:, frame_indices[0]: frame_indices[1]]
-        )
-        return dn.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
-
-    @validate("cnmf")
-    def get_residuals(
-            self,
-            frame_indices: Union[Tuple[int, int], int] = None,
-    ) -> np.ndarray:
-        """
-        Return residuals, ``raw movie - (A * C) - (b * f)``
-
-        Parameters
-        ----------
-        frame_indices: optional, Union[Tuple[int, int], int]
-            (start_frame, stop_frame), return frames in this range including
-            the ``start_frame`` upto and not including the ``stop_frame``
-            | if single int, return only for single frame indicated
-            | if ``None`` or not provided returns all frames, **not recommended**
-
-        Returns
-        -------
-        np.ndarray
-            shape is [n_frames, x_pixels, y_pixels]
+        LazyArray
+            shape is [n_frames, x_dims, y_dims]
 
         Examples
         --------
 
-        This example uses fastplotlib to display the residuals movie from a CNMF item that has already been run.
+        This example uses fastplotlib to display the reconstructed movie from a CNMF item that has already been run.
 
         | **fastplotlib code must be run in a notebook**
 
@@ -593,58 +535,79 @@ class CNMFExtensions:
         .. code-block:: python
 
             from mesmerize_core import *
-            from fastplotlib import Plot
-            from ipywidgets import VBox, IntSlider
+            from fastplotlib.widgets import ImageWidget
 
             # load existing batch
             df = load_batch("/path/to/batch.pickle")
 
-            # get the residuals for the first frame
+            # get the reconstructed background as a LazyArray
             # assumes the last index, `-1`, is a cnmf item
-            frame0 = df.iloc[-1].cnmf.get_residuals(frame_indices=0)[0]
+            rcb = df.iloc[-1].cnmf.get_rcb()
 
-            plot = Plot()
-
-            # add an image graphic to the plot
-            graphic = plot.image(frame0, cmap="gnuplot2")
-
-            # we need the number of frames in this movie, we can just get the length of the temporal components
-            n_frames = df.iloc[-1].cnmf.get_temporal().shape[1]
-
-            # make a frame slider
-            frame_slider = IntSlider(value=0, min=0, max=n_frames - 1, step=1)
-
-            # update the image graphic when the slider moves
-            previous_index = 0
-            def update_frame():
-                if previous_index == frame_slider.value:
-                    return
-
-                graphic.update_data(df.iloc[-1].cnmf.get_residuals(frame_indices=frame_slider.value)[0])
-                previous_index = frame_slider.value
-
-            plot.add_animations([update_frame])
-
-            VBox([plot.show(), frame_slider])
+            # view with ImageWidget
+            iw = ImageWidget(data=rcb)
+            iw.show()
         """
 
         cnmf_obj = self.get_output()
 
-        if frame_indices is None:
-            frame_indices = (0, cnmf_obj.estimates.C.shape[1])
+        if cnmf_obj.estimates.dims is not None:
+            dims = cnmf_obj.estimates.dims
+        elif cnmf_obj.dims is not None:
+            dims = cnmf_obj.dims
+        else:
+            raise AttributeError(f"`dims` not found in the CNMF data, it is usually found in one of the following:\n"
+                                 f"`cnmf_obj.estimates.dims` or `cnmf_obj.dims`")
 
-        if isinstance(frame_indices, int):
-            frame_indices = (frame_indices, frame_indices + 1)
+        spatial = cnmf_obj.estimates.b
+        temporal = cnmf_obj.estimates.f
 
-        raw_movie = self._series.caiman.get_input_movie()
+        return LazyArrayRCB(spatial=spatial, temporal=temporal, frame_dims=dims)
 
-        reconstructed_movie = self.get_rcm(component_indices="all", frame_indices=frame_indices)
+    @validate("cnmf")
+    @cnmf_cache.use_cache
+    def get_residuals(self) -> np.ndarray:
+        """
+        Return residuals, ``Y - (A ⊗ C) - (b ⊗ f)``
 
-        background = self.get_rcb(frame_indices)
+        Returns
+        -------
+        LazyArray
+            shape is [n_frames, x_dims, y_dims]
 
-        residuals = raw_movie[np.arange(*frame_indices)] - reconstructed_movie - background
+        Examples
+        --------
 
-        return residuals.reshape(cnmf_obj.dims + (-1,), order="F").transpose([2, 0, 1])
+        This example uses fastplotlib to display the reconstructed movie from a CNMF item that has already been run.
+
+        | **fastplotlib code must be run in a notebook**
+
+        | See the demo notebooks for more detailed examples.
+
+        .. code-block:: python
+
+            from mesmerize_core import *
+            from fastplotlib.widgets import ImageWidget
+
+            # load existing batch
+            df = load_batch("/path/to/batch.pickle")
+
+            # get the reconstructed background as a LazyArray
+            # assumes the last index, `-1`, is a cnmf item
+            residuals = df.iloc[-1].cnmf.get_residuals()
+
+            # view with ImageWidget
+            iw = ImageWidget(data=residuals)
+            iw.show()
+        """
+
+        residuals = LazyArrayResiduals(
+            self._series.caiman.get_input_movie(),
+            self.get_rcm(),
+            self.get_rcb(),
+        )
+
+        return residuals
 
     @validate("cnmf")
     @_check_permissions
@@ -746,6 +709,7 @@ class CNMFExtensions:
             shape is [n_components, n_frames]
 
         """
+
         cnmf_obj = self.get_output()
         if cnmf_obj.estimates.F_dff is None:
             raise AttributeError("You must run ``cnmf.run_detrend_dfof()`` first")
@@ -841,5 +805,6 @@ class CNMFExtensions:
             array of ints, indices of bad components
 
         """
+
         cnmf_obj = self.get_output()
         return cnmf_obj.estimates.idx_components_bad
