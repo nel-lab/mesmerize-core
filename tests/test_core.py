@@ -205,7 +205,7 @@ def test_mcorr():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -366,7 +366,7 @@ def test_cnmf():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -409,7 +409,7 @@ def test_cnmf():
     assert batch_dir.joinpath(df.iloc[-1]["input_movie_path"]) == input_movie_path
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -487,9 +487,8 @@ def test_cnmf():
     )
     numpy.testing.assert_array_equal(cnmf_mmap_output, cnmf_mmap_output_actual)
 
-    print("testing cnmf.get_input_memmap()")
-    # test to check cnmf get_input_memmap()
-    cnmf_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
+    print("testing caiman.get_input_movie() for cnmf")
+    cnmf_input_mmap = df.iloc[-1].caiman.get_input_movie()
     cnmf_input_mmap_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "cnmf_input_mmap.npy")
     )
@@ -677,7 +676,7 @@ def test_cnmfe():
         params=test_params["mcorr"],
     )
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -710,7 +709,7 @@ def test_cnmfe():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -788,7 +787,7 @@ def test_cnmfe():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -872,8 +871,8 @@ def test_cnmfe():
     )
     numpy.testing.assert_array_equal(cnmfe_mmap_output, cnmfe_mmap_output_actual)
 
-    # test to check cnmf get_input_memmap()
-    cnmfe_input_mmap = df.iloc[-1].cnmf.get_input_memmap()
+    # test to check input memmap paths
+    cnmfe_input_mmap = df.iloc[-1].caiman.get_input_movie()
     cnmfe_input_mmap_actual = numpy.load(
         ground_truths_dir.joinpath("cnmfe_full", "cnmfe_full_input_mmap.npy")
     )
@@ -1055,7 +1054,7 @@ def test_remove_item():
 
     for i, r in df.iterrows():
         proc = r.caiman.run()
-        proc.wait()
+        # proc.wait()
 
     df = load_batch(df.paths.get_batch_path())
 
@@ -1146,7 +1145,7 @@ def test_cache():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -1188,7 +1187,7 @@ def test_cache():
     assert batch_dir.joinpath(df.iloc[-1]["input_movie_path"]) == input_movie_path
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -1287,7 +1286,7 @@ def test_cache():
         params=test_params["mcorr"],
     )
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 
@@ -1304,7 +1303,7 @@ def test_cache():
     )
 
     process = df.iloc[-1].caiman.run()
-    process.wait()
+    # process.wait()
 
     df = load_batch(batch_path)
 

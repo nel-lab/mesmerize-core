@@ -11,15 +11,13 @@
 
 ### Mesmerize core backend
 
-**News: there will be an in-person workshop in January 2023, more info:** https://indico.flatironinstitute.org/event/3293/
-
 A batch management system for calcium imaging analysis using the CaImAn library. 
 It contains `pandas.DataFrame` and `pandas.Series` extensions that interface with CaImAn for running the various algorithms and organizing input & output data.
 
 This **replaces** the [Mesmerize legacy desktop application](https://github.com/kushalkolar/MESmerize).\
 `mesmerize-core` is MUCH faster, more efficient, and offers many more features! For example there are simple extensions which you can just call to get the motion correction shifts, CNMF reconstructed movie, CNMF residuals, contours etc.
 
-See the demo notebook at `notebooks/mcorr_cnmf.ipynb` for more details. Note that the demo requires [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) for visualization.
+[**Installation**](https://github.com/nel-lab/mesmerize-core#installation) | [**Examples**](https://github.com/nel-lab/mesmerize-core#examples)
 
 # Documentation
 
@@ -40,25 +38,27 @@ Video tutorial/virtual workshop from September 2022: https://www.youtube.com/wat
 
 # Visualization
 
-For visualization we recommend [`mesmerize-viz`](https://github.com/kushalkolar/mesmerize-viz) which contains a standard set of visualizations (a WIP), or [`fastplotlib`](https://github.com/kushalkolar/fastplotlib). Here are some examples of visualizations using `fastplotlib`, these visualizations are all performed within jupyter notebooks therefore they will also work on cloud computing intrastructure!
+For visualization we strongly recommend [`fastplotlib`](https://github.com/kushalkolar/fastplotlib), a very new but very fast plotting library. Here are some examples of `fastplotlib` visualizations using `mesmerize-core` outputs. You can create these interactive plots within jupyter notebooks, therefore they will also work on cloud computing intrastructure!
 
 ### View raw and motion corrected movie side by side:
 
-https://user-images.githubusercontent.com/9403332/191207398-39a027d7-079e-475b-baec-381f2d271652.mp4
+![mcorr](https://user-images.githubusercontent.com/9403332/210932452-5ed344dd-9a82-41ee-adc5-a9476e1f03a5.gif)
 
-### Contours from CNMF, good components in cyan and bad components in magenta:
+### Contours from CNMF, good components shown here in cyan and bad components in magenta:
 
-https://user-images.githubusercontent.com/9403332/191207461-9c5c4cad-867b-413a-b30b-ea61f010eed6.mp4
+![cnmf](https://user-images.githubusercontent.com/9403332/210932670-d797d301-839c-48d9-b11f-3330e076e0e4.gif)
 
 ### Input movie, constructed movie `(A * C)`, residuals `(Y - A * C - b * f)`, and reconstructed background `(b * f)`:
 
-https://user-images.githubusercontent.com/9403332/191207782-566e24bc-7f0d-40a3-9442-37c86d0ebe48.mp4
+![cnmf-rcm](https://user-images.githubusercontent.com/9403332/210932903-b994359b-62d4-49fd-aa6b-cd4855ba873e.gif)
 
 ### Interactive Component evaluation after CNMF:
 
 https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-84d1-8ed7eadcf7a0.mp4
 
-### This is all possible within jupyter notebooks using `fastplotlib`!
+As mentioned, fastplotlib is meant to be a fast plotting library which can handle **millions** of points. You can create highly complex and interactive plots to combine outputs from the CaImAn algorithms with other experimentally relevant analysis, such as behavioral data.
+
+![epic](https://user-images.githubusercontent.com/9403332/210304473-f36f2aaf-319e-435b-bcc8-0e8d3e1ef282.gif)
 
 # Examples
 

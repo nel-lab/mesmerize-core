@@ -2,7 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from subprocess import Popen
-from typing import Union, List, Optional
+from typing import *
 from uuid import UUID, uuid4
 from shutil import rmtree
 from itertools import chain
@@ -11,7 +11,6 @@ from time import time
 
 import numpy as np
 import pandas as pd
-import pims
 
 from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError
 from ._utils import validate, _index_parser
@@ -23,10 +22,9 @@ from ..batch_utils import (
     load_batch
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
-from caiman import load_memmap
-from .movie_readers import MovieReader
 from .cnmf import cnmf_cache
 from .. import algorithms
+from ..movie_readers import default_reader
 
 
 ALGO_MODULES = {
@@ -158,6 +156,23 @@ class CaimanDataFrameExtensions:
             shutil.copyfile(bak, path)
             raise IOError(f"Could not save dataframe to disk.")
 
+    def reload_from_disk(self) -> pd.DataFrame:
+        """
+        Returns the DataFrame on disk.
+
+        Example:
+
+            .. code-block:: python
+
+                df = df.caiman.reload_from_disk()
+
+        Returns
+        -------
+        pd.DataFrame
+
+        """
+        return load_batch(self._df.paths.get_batch_path())
+
     @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
         """
@@ -166,8 +181,9 @@ class CaimanDataFrameExtensions:
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
-            The index of the batch item to remove from the DataFrame
+        index: int, str or UUID
+            The index of the batch item to remove from the DataFrame as a numerical ``int`` index, ``str`` representing
+            a UUID, or a UUID object.
 
         remove_data: bool
             if ``True`` removes all output data associated to the batch item from disk.
@@ -272,14 +288,14 @@ class CaimanDataFrameExtensions:
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
-            the index of the mcorr item to get the children of
+        index: int, str, or UUID
+            the index of the mcorr item to get the children of, provided as a numerical ``int`` index, str representing
+            a UUID, or a UUID object
 
         Returns
         -------
         List[UUID]
             List of UUIDs of child CNMF items
-
         """
 
         if not self._df.iloc[index]["algo"] == "mcorr":
@@ -313,12 +329,13 @@ class CaimanDataFrameExtensions:
 
         Parameters
         ----------
-        index: Union[int, str, UUID]
-            the index of the batch item to get the parent of
+        index: int, str, or UUID
+            the index of the batch item to get the parent of, provided as a numerical ``int`` index, str representing
+            a UUID, or a UUID object
 
         Returns
         -------
-        Union[UUID, None]
+        UUID or None
             | if ``UUID``, this is the UUID of the batch item whose output was used for the input of the batch item at
             the provided ``index``
 
@@ -374,6 +391,7 @@ class CaimanSeriesExtensions:
     def _run_subprocess(
         self,
         runfile_path: str,
+        wait: bool,
         **kwargs
     ):
 
@@ -383,6 +401,10 @@ class CaimanSeriesExtensions:
             self.process = Popen(runfile_path, cwd=parent_path)
         else:
             self.process = Popen(f"powershell {runfile_path}", cwd=parent_path)
+
+        if wait:
+            self.process.wait()
+
         return self.process
 
     def _run_slurm(
@@ -390,7 +412,7 @@ class CaimanSeriesExtensions:
         runfile_path: str,
         **kwargs
     ):
-        raise NotImplementedError("Not just implemented, just a placeholder")
+        raise NotImplementedError("Not yet implemented, just a placeholder")
         # submission_command = (
         #     f'sbatch --ntasks=1 --cpus-per-task=16 --mem=90000 --wrap="{runfile_path}"'
         # )
@@ -400,7 +422,9 @@ class CaimanSeriesExtensions:
     @cnmf_cache.invalidate()
     def run(
             self,
-            backend: Optional[str] = None, **kwargs
+            backend: Optional[str] = None,
+            wait: bool = True,
+            **kwargs
     ):
         """
         Run a CaImAn algorithm in an external process using the chosen backend
@@ -410,8 +434,12 @@ class CaimanSeriesExtensions:
 
         Parameters
         ----------
-        backend: Optional[str]
-            One of the available backends, if none default is `COMPUTE_BACKEND_SUBPROCESS`
+        backend: str, optional
+            One of the available backends, default on Linux & Mac is ``"subprocess"``. Default on Windows is
+            ``"local"`` since Windows is inconsistent in the way it launches subprocesses
+
+        wait: bool, default ``True``
+            if using the ``"subprocess"`` backend, call ``wait()`` on the ``Popen`` instance before returning it
 
         **kwargs
             any kwargs to pass to the backend
@@ -468,7 +496,7 @@ class CaimanSeriesExtensions:
         )
         try:
             self.process = getattr(self, f"_run_{backend}")(
-                runfile_path, **kwargs
+                runfile_path, wait=wait, **kwargs
             )
         except:
             with open(runfile_path, "r") as f:
@@ -487,32 +515,30 @@ class CaimanSeriesExtensions:
         return self._series.paths.resolve(self._series["input_movie_path"])
 
     @warning_experimental()
-    def get_input_movie(self, reader: str = None) -> Union[np.ndarray, pims.FramesSequence]:
+    def get_input_movie(self, reader: callable = None) -> Union[np.ndarray, Any]:
         """
         Get the input movie
 
         Parameters
         ----------
-        reader: str
-            one of ``None``, or registered ``MovieReader``
-            | if ``None`` reader is chosen based on file extension
+        reader: callable
+            a function that take the input movie path and return an array-like
 
         Returns
         -------
 
         """
+        path_str = str(self.get_input_movie_path())
+
         if reader is not None:
-            Reader = MovieReader().get_reader(reader)
-            return Reader(self.get_input_movie_path())
+            if not callable(reader):
+                raise TypeError(
+                    f"reader must be a callable type, such as a function"
+                )
 
-        extension = self.get_input_movie_path().suffixes[-1]
+            return reader(path_str)
 
-        if extension in [".tiff", ".tif", ".btf"]:
-            return pims.open(str(self.get_input_movie_path()))
-
-        elif extension in [".mmap", ".memmap"]:
-            Yr, dims, T = load_memmap(str(self.get_input_movie_path()))
-            return np.reshape(Yr.T, [T] + list(dims), order="F")
+        return default_reader(path_str)
 
     @validate()
     def get_corr_image(self) -> np.ndarray:

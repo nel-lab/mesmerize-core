@@ -91,7 +91,8 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_cnmf_memmap(self, mode: str = "r") -> np.ndarray:
         """
-        Get the CNMF C-order memmap
+        Get the CNMF C-order memmap. This should NOT be used for viewing the
+        movie frames use ``caiman.get_input_movie()`` for that purpose.
 
         Parameters
         ----------
@@ -126,68 +127,6 @@ class CNMFExtensions:
         Yr, dims, T = load_memmap(str(path), mode=mode)
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
         return images
-
-    def get_input_memmap(self) -> np.ndarray:
-        """
-        Return the F-order memmap if the input to this
-        CNMF batch item was a mcorr output memmap
-
-        Returns
-        -------
-        np.ndarray
-            numpy memmap array of the input
-
-        Examples
-        --------
-
-        Get the input memmap and view it with random access scrolling
-
-        .. code-block:: python
-
-            from mesmerize_core import load_batch
-            from matplotlib import pyplot as plt
-
-            # needs fastplotlib and must be run in a notebook
-            from fastplotlib import Plot
-            from ipywidgets import IntSlider, VBox
-
-            df = load_batch("/path/to/batch_dataframe_file.pickle")
-
-            # assuming the 0th index is a cnmf item
-            movie = df.iloc[0].cnmf.get_input_memmap()
-
-            # plot a frame
-            plt.imshow(movie[0])
-            plt.show()
-
-            # the following requires fastplotlib and must be run in a new notebook cell
-            slider = IntSlider(value=0, min=0, max=movie.shape[0] - 1, step=1)
-            plot = Plot()
-
-            image_graphic = plot.image(movie[0], cmap="gnuplot2")
-
-            previous_slider_value = 0
-            def update_frame():  # runs on each rendering cycle
-                if slider.value == previous_slider_value:
-                    return
-                image_graphic.update_data(data=movie[slider.value])
-
-            plot.add_animations([update_frame])
-
-            VBox([plot.show(), slider])
-
-        """
-
-        movie_path = str(self._series.caiman.get_input_movie_path())
-        if movie_path.endswith("mmap"):
-            Yr, dims, T = load_memmap(movie_path)
-            images = np.reshape(Yr.T, [T] + list(dims), order="F")
-            return images
-        else:
-            raise TypeError(
-                f"Input movie for CNMF was not a memmap, path to input movie is:\n"
-                f"{movie_path}"
-            )
 
     @validate("cnmf")
     def get_output_path(self) -> Path:
@@ -257,13 +196,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
-
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         threshold: float
             threshold
@@ -333,12 +271,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         swap_dim: bool
             swap the x and y coordinates, use if the contours don't align with the cells in your image
@@ -372,7 +310,7 @@ class CNMFExtensions:
             df = load_batch("/path/to/batch_dataframe_file.pickle")
 
             # assuming the 0th index is a cnmf item
-            movie = df.iloc[0].cnmf.get_input_memmap()
+            movie = df.iloc[0].caiman.get_input_movie()
             contours, coms = df.iloc[0].cnmf.get_contours()
 
             # plot a corr img and contours using matplotlib
@@ -436,12 +374,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         add_background: bool
             if ``True``, add the temporal background, ``cnmf.estimates.C + cnmf.estimates.f``
@@ -685,7 +623,7 @@ class CNMFExtensions:
     ) -> None:
         """
         | Uses caiman's detrend_df_f.
-        | call ``cnmf.get_detrend_dfof()`` to get the values.
+        | call ``CNMF.get_detrend_dfof()`` to get the values.
         | Sets ``CNMF.estimates.F_dff``
 
         Warnings
@@ -753,12 +691,12 @@ class CNMFExtensions:
 
         Parameters
         ----------
-        component_indices: optional, Union[np.ndarray, str]
+        component_indices: str or np.ndarray, optional
             | indices of the components to include
-            | if ``np.ndarray``, uses these indices in the provided array
-            | if ``"good"`` uses good components, i.e. cnmf.estimates.idx_components
-            | if ``"bad"`` uses bad components, i.e. cnmf.estimates.idx_components_bad
             | if not provided, ``None``, or ``"all"`` uses all components
+            | if ``"good"`` uses good components, i.e. ``Estimates.idx_components``
+            | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
+            | if ``np.ndarray``, uses the indices in the provided array
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
@@ -831,7 +769,7 @@ class CNMFExtensions:
 
         cnmf_obj.params.quality.update(params)
         cnmf_obj.estimates.filter_components(
-            imgs=self.get_input_memmap(),
+            imgs=self._series.caiman.get_input_movie(),
             params=cnmf_obj.params
         )
 
@@ -844,7 +782,7 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_good_components(self) -> np.ndarray:
         """
-        get the good component indices, ``CNMF.estimates.idx_components``
+        get the good component indices, ``Estimates.idx_components``
 
         Returns
         -------
@@ -859,7 +797,7 @@ class CNMFExtensions:
     @validate("cnmf")
     def get_bad_components(self) -> np.ndarray:
         """
-        get the bad component indices, ``CNMF.estimates.idx_components_bad``
+        get the bad component indices, ``Estimates.idx_components_bad``
 
         Returns
         -------
