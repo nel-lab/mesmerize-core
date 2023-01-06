@@ -4,6 +4,7 @@ from time import time
 from warnings import warn
 
 import numpy as np
+from scipy.sparse import csc_matrix
 
 from ._base import LazyArray
 
@@ -49,10 +50,14 @@ class LazyArrayRCM(LazyArray):
 
         # precompute min and max vals for each component for spatial and temporal
         temporal_max = np.nanmax(self.temporal, axis=1)
-        spatial_max = self.spatial.max(axis=0).toarray()
-
         temporal_min = np.nanmin(self.temporal, axis=1)
-        spatial_min = self.spatial.min(axis=0).toarray()
+
+        if isinstance(self.spatial, csc_matrix):
+            spatial_max = self.spatial.max(axis=0).toarray()
+            spatial_min = self.spatial.min(axis=0).toarray()
+        else:
+            spatial_max = self.spatial.max(axis=0)
+            spatial_min = self.spatial.min(axis=0)
 
         prods = list()
         for t, s in iter_product([temporal_min, temporal_max], [spatial_min, spatial_max]):
@@ -183,6 +188,13 @@ class LazyArrayResiduals(LazyArray):
         self._rcm = rcm
         self._rcb = rcb
 
+        # I was lazy to figure out how to copy tuples
+        self._shape = (
+            self._raw_movie.shape[0],
+            self._raw_movie.shape[1],
+            self._raw_movie.shape[2],
+        )
+
         if self._raw_movie.dtype == self._rcm.dtype == self._rcb.dtype:
             self._dtype = self._raw_movie.dtype
         else:
@@ -199,13 +211,6 @@ class LazyArrayResiduals(LazyArray):
         #
         #     _min = _min - self._rcm.max - self._rcb.max
         #     _max = _max -
-
-        # I was lazy to figure out how to copy tuples
-        self._shape = (
-            self._raw_movie.shape[0],
-            self._raw_movie.shape[1],
-            self._raw_movie.shape[2],
-        )
 
     def _quick_min_max(self, data, timeout):
         # adapted from pyqtgraph.ImageView
@@ -240,13 +245,14 @@ class LazyArrayResiduals(LazyArray):
     def min(self) -> float:
         warn("min and max not yet implemented for LazyArrayResiduals. "
              "Using first frame of raw movie")
-        return self._raw_movie[0].min()
+        return float(self._raw_movie[0].min())
 
     @property
     def max(self) -> float:
         warn("min and max not yet implemented for LazyArrayResiduals. "
              "Using first frame of raw movie")
-        return self._raw_movie[0].max()
+        return float(self._raw_movie[0].max())
 
     def _compute_at_indices(self, indices: Union[int, slice]) -> np.ndarray:
-        return self._raw_movie[indices] - self._rcm[indices] - self._rcb[indices]
+        residuals = self._raw_movie[indices] - self._rcm[indices] - self._rcb[indices]
+        return residuals

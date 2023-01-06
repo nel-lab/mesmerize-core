@@ -129,6 +129,10 @@ class LazyArray(ABC):
         if isinstance(item, int):
             indexer = item
 
+        # numpy int scaler
+        elif isinstance(item, np.integer):
+            indexer = item.item()
+
         elif isinstance(item, slice):
             indexer = item
 

@@ -120,6 +120,7 @@ class CNMFExtensions:
         np.ndarray
             numpy memmap array used for CNMF
         """
+
         path = self._series.paths.resolve(self._series["outputs"]["cnmf-memmap-path"])
         # Get order f images
         Yr, dims, T = load_memmap(str(path), mode=mode)
@@ -176,6 +177,7 @@ class CNMFExtensions:
             VBox([plot.show(), slider])
 
         """
+
         movie_path = str(self._series.caiman.get_input_movie_path())
         if movie_path.endswith("mmap"):
             Yr, dims, T = load_memmap(movie_path)
@@ -200,6 +202,7 @@ class CNMFExtensions:
             full path to the caiman-format CNMF hdf5 output file
 
         """
+
         return self._series.paths.resolve(self._series["outputs"]["cnmf-hdf5-path"])
 
     @validate("cnmf")
@@ -237,6 +240,7 @@ class CNMFExtensions:
             print(cnmf_obj.estimates.f)
 
         """
+
         # Need to create a cache object that takes the item's UUID and returns based on that
         # collective global cache
         return load_CNMF(self.get_output_path())
@@ -275,6 +279,7 @@ class CNMFExtensions:
             shape is [dim_0, dim_1, n_components]
 
         """
+
         cnmf_obj = self.get_output()
 
         dims = cnmf_obj.dims
@@ -403,6 +408,7 @@ class CNMFExtensions:
 
             VBox([plot.show(), slider])
         """
+
         cnmf_obj = self.get_output()
         contours = self._get_spatial_contours(cnmf_obj, component_indices, swap_dim)
 
@@ -467,6 +473,7 @@ class CNMFExtensions:
 
             heatmap(temporal)
         """
+
         cnmf_obj = self.get_output()
 
         C = cnmf_obj.estimates.C[component_indices]
@@ -487,7 +494,7 @@ class CNMFExtensions:
             return_copy=False
     ) -> LazyArray:
         """
-        Return the reconstructed movie with no background, i.e. A ⊗ C, as a `LazyArray`.
+        Return the reconstructed movie with no background, i.e. ``A ⊗ C``, as a ``LazyArray``.
         This is an array that performs lazy computation of the reconstructed movie only upon indexing.
 
         Parameters
@@ -541,6 +548,7 @@ class CNMFExtensions:
             iw = ImageWidget(data=rcm)
             iw.show()
         """
+
         cnmf_obj = self.get_output()
 
         if temporal_components is None:
@@ -595,12 +603,14 @@ class CNMFExtensions:
             df = load_batch("/path/to/batch.pickle")
 
             # get the reconstructed background as a LazyArray
+            # assumes the last index, `-1`, is a cnmf item
             rcb = df.iloc[-1].cnmf.get_rcb()
 
             # view with ImageWidget
             iw = ImageWidget(data=rcb)
             iw.show()
         """
+
         cnmf_obj = self.get_output()
 
         if cnmf_obj.estimates.dims is not None:
@@ -645,6 +655,7 @@ class CNMFExtensions:
             df = load_batch("/path/to/batch.pickle")
 
             # get the reconstructed background as a LazyArray
+            # assumes the last index, `-1`, is a cnmf item
             residuals = df.iloc[-1].cnmf.get_residuals()
 
             # view with ImageWidget
@@ -653,7 +664,7 @@ class CNMFExtensions:
         """
 
         residuals = LazyArrayResiduals(
-            self._df.caiman.get_input_movie(),
+            self._series.caiman.get_input_movie(),
             self.get_rcm(),
             self.get_rcb(),
         )
@@ -760,6 +771,7 @@ class CNMFExtensions:
             shape is [n_components, n_frames]
 
         """
+
         cnmf_obj = self.get_output()
         if cnmf_obj.estimates.F_dff is None:
             raise AttributeError("You must run ``cnmf.run_detrend_dfof()`` first")
@@ -855,5 +867,6 @@ class CNMFExtensions:
             array of ints, indices of bad components
 
         """
+
         cnmf_obj = self.get_output()
         return cnmf_obj.estimates.idx_components_bad
