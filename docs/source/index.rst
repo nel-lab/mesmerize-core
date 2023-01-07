@@ -17,7 +17,7 @@ Welcome to mesmerize-core's documentation!
 Summary
 =======
 
-Mesmerize-core is a framework that makes it easy to use `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms and organize the outputs. It is a collection of "pandas extensions", which are functions that operate on pandas DataFrames. This enables you to essentially create a "psuedo-database" of your calcium imaging data and `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ generated output files. The "pandas extensions" are useful functions that make it easier to work with the results of the various `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms.
+``mesmerize-core`` interfaces `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms, helps with parameter optimization, and data organization. It is a collection of "pandas extensions", which are functions that operate on pandas DataFrames. It essentially creates a user-friendly "psuedo-database" of your calcium imaging data and `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ generated output files. This makes it easier to work with the results of the various `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms to assess the outputs and create visualizations.
 
 Installation
 ============

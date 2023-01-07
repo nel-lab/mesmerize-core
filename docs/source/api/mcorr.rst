@@ -5,7 +5,7 @@ Motion Correction
 
 Extensions that are exlusive to motion correction
 
-**Acessor:** ``mcorr``
+**Accessor:** ``mcorr``
 
 .. autoclass:: mesmerize_core.MCorrExtensions
     :members:

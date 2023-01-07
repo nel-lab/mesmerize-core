@@ -2,9 +2,9 @@ User Guide
 **********
 The demo notebook is the best place to start: https://github.com/nel-lab/mesmerize-core/tree/master/notebooks
 
-This guide provides some more details on the API and concepts for using the ``mesmerize-core`` framework.
+This guide provides some more details on the API and concepts for using ``mesmerize-core``.
 
-Mesmerize-core is a framework that interfaces with `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms, helps with data organization, and provides useful functions for evaluation and visualization. It is a collection of "pandas extensions" -- functions that operate on `pandas DataFrames <https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe>`_. This enables you to create a "psuedo-database" of your calcium imaging data and `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ generated output files. No database setup or experience is required, it operates purely on ``pandas`` and standard file systems.
+Mesmerize-core interfaces with `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ algorithms, helps with data organization, and provides useful functions for evaluation and visualization. It is a collection of "pandas extensions" -- functions that operate on `pandas DataFrames <https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe>`_. This enables you to create a "psuedo-database" of your calcium imaging data and `CaImAn <https://github.com/flatironinstitute/CaImAn>`_ generated output files. No database setup or experience is required, it operates purely on ``pandas`` and standard file systems.
 
 Since this framework uses ``pandas`` extensions, you should be relatively comfortable with basic pandas operations. If you're familiar with ``numpy`` then ``pandas`` will be easy, here's a quick start guide from the pandas docs: https://pandas.pydata.org/docs/user_guide/10min.html
 
@@ -279,3 +279,27 @@ CNMF Extensions
 ===============
 
 These extensions with the accessor ``cnmf`` contain functions that are exclusive to CNMF, such as getting the contours and centers of mass for spatial components, getting the temporal components and dF/F0, running component evaluation, getting the reconstructed movie, residuals, etc. See the :ref:`API reference for CNMF extensions <api_extensions_cnmf>` which extensively documents these extensions along with several examples.
+
+Input movie files
+=================
+
+``mesmerize-core`` will work with any input files that `caiman` accepts, input movie paths are directly passed to
+``caiman`` when you use ``caiman.add_item(...input_movie_path="/path/to/movie")``. However if you use
+``caiman.get_input_movie()`` only tiff files and files that can be opened with ``pims`` are currently supported,
+BUT it is easy even for a Python beginner to use ``caiman.get_input_movie()`` with your own file formats. You just need
+to create function that returns an indexable array for your file format and pass it: ``caiman.get_input_movie(my_func)``.
+
+For example:
+
+.. code-block:: python
+
+    from mesmerize_core import *
+
+    df = load_batch("/path/to/batch.pickle")
+
+    def my_func(path):
+        # your file handling code here
+        # must return an indexable array
+        return a  # shape must be [n_frames, x, y]
+
+    movie = df.iloc[0].caiman.get_input_movie(my_func)
