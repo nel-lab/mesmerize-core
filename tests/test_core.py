@@ -439,7 +439,7 @@ def test_cnmf():
     assert (
             batch_dir.joinpath(
                 str(df.iloc[-1]["uuid"]),
-                f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_60_d2_80_d3_1_order_C_frames_2000.mmap',
+                f'{df.iloc[-1]["uuid"]}_cnmf-memmap_d1_60_d2_80_d3_1_order_C_frames_2000.mmap',
             )
             == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
             == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
@@ -731,7 +731,7 @@ def test_cnmfe():
 
     assert batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000.mmap',
+        f'{df.iloc[-1]["uuid"]}_cnmf-memmap_d1_128_d2_128_d3_1_order_C_frames_1000.mmap',
     ) == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
 
     assert batch_dir.joinpath(
@@ -815,7 +815,7 @@ def test_cnmfe():
     assert (
             batch_dir.joinpath(
                 str(df.iloc[-1]["uuid"]),
-                f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000.mmap',
+                f'{df.iloc[-1]["uuid"]}_cnmf-memmap_d1_128_d2_128_d3_1_order_C_frames_1000.mmap',
             )
             == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
             == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
