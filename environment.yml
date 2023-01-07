@@ -7,7 +7,6 @@ dependencies:
   - click
   - jupyterlab
   - tqdm
-  - pims
   - psutil
   - pytest
   - pydata-sphinx-theme < 0.10.0

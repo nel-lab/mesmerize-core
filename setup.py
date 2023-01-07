@@ -11,7 +11,6 @@ install_requires = [
     "matplotlib",
     "click",
     "psutil",
-    "pims",
     "jupyterlab",
 ]
 
