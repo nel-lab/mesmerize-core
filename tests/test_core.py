@@ -220,7 +220,7 @@ def test_mcorr():
     # test that path resolve works for batch_dir
     mcorr_memmap_path = batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000.mmap',
     )
     rel_mcorr_memmap_path = mcorr_memmap_path.relative_to(batch_dir)
     assert (
@@ -248,7 +248,7 @@ def test_mcorr():
             == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
             == batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000.mmap',
     )
     )
 
@@ -291,7 +291,7 @@ def test_mcorr():
             df.iloc[-1].mcorr.get_output_path()
             == batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000.mmap',
     )
             == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
     )
@@ -383,7 +383,7 @@ def test_cnmf():
             == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
             == batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000.mmap',
     )
     )
 
@@ -439,7 +439,7 @@ def test_cnmf():
     assert (
             batch_dir.joinpath(
                 str(df.iloc[-1]["uuid"]),
-                f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_60_d2_80_d3_1_order_C_frames_2000_.mmap',
+                f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_60_d2_80_d3_1_order_C_frames_2000.mmap',
             )
             == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
             == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
@@ -731,7 +731,7 @@ def test_cnmfe():
 
     assert batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000_.mmap',
+        f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000.mmap',
     ) == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
 
     assert batch_dir.joinpath(
@@ -815,7 +815,7 @@ def test_cnmfe():
     assert (
             batch_dir.joinpath(
                 str(df.iloc[-1]["uuid"]),
-                f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000_.mmap',
+                f'{df.iloc[-1]["uuid"]}_cnmf-memmap__d1_128_d2_128_d3_1_order_C_frames_1000.mmap',
             )
             == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
             == batch_dir.joinpath(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
@@ -1162,7 +1162,7 @@ def test_cache():
             == df.paths.resolve(df.iloc[-1]["outputs"]["mcorr-output-path"])
             == batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000_.mmap',
+        f'{df.iloc[-1]["uuid"]}-mcorr_els__d1_60_d2_80_d3_1_order_F_frames_2000.mmap',
     )
     )
 
