@@ -15,7 +15,7 @@ COMPUTE_BACKEND_LOCAL = "local"
 
 COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM, COMPUTE_BACKEND_LOCAL]
 
-DATAFRAME_COLUMNS = ["algo", "item_name", "input_movie_path", "params", "outputs", "comments", "uuid"]
+DATAFRAME_COLUMNS = ["algo", "item_name", "input_movie_path", "params", "outputs", "added_time", "ran_time", "algo_duration", "comments", "uuid"]
 
 
 def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
@@ -181,7 +181,14 @@ def load_batch(path: Union[str, Path]) -> pd.DataFrame:
 
     df.paths.set_batch_path(path)
 
-    return df
+    # check to see if added and ran timestamp are in df
+    if all(item in df.columns for item in ["added_time", "ran_time", "algo_duration"]):
+        return df
+    else:
+        df["added_time"] = None
+        df["ran_time"] = None
+        df["algo_duration"] = None
+        return df
 
 
 def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.DataFrame:
