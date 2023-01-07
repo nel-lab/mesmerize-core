@@ -231,7 +231,7 @@ class CaimanDataFrameExtensions:
         # Save new df to disc
         self._df.to_pickle(self._df.paths.get_batch_path())
 
-    @warning_experimental()
+    @warning_experimental("This feature is new and the might improve in the future")
     def get_params_diffs(self, algo: str, item_name: str) -> pd.Series:
         """
         Get the parameters that differ for a given `item_name` run with a given `algo`
@@ -276,7 +276,9 @@ class CaimanDataFrameExtensions:
 
         return diffs
 
-    @warning_experimental()
+    @warning_experimental("This feature will change in the future and directly return the "
+                          " a DataFrame of children (rows, ie. child batch items row) "
+                          "instead of a list of UUIDs")
     @_index_parser
     def get_children(self, index: Union[int, str, UUID]) -> List[UUID]:
         """
@@ -318,7 +320,8 @@ class CaimanDataFrameExtensions:
                 children.append(r["uuid"])
         return children
 
-    @warning_experimental()
+    @warning_experimental("This feature will change in the future and directly return the "
+                          " pandas.Series (row, ie. batch item row) instead of the UUID")
     @_index_parser
     def get_parent(self, index: Union[int, str, UUID]) -> Union[UUID, None]:
         """
@@ -514,7 +517,6 @@ class CaimanSeriesExtensions:
 
         return self._series.paths.resolve(self._series["input_movie_path"])
 
-    @warning_experimental()
     def get_input_movie(self, reader: callable = None) -> Union[np.ndarray, Any]:
         """
         Get the input movie

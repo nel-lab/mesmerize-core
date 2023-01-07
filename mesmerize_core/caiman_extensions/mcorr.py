@@ -6,7 +6,6 @@ from caiman import load_memmap
 
 from ._utils import validate
 from typing import *
-from .cache import Cache
 
 
 @pd.api.extensions.register_series_accessor("mcorr")
