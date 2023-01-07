@@ -41,8 +41,9 @@ jobs:
 
     - name: Install mesmerize-core
       run: |
-        pip install .        
+        pip install .
         
     - name: Test with pytest
       run: |
+        pip install pytest
         DOWNLOAD_GROUND_TRUTHS=1 pytest -s .

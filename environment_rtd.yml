@@ -5,6 +5,5 @@ dependencies:
   - pandas >= 1.5.0
   - requests
   - click
-  - jupyterlab
   - tqdm
   - psutil

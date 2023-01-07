@@ -3,6 +3,9 @@ from pathlib import Path
 import numpy as np
 from caiman import load_memmap
 
+from .utils import warning_experimental
+from .arrays import LazyTiff
+
 try:
     import pims
     HAS_PIMS = True
@@ -13,7 +16,12 @@ except (ModuleNotFoundError, ImportError):
 def default_reader(path: str):
     ext = Path(path).suffixes[-1]
     if ext in [".tiff", ".tif", ".btf"]:
-        return tiff_memmap_reader(path)
+        try:
+            movie = tiff_memmap_reader(path)
+        except:  # if file is not memmapable
+            movie = tiff_lazyarray(path)
+
+        return movie
 
     if ext in [".mmap", ".memmap"]:
         return caiman_memmap_reader(path)
@@ -26,6 +34,13 @@ def default_reader(path: str):
 
 def tiff_memmap_reader(path: str) -> np.memmap:
     return tifffile.memmap(path)
+
+
+@warning_experimental("This feature is new and might change in the future")
+def tiff_lazyarray(path: str) -> LazyTiff:
+    # random access speed on a magnetic HDD is ~30Hz for simultaneously slicing of 20 frames from Teena's tiff files
+    # much slower than tifffile.memmap but this is just a last resort anyways
+    return LazyTiff(path)
 
 
 def caiman_memmap_reader(path: str) -> np.memmap:

@@ -6,7 +6,6 @@ GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 
 
 import numpy as np
-from matplotlib import cm as matplotlib_color_map
 from functools import wraps
 import os
 from stat import S_IEXEC
@@ -29,22 +28,6 @@ if "MESMERIZE_LRU_CACHE" in os.environ.keys():
     MESMERIZE_LRU_CACHE = os.environ["MESMERIZE_LRU_CACHE"]
 else:
     MESMERIZE_LRU_CACHE = 10
-
-
-qualitative_colormaps = [
-    "Pastel1",
-    "Pastel2",
-    "Paired",
-    "Accent",
-    "Dark2",
-    "Set1",
-    "Set2",
-    "Set3",
-    "tab10",
-    "tab20",
-    "tab20b",
-    "tab20c",
-]
 
 
 def warning_experimental(more_info: str = ""):
@@ -74,88 +57,6 @@ def validate_path(path: Union[str, Path]):
             "hyphens ( - ), underscores ( _ ) or periods ( . )"
         )
     return path
-
-
-def auto_colormap(
-    n_colors: int,
-    cmap: str = "hsv",
-    output: Union[str, type] = "float",
-    spacing: str = "uniform",
-    alpha: float = 1.0,
-) -> List[Union[np.ndarray, str]]:
-    """
-    If non-qualitative map: returns list of colors evenly spread through the chosen colormap.
-    If qualitative map: returns subsequent colors from the chosen colormap
-
-    Parameters
-    ----------
-    n_colors: int
-        Numbers of colors to return
-
-    cmap: str
-        item_name of colormap
-
-    output: Union[str, type]
-        option: "float" or ``float`` returns RGBA values between 0-1: [R, G, B, A],
-        option: "hex" returns hex strings that correspond to the RGBA values
-
-    spacing: str
-        option: "uniform"'" returns evenly spaced colors across the entire cmap range
-        option: "subsequent" returns subsequent colors from the cmap
-
-    alpha: float
-        alpha level, 0.0 - 1.0
-
-    Returns
-    -------
-    List[Union[np.ndarray, str]]
-        List of colors as either ``numpy.ndarray``, or hex ``str`` with length ``n_colors``
-    """
-
-    valid = ["float", float, "hex"]
-    if output not in valid:
-        raise ValueError(f"output must be one {valid}")
-
-    valid = ["uniform", "subsequent"]
-    if spacing not in valid:
-        raise ValueError(f"spacing must be one of either {valid}")
-
-    if alpha < 0.0 or alpha > 1.0:
-        raise ValueError("alpha must be within 0.0 and 1.0")
-
-    cm = matplotlib_color_map.get_cmap(cmap)
-    cm._init()
-
-    lut = (cm._lut).view(np.ndarray)
-
-    lut[:, 3] *= alpha
-
-    if spacing == "uniform":
-        if not cmap in qualitative_colormaps:
-            if cmap == "hsv":
-                cm_ixs = np.linspace(30, 210, n_colors, dtype=int)
-            else:
-                cm_ixs = np.linspace(0, 210, n_colors, dtype=int)
-        else:
-            if n_colors > len(lut):
-                raise ValueError("Too many colors requested for the chosen cmap")
-            cm_ixs = np.arange(0, len(lut), dtype=int)
-    else:
-        cm_ixs = range(n_colors)
-
-    colors = []
-    for ix in range(n_colors):
-        c = lut[cm_ixs[ix]]
-
-        if output == "hex":
-            c = tuple(c[:3] * 255)
-            hc = "#%02x%02x%02x" % tuple(map(int, c))
-            colors.append(hc)
-
-        else:  # floats
-            colors.append(c)
-
-    return colors
 
 
 def make_runfile(

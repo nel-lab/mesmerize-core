@@ -8,5 +8,5 @@ numpy
 matplotlib
 click
 psutil
-pims
 jupyterlab
+e
