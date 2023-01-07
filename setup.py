@@ -8,7 +8,6 @@ install_requires = [
     "requests",
     "tqdm",
     "numpy",
-    "matplotlib",
     "click",
     "psutil",
     "jupyterlab",

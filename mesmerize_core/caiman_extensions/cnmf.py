@@ -301,7 +301,6 @@ class CNMFExtensions:
         .. code-block:: python
 
             from mesmerize_core import load_batch
-            from matplotlib import pyplot as plt
 
             # needs fastplotlib and must be run in a notebook
             from fastplotlib import Plot
@@ -312,12 +311,6 @@ class CNMFExtensions:
             # assuming the 0th index is a cnmf item
             movie = df.iloc[0].caiman.get_input_movie()
             contours, coms = df.iloc[0].cnmf.get_contours()
-
-            # plot a corr img and contours using matplotlib
-            plt.imshow(df.iloc[0].caiman.get_corr_image().T)
-            for coor in contours:
-                plt.scatter(coor[:, 0], coor[:, 1])
-            plt.show()
 
             # the following requires fastplotlib and must be run in a new notebook cell
             slider = IntSlider(value=0, min=0, max=movie.shape[0] - 1, step=1)
