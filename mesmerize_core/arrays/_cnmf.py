@@ -44,7 +44,7 @@ class LazyArrayRCM(LazyArray):
 
         # determine dtype
         if self.spatial.dtype == self.temporal.dtype:
-            self._dtype = self.temporal.dtype
+            self._dtype = self.temporal.dtype.name
         else:
             self._dtype = self[0].dtype.name
 
