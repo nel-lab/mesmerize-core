@@ -83,7 +83,10 @@ You may need to install Vulkan drivers depending on your system, see the `fastpl
 
 `mesmerize-core` is availabe as a conda package which also gives you CaImAn! These instructions will give you a working `mesmerize-core` along with `caiman` in the same environment.
 
+**Important note: Sometimes conda or mamba will get stuck at a step, such as creating an environment or installing a package. I found that pressing `Enter` on your keyboard can sometimes help it continue when it pauses.**
+
 1. Install `mamba` into your base environment. Skip this step if you have `mamba`. This step may take 10 minutes and display several messages like "Solving environment: failed with..." but it should eventually install `mamba`.
+
 ```bash
 conda install -c conda-forge mamba
 
@@ -94,10 +97,10 @@ conda clean -a
 2. To create a new environment and install `mesmerize-core` into it do this:
 
 ```bash
-# on linux and mac you can use python=3.10
 mamba create -n mescore -c conda-forge mesmerize-core
-# `caiman` is a dependency of `mesmerize-core` so it will automatically grab `caiman` too
 ```
+
+`caiman` is a dependency of `mesmerize-core` so it will automatically grab `caiman` too
 
 If you already have an environment with `caiman`:
 
