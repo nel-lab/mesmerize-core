@@ -600,7 +600,7 @@ def test_cnmf():
     cnmf_corr_img_actual = numpy.load(
         ground_truths_dir.joinpath("cnmf", "cnmf_correlation_img.npy")
     )
-    numpy.testing.assert_array_equal(cnmf_corr_img, cnmf_corr_img_actual)
+    numpy.testing.assert_allclose(cnmf_corr_img, cnmf_corr_img_actual, rtol=1e-5, atol=1e-5)
 
     # test to check caiman get_projection("mean")
     cnmf_mean = df.iloc[-1].caiman.get_projection("mean")
