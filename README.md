@@ -111,7 +111,7 @@ mamba install -n name-of-env-with-caiman mesmerize-core
 3. Activate environment. You can only use `mesmerize-core` in the environment that it's installed into.
 
 ```bash
-mamba activate mesmerize-core
+mamba activate mescore
 ```
 
 4. Install `caimanmanager`
