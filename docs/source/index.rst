@@ -33,6 +33,11 @@ We're open to contributions! If you think there's a useful extension that can be
 
 You can also look at our "Milestones" for future versions to give you an idea of what we plan to implement in the future: https://github.com/nel-lab/mesmerize-core/milestones
 
+Old Mesmerize Desktop application
+---------------------------------
+
+`mesmerize-core` in combination with `fastplotlib` basically replaces the Mesmerize desktop application which is now treated as legacy software. We strongly recommend `mesmerize-core` over the old desktop application, but if you really want to use the old desktop application you can access it here: http://mesmerize.readthedocs.io/
+
 Indices and tables
 ==================
 
