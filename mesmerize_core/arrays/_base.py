@@ -158,6 +158,8 @@ class LazyArray(ABC):
             start = indexer.start
             stop = indexer.stop
             step = indexer.step
+            indexer = slice(start, stop, step)  # in case it was a range object
+
             if start is not None:
                 if start > self.n_frames:
                     raise IndexError(f"Cannot index beyond `n_frames`.\n"
