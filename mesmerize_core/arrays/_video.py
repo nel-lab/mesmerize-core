@@ -3,7 +3,13 @@ from pathlib import Path
 from warnings import warn
 
 import numpy as np
-from decord import VideoReader
+
+try:
+    from decord import VideoReader
+except ImportError:
+    HAS_DECORD = False
+else:
+    HAS_DECORD = True
 
 from ._base import LazyArray
 
@@ -36,6 +42,9 @@ class LazyVideo(LazyArray):
             (r, g, b) weights used for grayscale conversion if ``as_graycale`` is ``True``.
             default is (0.299, 0.587, 0.114)
         """
+        if not HAS_DECORD:
+            raise ImportError("You must install `decord` to use LazyVideo")
+
         self._video_reader = VideoReader(str(path))
 
         try:
