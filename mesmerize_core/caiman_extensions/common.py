@@ -520,7 +520,7 @@ class CaimanSeriesExtensions:
 
         return self._series.paths.resolve(self._series["input_movie_path"])
 
-    def get_input_movie(self, reader: callable = None) -> Union[np.ndarray, Any]:
+    def get_input_movie(self, reader: callable = None, **kwargs) -> Union[np.ndarray, Any]:
         """
         Get the input movie
 
@@ -528,6 +528,9 @@ class CaimanSeriesExtensions:
         ----------
         reader: callable
             a function that take the input movie path and return an array-like
+
+        **kwargs
+            passed to ``reader`` function
 
         Returns
         -------
@@ -541,9 +544,9 @@ class CaimanSeriesExtensions:
                     f"reader must be a callable type, such as a function"
                 )
 
-            return reader(path_str)
+            return reader(path_str, **kwargs)
 
-        return default_reader(path_str)
+        return default_reader(path_str, **kwargs)
 
     @validate()
     def get_corr_image(self) -> np.ndarray:

@@ -13,18 +13,18 @@ except (ModuleNotFoundError, ImportError):
     HAS_PIMS = False
 
 
-def default_reader(path: str):
+def default_reader(path: str, **kwargs):
     ext = Path(path).suffixes[-1]
     if ext in [".tiff", ".tif", ".btf"]:
         try:
-            movie = tiff_memmap_reader(path)
+            movie = tiff_memmap_reader(path, **kwargs)
         except:  # if file is not memmapable
-            movie = tiff_lazyarray(path)
+            movie = tiff_lazyarray(path, **kwargs)
 
         return movie
 
     if ext in [".mmap", ".memmap"]:
-        return caiman_memmap_reader(path)
+        return caiman_memmap_reader(path, **kwargs)
 
     else:
         raise ValueError(
@@ -32,8 +32,8 @@ def default_reader(path: str):
         )
 
 
-def tiff_memmap_reader(path: str) -> np.memmap:
-    return tifffile.memmap(path)
+def tiff_memmap_reader(path: str, **kwargs) -> np.memmap:
+    return tifffile.memmap(path, **kwargs)
 
 
 @warning_experimental("This feature is new and might change in the future")
@@ -43,14 +43,14 @@ def tiff_lazyarray(path: str) -> LazyTiff:
     return LazyTiff(path)
 
 
-def caiman_memmap_reader(path: str) -> np.memmap:
-    Yr, dims, T = load_memmap(path)
+def caiman_memmap_reader(path: str, **kwargs) -> np.memmap:
+    Yr, dims, T = load_memmap(path, **kwargs)
     return np.reshape(Yr.T, [T] + list(dims), order="F")
 
 
-def pims_reader(path: str):
+def pims_reader(path: str, **kwargs):
     if not HAS_PIMS:
         raise ModuleNotFoundError(
             "you must install `pims` to use the pims reader"
         )
-    return pims.open(path)
+    return pims.open(path, **kwargs)
