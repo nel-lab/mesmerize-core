@@ -158,7 +158,6 @@ class LazyArray(ABC):
             start = indexer.start
             stop = indexer.stop
             step = indexer.step
-            indexer = slice(start, stop, step)  # in case it was a range object
 
             if start is not None:
                 if start > self.n_frames:
@@ -172,8 +171,11 @@ class LazyArray(ABC):
                                      f"lies beyond `n_frames` <{self.n_frames}>")
 
             if step is None:
-                indexer.step = 1
-
+                step = 1
+            
+            # convert indexer to slice if it was a range, allows things like decord.VideoReader slicing
+            indexer = slice(start, stop, step)  # in case it was a range object
+            
             # dimension_0 is always time
             frames = self._compute_at_indices(indexer)
 
