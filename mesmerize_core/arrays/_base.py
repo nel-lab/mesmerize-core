@@ -5,7 +5,7 @@ from typing import *
 
 import numpy as np
 
-slice_or_int = Union[int, slice]
+slice_or_int_or_range = Union[int, slice, range]
 
 
 class LazyArray(ABC):
@@ -124,7 +124,7 @@ class LazyArray(ABC):
 
     def __getitem__(
             self,
-            item: Union[int, Tuple[slice_or_int]]
+            item: Union[int, Tuple[slice_or_int_or_range]]
     ):
         if isinstance(item, int):
             indexer = item
@@ -133,7 +133,8 @@ class LazyArray(ABC):
         elif isinstance(item, np.integer):
             indexer = item.item()
 
-        elif isinstance(item, slice):
+        # treat slice and range the same
+        elif isinstance(item, (slice, range)):
             indexer = item
 
         elif isinstance(item, tuple):
@@ -152,9 +153,12 @@ class LazyArray(ABC):
                 f"you have passed a: <{type(item)}>"
             )
 
-        if isinstance(indexer, slice):
+        # treat slice and range the same
+        if isinstance(indexer, (slice, range)):
             start = indexer.start
             stop = indexer.stop
+            step = indexer.step
+
             if start is not None:
                 if start > self.n_frames:
                     raise IndexError(f"Cannot index beyond `n_frames`.\n"
@@ -166,9 +170,16 @@ class LazyArray(ABC):
                                      f"Desired frame stop index of <{stop}> "
                                      f"lies beyond `n_frames` <{self.n_frames}>")
 
+            if step is None:
+                step = 1
+            
+            # convert indexer to slice if it was a range, allows things like decord.VideoReader slicing
+            indexer = slice(start, stop, step)  # in case it was a range object
+            
             # dimension_0 is always time
             frames = self._compute_at_indices(indexer)
 
+            # index the remaining dims after lazy computing the frame(s)
             if isinstance(item, tuple):
                 if len(item) == 2:
                     return frames[:, item[1]]
