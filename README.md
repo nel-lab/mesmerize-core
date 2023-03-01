@@ -71,10 +71,10 @@ Note that [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) is require
 
 The instructions below will install `mesmerize-core`.
 
-For visualization install `fastplotlib` like this into the same environment as `mesmerize-core`:
+For visualization install `fastplotlib` into the same environment as `mesmerize-core`:
 
 ```bash
-pip install git+https://github.com/kushalkolar/fastplotlib.git
+pip install fastplotlib
 ```
 
 You may need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#install-vulkan-drivers
@@ -126,7 +126,7 @@ The `caimanmanager.py` step may cause issues, especially on Windows. Assuming yo
 python C:\Users\your-username\anaconda3\envs\your-env-name\bin\caimanmanager.py install
 ```
 
-If you continue to have issues with this step, please post an issue on the caiman github or gitterpip install git+https://github.com/kushalkolar/fastplotlib.git: https://github.com/flatironinstitute/CaImAn/issues 
+If you continue to have issues with this step, please post an issue on the caiman github or gitter: https://github.com/flatironinstitute/CaImAn/issues 
 
 5. Run `ipython` and verify that `mesmerize_core` is installed:
 
@@ -136,16 +136,10 @@ import mesmerize_core
 mesmerize_core.__version__
 ```
 
-6. Install `fastplotlib` for visualization into the same environment (run this in the anaconda prompt, not ipython)
+6. Install `fastplotlib` for visualization into the same environment (run this in the anaconda prompt, not ipython). You may also need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#install-vulkan-drivers
 
 ```bash
-pip install git+https://github.com/kushalkolar/fastplotlib.git
-```
-
-If you don't have git installed you will need to install that first in the environment:
-
-```bash
-conda install git
+pip install fastplotlib
 ```
 
 ### python virtual environments
@@ -172,6 +166,9 @@ caimanmanager.py install
 
 # install mesmerize-core
 pip install mesmerize-core
+
+# install fastplotlib
+pip install fastplotlib
 
 # you should now be able to import mesmerize_core
 # start ipython
