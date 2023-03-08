@@ -4,7 +4,6 @@ import caiman as cm
 from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 import psutil
-import pandas as pd
 import traceback
 from pathlib import Path
 from shutil import move as move_file
@@ -56,11 +55,11 @@ def run_algo(batch_path, uuid, data_path: str = None):
         )
 
         print("making memmap")
-        gSig = params["main"]["gSig"][0]
-
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
+        # TODO: if projections already exist from mcorr we don't
+        #  need to waste compute time re-computing them here
         proj_paths = dict()
         for proj_type in ["mean", "std", "max"]:
             p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
@@ -69,49 +68,38 @@ def run_algo(batch_path, uuid, data_path: str = None):
             )
             np.save(str(proj_paths[proj_type]), p_img)
 
-        downsample_ratio = params["downsample_ratio"]
-        # in fname new load in memmap order C
-
-        cn_filter, pnr = cm.summary_images.correlation_pnr(
-            images[::downsample_ratio], swap_dim=False, gSig=gSig
-        )
-
-        pnr_output_path = output_dir.joinpath(f"{uuid}_pn.npy").resolve()
-        cn_output_path = output_dir.joinpath(f"{uuid}_cn.npy").resolve()
-
-        np.save(str(pnr_output_path), pnr, allow_pickle=False)
-        np.save(str(cn_output_path), cn_filter, allow_pickle=False)
-
         d = dict()  # for output
 
-        if params["do_cnmfe"]:
-            cnmfe_params_dict = {
-                "method_init": "corr_pnr",
-                "n_processes": n_processes,
-                "only_init": True,  # for 1p
-                "center_psf": True,  # for 1p
-                "normalize_init": False,  # for 1p
-            }
-            tot = {**cnmfe_params_dict, **params["main"]}
-            cnmfe_params_dict = CNMFParams(params_dict=tot)
-            cnm = cnmf.CNMF(
-                n_processes=n_processes, dview=dview, params=cnmfe_params_dict
+        # force the CNMFE params
+        cnmfe_params_dict = {
+            "method_init": "corr_pnr",
+            "n_processes": n_processes,
+            "only_init": True,  # for 1p
+            "center_psf": True,  # for 1p
+            "normalize_init": False,  # for 1p
+        }
+
+        params_dict = {**cnmfe_params_dict, **params["main"]}
+
+        cnmfe_params_dict = CNMFParams(params_dict=params_dict)
+        cnm = cnmf.CNMF(
+            n_processes=n_processes, dview=dview, params=cnmfe_params_dict
+        )
+        print("Performing CNMFE")
+        cnm = cnm.fit(images)
+        print("evaluating components")
+        cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
+
+        cnmf_hdf5_path = output_dir.joinpath(f"{uuid}.hdf5").resolve()
+        cnm.save(str(cnmf_hdf5_path))
+
+        # save output paths to outputs dict
+        d["cnmf-hdf5-path"] = cnmf_hdf5_path.relative_to(output_dir.parent)
+
+        for proj_type in proj_paths.keys():
+            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+                output_dir.parent
             )
-            print("Performing CNMFE")
-            cnm = cnm.fit(images)
-            print("evaluating components")
-            cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
-
-            cnmf_hdf5_path = output_dir.joinpath(f"{uuid}.hdf5").resolve()
-            cnm.save(str(cnmf_hdf5_path))
-
-            # save output paths to outputs dict
-            d["cnmf-hdf5-path"] = cnmf_hdf5_path.relative_to(output_dir.parent)
-
-            for proj_type in proj_paths.keys():
-                d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
-                    output_dir.parent
-                )
 
         cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
         if IS_WINDOWS:
@@ -119,14 +107,10 @@ def run_algo(batch_path, uuid, data_path: str = None):
         move_file(fname_new, cnmf_memmap_path)
 
         cnmfe_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
-        cn_output_path = cn_output_path.relative_to(output_dir.parent)
-        pnr_output_path = pnr_output_path.relative_to(output_dir.parent)
 
         d.update(
             {
                 "cnmf-memmap-path": cnmfe_memmap_path,
-                "corr-img-path": cn_output_path,
-                "pnr-image-path": pnr_output_path,
                 "success": True,
                 "traceback": None,
             }
