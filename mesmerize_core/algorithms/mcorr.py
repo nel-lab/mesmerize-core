@@ -5,7 +5,6 @@ from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
 from caiman.summary_images import local_correlations_movie_offline
 import psutil
-import pandas as pd
 import os
 from pathlib import Path
 import numpy as np
@@ -41,6 +40,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
     os.environ["CAIMAN_NEW_TEMPFILE"] = "True"
 
     params = item["params"]
+
+    optional_outputs = {
+        "corr_image": False,
+    }
+
+    for k in optional_outputs.keys():
+        if k in params.keys():
+            optional_outputs[k] = params[k]
 
     # adapted from current demo notebook
     if "MESMERIZE_N_PROCESSES" in os.environ.keys():
@@ -91,20 +98,19 @@ def run_algo(batch_path, uuid, data_path: str = None):
             )
             np.save(str(proj_paths[proj_type]), p_img)
 
-        print("Computing correlation image")
-        Cns = local_correlations_movie_offline(
-            [str(mcorr_memmap_path)],
-            remove_baseline=True,
-            window=1000,
-            stride=1000,
-            winSize_baseline=100,
-            quantil_min_baseline=10,
-            dview=dview,
-        )
-        Cn = Cns.max(axis=0)
-        Cn[np.isnan(Cn)] = 0
-        cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
-        np.save(str(cn_path), Cn, allow_pickle=False)
+        if optional_outputs["corr_image"] is not False:
+            print("Computing correlation image")
+            Cns = local_correlations_movie_offline(
+                [str(mcorr_memmap_path)],
+                dview=dview,
+                **optional_outputs["corr_image"]
+            )
+            Cn = Cns.max(axis=0)
+            Cn[np.isnan(Cn)] = 0
+            cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
+            np.save(str(cn_path), Cn, allow_pickle=False)
+        else:
+            cn_path = None
 
         # output dict for pandas series for dataframe row
         d = dict()
@@ -124,7 +130,9 @@ def run_algo(batch_path, uuid, data_path: str = None):
             np.save(str(shift_path), shifts)
 
         # relative paths
-        cn_path = cn_path.relative_to(output_dir.parent)
+        if cn_path is not None:
+            cn_path = cn_path.relative_to(output_dir.parent)
+
         mcorr_memmap_path = mcorr_memmap_path.relative_to(output_dir.parent)
         shift_path = shift_path.relative_to(output_dir.parent)
         for proj_type in proj_paths.keys():
