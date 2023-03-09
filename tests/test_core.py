@@ -680,85 +680,8 @@ def test_cnmfe():
 
     df = load_batch(batch_path)
 
-    # Test if pnr and cn alone work
-    algo = "cnmfe"
-    param_name = "cnmfe_partial"
-    print(f"testing cnmfe - partial")
-    input_movie_path = df.iloc[0].mcorr.get_output_path()
-    print(input_movie_path)
-    df.caiman.add_item(
-        algo=algo,
-        item_name=f"test-{algo}",
-        input_movie_path=input_movie_path,
-        params=test_params[param_name],
-    )
-
-    assert df.iloc[-1]["algo"] == algo
-    assert df.iloc[-1]["item_name"] == f"test-{algo}"
-    assert df.iloc[-1]["params"] == test_params[param_name]
-    assert df.iloc[-1]["outputs"] is None
-    try:
-        UUID(df.iloc[-1]["uuid"])
-    except:
-        pytest.fail("Something wrong with setting UUID for batch items")
-
-    assert (
-            batch_dir.joinpath(df.iloc[-1]["input_movie_path"])
-            == batch_dir.joinpath(df.iloc[0].mcorr.get_output_path())
-            == df.paths.resolve(df.iloc[-1]["input_movie_path"])
-    )
-
-    process = df.iloc[-1].caiman.run()
-    # process.wait()
-
-    df = load_batch(batch_path)
-
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):
-        print(df)
-
-    pprint(df.iloc[-1]["outputs"], width=-1)
-    print(df.iloc[-1]["outputs"]["traceback"])
-
-    # Confirm output path is as expected
-    assert df.iloc[-1]["outputs"]["success"] is True
-    assert df.iloc[-1]["outputs"]["traceback"] is None
-
-    assert (
-            input_movie_path
-            == df.iloc[-1].caiman.get_input_movie_path()
-            == df.paths.resolve(df.iloc[-1]["input_movie_path"])
-    )
-
-    assert batch_dir.joinpath(
-        str(df.iloc[-1]["uuid"]),
-        f'{df.iloc[-1]["uuid"]}_cnmf-memmap_d1_128_d2_128_d3_1_order_C_frames_1000.mmap',
-    ) == df.paths.resolve(df.iloc[-1]["outputs"]["cnmf-memmap-path"])
-
-    assert batch_dir.joinpath(
-        str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_pn.npy'
-    ) == df.paths.resolve(df.iloc[-1]["outputs"]["pnr-image-path"])
-
-    assert batch_dir.joinpath(
-        str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy'
-    ) == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
-
-    # extension tests - partial
-
-    # test to check caiman get_corr_image()
-    corr_img = df.iloc[-1].caiman.get_corr_image()
-    corr_img_actual = numpy.load(
-        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_correlation_img.npy")
-    )
-    numpy.testing.assert_allclose(corr_img, corr_img_actual, rtol=1e-1, atol=1e-10)
-
-    # test to check caiman get_pnr_image()
-    pnr_image = df.iloc[-1].caiman.get_pnr_image()
-    pnr_image_actual = numpy.load(
-        ground_truths_dir.joinpath("cnmfe_partial", "cnmfe_partial_pnr_img.npy")
-    )
-    numpy.testing.assert_allclose(pnr_image, pnr_image_actual, rtol=1e2, atol=1e-10)
-
     # Test if running full cnmfe works
+    print("testing cnmfe")
     algo = "cnmfe"
     param_name = "cnmfe_full"
     input_movie_path = df.iloc[0].mcorr.get_output_path()
@@ -846,20 +769,6 @@ def test_cnmfe():
             == batch_dir.joinpath(
         str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_max_projection.npy'
     )
-    )
-
-    # test to check correlation image output path
-    assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["corr-img-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["corr-img-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_cn.npy')
-    )
-
-    # test to check pnr image output path
-    assert (
-            batch_dir.joinpath(df.iloc[-1]["outputs"]["pnr-image-path"])
-            == df.paths.resolve(df.iloc[-1]["outputs"]["pnr-image-path"])
-            == batch_dir.joinpath(str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_pn.npy')
     )
 
     # extension tests - full

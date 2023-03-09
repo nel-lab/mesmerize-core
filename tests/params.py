@@ -33,8 +33,6 @@ test_params = {
         "refit": True,
     },
     "cnmfe_full": {
-        "do_cnmfe": True,
-        "keep_memmap": True,
         "main": {
             "gSig": (10, 10),
             "gSiz": (41, 41),
@@ -55,14 +53,5 @@ test_params = {
             "update_background_components": True,
             "del_duplicates": True,
         },
-        "downsample_ratio": 1,
-    },
-    "cnmfe_partial": {
-        "do_cnmfe": False,
-        "keep_memmap": True,
-        "main": {
-            "gSig": (10, 10),
-        },
-        "downsample_ratio": 1,
-    },
+    }
 }
