@@ -8,6 +8,7 @@ from shutil import rmtree
 from itertools import chain
 from collections import Counter
 from datetime import datetime
+import time
 
 import numpy as np
 import pandas as pd
@@ -149,7 +150,7 @@ class CaimanDataFrameExtensions:
                 f"in row number."
             )
 
-        bak = path.with_suffix(path.suffix + f"bak.{time()}")
+        bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
         shutil.copyfile(path, bak)
         try:
