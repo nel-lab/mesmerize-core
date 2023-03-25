@@ -293,51 +293,6 @@ class CNMFExtensions:
             | each array of coordinates is 2D, [xs, ys]
             | each center of mass is [x, y]
 
-        Examples
-        --------
-
-        This example loads the input movie and contours, and plots them with fastplotlib
-
-        .. code-block:: python
-
-            from mesmerize_core import load_batch
-
-            # needs fastplotlib and must be run in a notebook
-            from fastplotlib import Plot
-            from ipywidgets import IntSlider, VBox
-
-            df = load_batch("/path/to/batch_dataframe_file.pickle")
-
-            # assuming the 0th index is a cnmf item
-            movie = df.iloc[0].caiman.get_input_movie()
-            contours, coms = df.iloc[0].cnmf.get_contours()
-
-            # the following requires fastplotlib and must be run in a new notebook cell
-            slider = IntSlider(value=0, min=0, max=movie.shape[0] - 1, step=1)
-            plot = Plot()
-
-            image_graphic = plot.image(movie[0].T, cmap="gnuplot2")
-            # note the movie frame is transposed, this is sometimes requires to get the contours to align
-
-            for coor in contours:
-                # line data has to be 3D
-                zs = np.ones(coor.shape[0])  # this will place it above the image graphic
-                c3d = [coor[:, 0], coor[:, 1], zs]
-                coors_3d = np.dstack(c3d)[0]
-
-                # make all the lines red, [R, G, B, A] array
-                colors = np.vstack([[1., 0., 0., 0.7]] * coors_3d.shape[0])
-                plot.line(data=coors_3d, colors=colors)
-
-            previous_slider_value = 0
-            def update_frame():  # runs on each rendering cycle
-                if slider.value == previous_slider_value:
-                    return
-                image_graphic.update_data(data=movie[slider.value].T)
-
-            plot.add_animations([update_frame])
-
-            VBox([plot.show(), slider])
         """
 
         cnmf_obj = self.get_output()
@@ -395,14 +350,18 @@ class CNMFExtensions:
         .. code-block:: python
 
             from mesmerize_core import load_batch
-            from seaborn import heatmap
+            from fastplotlib import Plot
 
             df = load_batch("/path/to/batch_dataframe_file.pickle")
 
             # assumes 0th index is a cnmf batch item
             temporal = df.iloc[0].cnmf.get_temporal()
 
-            heatmap(temporal)
+            plot = Plot()
+
+            plot.add_line_collection(temporal)
+
+            plot.show()
         """
 
         cnmf_obj = self.get_output()
@@ -423,7 +382,7 @@ class CNMFExtensions:
             component_indices: Union[np.ndarray, str] = None,
             temporal_components: np.ndarray = None,
             return_copy=False
-    ) -> LazyArray:
+    ) -> LazyArrayRCM:
         """
         Return the reconstructed movie with no background, i.e. ``A ⊗ C``, as a ``LazyArray``.
         This is an array that performs lazy computation of the reconstructed movie only upon indexing.
@@ -450,7 +409,7 @@ class CNMFExtensions:
 
         Returns
         -------
-        LazyArray
+        LazyArrayRCM
             shape is [n_frames, x_dims, y_dims]
 
         Examples
@@ -507,13 +466,13 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @cnmf_cache.use_cache
-    def get_rcb(self,) -> LazyArray:
+    def get_rcb(self,) -> LazyArrayRCB:
         """
         Return the reconstructed background, ``(b ⊗ f)``
 
         Returns
         -------
-        LazyArray
+        LazyArrayRCB
             shape is [n_frames, x_dims, y_dims]
 
         Examples
@@ -559,13 +518,13 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @cnmf_cache.use_cache
-    def get_residuals(self) -> np.ndarray:
+    def get_residuals(self) -> LazyArrayResiduals:
         """
         Return residuals, ``Y - (A ⊗ C) - (b ⊗ f)``
 
         Returns
         -------
-        LazyArray
+        LazyArrayResiduals
             shape is [n_frames, x_dims, y_dims]
 
         Examples

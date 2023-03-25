@@ -15,16 +15,16 @@
 # sys.path.insert(0, os.path.abspath('.'))
 from bs4 import BeautifulSoup
 from typing import *
-
+import mesmerize_core
 
 # -- Project information -----------------------------------------------------
 
 project = 'mesmerize-core'
-copyright = '2022, Kushal Kolar, Caitlin Lewis, Arjun Putcha'
+copyright = '2023, Kushal Kolar, Caitlin Lewis, Arjun Putcha'
 author = 'Kushal Kolar, Caitlin Lewis, Arjun Putcha'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = mesmerize_core.__version__
 
 # -- General configuration ---------------------------------------------------
 
@@ -50,6 +50,7 @@ exclude_patterns = []
 #
 html_theme = 'pydata_sphinx_theme'
 html_theme_options = {"page_sidebar_items": ["class_page_toc"]}
+autoclass_content = "both"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -58,8 +59,8 @@ html_static_path = ['_static']
 
 autodoc_member_order = 'bysource'
 
-def _setup_navbar_side_toctree(app: Any):
 
+def _setup_navbar_side_toctree(app: Any):
     def add_class_toctree_function(app: Any, pagename: Any, templatename: Any, context: Any, doctree: Any):
         def get_class_toc() -> Any:
             soup = BeautifulSoup(context["body"], "html.parser")

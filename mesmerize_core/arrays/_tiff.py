@@ -10,6 +10,16 @@ from ._base import LazyArray
 
 class LazyTiff(LazyArray):
     def __init__(self, path: Union[Path, str]):
+        """
+        Lazy reader for tiff files. WIP, works for some tiff files.
+        Try ``tifffile.memmap`` first before trying ``LazyTiff``
+
+        Parameters
+        ----------
+        path: str or Path
+            path to tiff file
+        """
+
         self._tif = tifffile.TiffFile(path)
         tiffseries = self._tif.series[0].levels[0]
 

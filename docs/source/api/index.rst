@@ -15,3 +15,11 @@ API Reference
    :caption: Functions
 
    functions
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Lazy Arrays
+
+   lazy_arrays/readers
+   lazy_arrays/cnmf
+   lazy_arrays/base

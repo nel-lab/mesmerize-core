@@ -25,7 +25,7 @@ class LazyVideo(LazyArray):
         LazyVideo reader, basically just a wrapper for ``decord.VideoReader``.
         Should support opening anything that decord can open.
 
-        **Requires ``decord`` to be installed**
+        **Requires ``decord`` to be installed**: https://github.com/dmlc/decord
 
         Parameters
         ----------
