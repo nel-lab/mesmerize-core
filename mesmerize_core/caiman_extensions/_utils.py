@@ -16,7 +16,7 @@ def validate(algo: str = None):
             if algo is not None:
                 if algo not in self._series["algo"]:
                     raise WrongAlgorithmExtensionError(
-                        f"<{algo} extension called for a <{self._series}> item"
+                        f"<{algo}> extension called for a <{self._series.algo}> item"
                     )
 
             if not self._series["outputs"]["success"]:
