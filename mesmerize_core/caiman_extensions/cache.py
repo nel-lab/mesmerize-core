@@ -9,6 +9,7 @@ from caiman.source_extraction.cnmf import CNMF
 import re
 from sys import getsizeof
 import copy
+import os
 
 
 def _check_arg_equality(args, cache_args):
@@ -47,6 +48,9 @@ class Cache:
             columns=["uuid", "function", "args", "kwargs", "return_val", "time_stamp"],
         )
         self.set_maxsize(cache_size)
+
+        if os.name == 'nt':
+            self.invalidate(pre=True, post=True)
 
     def get_cache(self):
         return self.cache
