@@ -9,7 +9,7 @@ from ._base import LazyArray
 
 
 class LazyTiff(LazyArray):
-    def __init__(self, path: Union[Path, str]):
+    def __init__(self, path: Union[Path, str], shape: Tuple[int] = None):
         """
         Lazy reader for tiff files. WIP, works for some tiff files.
         Try ``tifffile.memmap`` first before trying ``LazyTiff``
@@ -18,18 +18,25 @@ class LazyTiff(LazyArray):
         ----------
         path: str or Path
             path to tiff file
+
+        shape: Tuple[int]
+            manually set shape
         """
 
         self._tif = tifffile.TiffFile(path)
         tiffseries = self._tif.series[0].levels[0]
 
-        # TODO: someone who's better with tiff can help on this
-        if len(self._tif.pages) == 1:
-            n_frames = len(self._tif.series)
-        else:
-            n_frames = len(self._tif.pages)
+        if shape is None:
+            # TODO: someone who's better with tiff can help on this
+            if len(self._tif.pages) == 1:
+                n_frames = len(self._tif.series)
+            else:
+                n_frames = len(self._tif.pages)
 
-        self._shape = (n_frames, *tiffseries.shape)
+            self._shape = (n_frames, *tiffseries.shape)
+        else:
+            self._shape = shape
+
         self._dtype = tiffseries.dtype.name
 
     @property
