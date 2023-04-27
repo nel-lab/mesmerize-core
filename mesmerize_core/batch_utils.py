@@ -1,3 +1,4 @@
+from typing import *
 import os
 from pathlib import Path
 from typing import Union
@@ -148,13 +149,17 @@ class PathsSeriesExtension(_BasePathExtensions):
     pass
 
 
-def load_batch(path: Union[str, Path]) -> pd.DataFrame:
+def load_batch(path: Union[str, Path], file_format: str = "pickle") -> pd.DataFrame:
     """
     Load the batch dataframe pickle file
 
     Parameters
     ----------
     path: str or Path
+        path to the dataframe batch file
+
+    file_format: str, default "pickle"
+        pandas reader to use
 
     Returns
     -------
@@ -177,7 +182,9 @@ def load_batch(path: Union[str, Path]) -> pd.DataFrame:
 
     path = validate_path(path)
 
-    df = pd.read_pickle(Path(path))
+    reader = getattr(pd, f"read_{file_format}")
+
+    df = reader(Path(path))
 
     df.paths.set_batch_path(path)
 
@@ -191,7 +198,12 @@ def load_batch(path: Union[str, Path]) -> pd.DataFrame:
         return df
 
 
-def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.DataFrame:
+def create_batch(
+        path: Union[str, Path],
+        remove_existing: bool = False,
+        file_format: str = "pickle",
+        add_columns: List[str] = None
+) -> pd.DataFrame:
     """
     Create a new batch DataFrame
 
@@ -202,6 +214,12 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
 
     remove_existing: bool
         If ``True``, remove an existing batch DataFrame file if it exists at the given `path`, default ``False``
+
+    file_format: str, default "pickle"
+        file format the dataframe is stored in
+
+    add_columns: List[str], optional
+        add additional columns to the dataframe
 
     Returns
     -------
@@ -231,10 +249,15 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
     if not Path(path).parent.is_dir():
         os.makedirs(Path(path).parent)
 
-    df = pd.DataFrame(columns=DATAFRAME_COLUMNS)
+    if add_columns is None:
+        add_columns = list()
+
+    df = pd.DataFrame(columns=DATAFRAME_COLUMNS + add_columns)
     df.paths.set_batch_path(path)
 
-    df.to_pickle(path)
+    writer = getattr(df, f"to_{file_format}")
+
+    writer(path)
 
     return df
 

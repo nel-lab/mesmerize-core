@@ -70,7 +70,7 @@ elif "DOWNLOAD_GROUND_TRUTHS" in os.environ.keys():
 
 
 def get_tmp_filename():
-    return os.path.join(tmp_dir, f"{uuid4()}.pickle")
+    return os.path.join(tmp_dir, f"{uuid4()}.parquet")
 
 
 def clear_tmp():
@@ -129,7 +129,7 @@ def teardown_module():
 
 def _create_tmp_batch() -> Tuple[pd.DataFrame, str]:
     fname = get_tmp_filename()
-    df = create_batch(fname)
+    df = create_batch(fname, file_format="parquet")
 
     return df, fname
 
@@ -207,7 +207,7 @@ def test_mcorr():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
@@ -368,7 +368,7 @@ def test_cnmf():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
@@ -411,7 +411,7 @@ def test_cnmf():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
@@ -678,7 +678,7 @@ def test_cnmfe():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     # Test if running full cnmfe works
     print("testing cnmfe")
@@ -712,7 +712,7 @@ def test_cnmfe():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
@@ -965,7 +965,7 @@ def test_remove_item():
         proc = r.caiman.run()
         # proc.wait()
 
-    df = load_batch(df.paths.get_batch_path())
+    df = load_batch(df.paths.get_batch_path(), file_format="parquet")
 
     # make sure we can get mcorr movie output of 0th and 1st indices
     path0 = df.iloc[0].mcorr.get_output_path()
@@ -1056,7 +1056,7 @@ def test_cache():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
@@ -1098,7 +1098,7 @@ def test_cache():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(df)
@@ -1197,7 +1197,7 @@ def test_cache():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     algo = "cnmfe"
     param_name = "cnmfe_full"
@@ -1214,7 +1214,7 @@ def test_cache():
     process = df.iloc[-1].caiman.run()
     # process.wait()
 
-    df = load_batch(batch_path)
+    df = load_batch(batch_path, file_format="parquet")
 
     cnmf.cnmf_cache.set_maxsize("1M")
 
