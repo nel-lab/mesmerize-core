@@ -257,7 +257,10 @@ def create_batch(
 
     writer = getattr(df, f"to_{file_format}")
 
-    writer(path)
+    if file_format == "hdf":
+        writer(path, key="batch")
+    else:
+        writer(path)
 
     return df
 
