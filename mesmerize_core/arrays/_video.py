@@ -19,13 +19,14 @@ class LazyVideo(LazyArray):
         self, path: Union[Path, str],
             min_max: Tuple[int, int] = None,
             as_grayscale: bool = False,
-            rgb_weights: Tuple[float, float, float] = (0.299, 0.587, 0.114)
+            rgb_weights: Tuple[float, float, float] = (0.299, 0.587, 0.114),
+            **kwargs,
     ):
         """
         LazyVideo reader, basically just a wrapper for ``decord.VideoReader``.
         Should support opening anything that decord can open.
 
-        **Requires ``decord`` to be installed**: https://github.com/dmlc/decord
+        **Important:** requires ``decord`` to be installed: https://github.com/dmlc/decord
 
         Parameters
         ----------
@@ -41,11 +42,45 @@ class LazyVideo(LazyArray):
         rgb_weights: Tuple[float, float, float], optional
             (r, g, b) weights used for grayscale conversion if ``as_graycale`` is ``True``.
             default is (0.299, 0.587, 0.114)
+
+        kwargs
+            passed to ``decord.VideoReader``
+
+        Examples
+        --------
+
+        Lazy loading with CPU
+
+        .. code-block:: python
+
+            from mesmerize_core.arrays import LazyVideo
+
+            vid = LazyVideo("path/to/video.mp4")
+
+            # use fpl to visualize
+
+            import fastplotlib as fpl
+
+            iw = fpl.ImageWidget(vid)
+            iw.show()
+
+
+        Lazy loading with GPU, decord must be compiled with CUDA options to use this
+
+        .. code-block:: python
+
+            from decord import gpu
+            from mesmerize_core.arrays import LazyVideo
+
+            gpu_context = gpu(0)
+
+            vid = LazyVideo("path/to/video.mp4", ctx=gpu_context)
+
         """
         if not HAS_DECORD:
             raise ImportError("You must install `decord` to use LazyVideo")
 
-        self._video_reader = VideoReader(str(path))
+        self._video_reader = VideoReader(str(path), **kwargs)
 
         try:
             frame0 = self._video_reader[10].asnumpy()
@@ -63,8 +98,11 @@ class LazyVideo(LazyArray):
 
         self._dtype = frame0.dtype
 
-        self._min = frame0.min()
-        self._max = frame0.max()
+        if min_max is not None:
+            self._min, self._max = min_max
+        else:
+            self._min = frame0.min()
+            self._max = frame0.max()
 
         self.as_grayscale = as_grayscale
         self.rgb_weights = rgb_weights
