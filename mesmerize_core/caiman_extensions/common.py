@@ -204,8 +204,18 @@ class CaimanDataFrameExtensions:
         -------
 
         """
+        if self._df.iloc[index]["outputs"] is not None:
+            if self._df.iloc[index]["outputs"]["success"] is True:
+                # if success, don't skip checks
+                skip_checks = False
+            else:
+                # if failed item, skip checks, allow removal since it cannot have children
+                skip_checks = True
+        else:
+            # if not run, skip checks, it cannot have children
+            skip_checks = True
 
-        if self._df.iloc[index]["algo"] == "mcorr":
+        if self._df.iloc[index]["algo"] == "mcorr" and not skip_checks:
             if safe_removal:
                 children = self.get_children(index)
                 if len(children) > 0:
