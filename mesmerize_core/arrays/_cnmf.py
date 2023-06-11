@@ -110,18 +110,22 @@ class LazyArrayRCM(LazyArray):
 
     @property
     def mean_image(self) -> np.ndarray:
+        """mean projection image"""
         return self._mean_image
 
     @property
     def max_image(self) -> np.ndarray:
+        """max projection image"""
         return self._max_image
 
     @property
     def min_image(self) -> np.ndarray:
+        """min projection image"""
         return self._min_image
 
     @property
     def std_image(self) -> np.ndarray:
+        """standard deviation projection image"""
         return self._std_image
     
     def _compute_at_indices(self, indices: Union[int, Tuple[int, int]]) -> np.ndarray:

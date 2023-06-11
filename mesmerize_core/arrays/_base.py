@@ -43,7 +43,7 @@ class LazyArray(ABC):
     @abstractmethod
     def min(self) -> float:
         """
-        int
+        float
             min value of the array if it were fully computed
         """
         pass
