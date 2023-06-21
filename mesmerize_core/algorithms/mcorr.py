@@ -5,7 +5,6 @@ from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
 from caiman.summary_images import local_correlations_movie_offline
 import psutil
-import pandas as pd
 import os
 from pathlib import Path
 import numpy as np
@@ -16,7 +15,7 @@ from datetime import datetime
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
-    from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core import set_parent_raw_data_path, load_batch, CaimanDataFrameExtensions
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
 
@@ -26,7 +25,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
     set_parent_raw_data_path(data_path)
 
     batch_path = Path(batch_path)
-    df = load_batch(batch_path)
+    file_format = batch_path.suffix[1:]
+    df = load_batch(batch_path, file_format=file_format)
 
     item = df[df["uuid"] == uuid].squeeze()
     # resolve full path
@@ -154,7 +154,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
     df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
     # Save DataFrame to disk
-    df.to_pickle(batch_path)
+    df.caiman.save_to_disk(max_index_diff=1)
 
 
 @click.command()

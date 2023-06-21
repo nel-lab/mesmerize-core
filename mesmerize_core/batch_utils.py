@@ -202,6 +202,24 @@ def load_batch(path: Union[str, Path], file_format: str = "pickle") -> pd.DataFr
         return df
 
 
+def save_dataframe_unsafe(
+        df: pd.DataFrame,
+):
+    """
+    Save DataFrame to disk, unsafe doesn't perform checks.
+    Use df.caiman.save_to_disk().
+    """
+    path = df.paths.get_batch_path()
+    file_format = df.paths.get_file_format()
+
+    writer = getattr(df, f"to_{file_format}")
+
+    if file_format == "hdf":
+        writer(path, key="batch")
+    else:
+        writer(path)
+
+
 def create_batch(
         path: Union[str, Path],
         remove_existing: bool = False,
@@ -220,7 +238,7 @@ def create_batch(
         If ``True``, remove an existing batch DataFrame file if it exists at the given `path`, default ``False``
 
     file_format: str, default "pickle"
-        file format the dataframe is stored in
+        file format the dataframe is stored in, examples: "hdf", "pickle"
 
     add_columns: List[str], optional
         add additional columns to the dataframe
@@ -242,6 +260,9 @@ def create_batch(
     """
     path = validate_path(path)
 
+    if not path.suffix == f".{file_format}":
+        raise IOError("path must end with same extension as `file_format` argument")
+
     if Path(path).is_file():
         if remove_existing:
             os.remove(path)
@@ -259,12 +280,7 @@ def create_batch(
     df = pd.DataFrame(columns=DATAFRAME_COLUMNS + add_columns)
     df.paths.set_batch_path(path, file_format=file_format)
 
-    writer = getattr(df, f"to_{file_format}")
-
-    if file_format == "hdf":
-        writer(path, key="batch")
-    else:
-        writer(path)
+    save_dataframe_unsafe(df)
 
     return df
 

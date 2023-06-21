@@ -21,7 +21,8 @@ from ..batch_utils import (
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
     get_parent_raw_data_path,
-    load_batch
+    load_batch,
+    save_dataframe_unsafe
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
@@ -137,7 +138,7 @@ class CaimanDataFrameExtensions:
         """
         path: Path = self._df.paths.get_batch_path()
 
-        disk_df = load_batch(path)
+        disk_df = load_batch(path, file_format=self._df.paths.get_file_format())
 
         # check that max_index_diff is not exceeded
         if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
@@ -155,15 +156,13 @@ class CaimanDataFrameExtensions:
 
         shutil.copyfile(path, bak)
 
-        file_format = self._df.paths.get_file_format()
-        writer = getattr(self._df, f"to_{file_format}")
-
         try:
-            writer(path)
-            os.remove(bak)
-        except:
+            save_dataframe_unsafe(self._df)
+        except Exception:
             shutil.copyfile(bak, path)
             raise IOError(f"Could not save dataframe to disk.\n{traceback.format_exc()}")
+        else:
+            os.remove(bak)
 
     def reload_from_disk(self) -> pd.DataFrame:
         """
@@ -180,7 +179,10 @@ class CaimanDataFrameExtensions:
         pd.DataFrame
 
         """
-        return load_batch(self._df.paths.get_batch_path())
+        return load_batch(
+            self._df.paths.get_batch_path(),
+            file_format=self._df.paths.get_file_format()
+        )
 
     @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):

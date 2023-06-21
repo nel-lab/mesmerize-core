@@ -56,7 +56,7 @@ def validate_path(path: Union[str, Path]):
             "Paths must only contain alphanumeric characters, "
             "hyphens ( - ), underscores ( _ ) or periods ( . )"
         )
-    return path
+    return Path(path)
 
 
 def make_runfile(

@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
-    from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core import set_parent_raw_data_path, load_batch, CaimanDataFrameExtensions
     from mesmerize_core.utils import IS_WINDOWS
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
@@ -23,7 +23,11 @@ def run_algo(batch_path, uuid, data_path: str = None):
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
-    df = load_batch(batch_path)
+    batch_path = Path(batch_path)
+
+    file_format = batch_path.suffix[1:]
+    df = load_batch(batch_path, file_format=file_format)
+
     item = df[df["uuid"] == uuid].squeeze()
 
     input_movie_path = item["input_movie_path"]
@@ -127,7 +131,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
     df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
     # save dataframe to disc
-    df.to_pickle(batch_path)
+    df.caiman.save_to_disk(max_index_diff=1)
 
 
 @click.command()
