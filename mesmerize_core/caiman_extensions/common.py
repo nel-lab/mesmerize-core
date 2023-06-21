@@ -9,6 +9,7 @@ from itertools import chain
 from collections import Counter
 from datetime import datetime
 import time
+import traceback
 
 import numpy as np
 import pandas as pd
@@ -128,7 +129,7 @@ class CaimanDataFrameExtensions:
         self._df.loc[self._df.index.size] = s
 
         # Save DataFrame to disk
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        self.save_to_disk(max_index_diff=1)
 
     def save_to_disk(self, max_index_diff: int = 0):
         """
@@ -153,12 +154,16 @@ class CaimanDataFrameExtensions:
         bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
         shutil.copyfile(path, bak)
+
+        file_format = self._df.paths.get_file_format()
+        writer = getattr(self._df, f"to_{file_format}")
+
         try:
-            self._df.to_pickle(path)
+            writer(path)
             os.remove(bak)
         except:
             shutil.copyfile(bak, path)
-            raise IOError(f"Could not save dataframe to disk.")
+            raise IOError(f"Could not save dataframe to disk.\n{traceback.format_exc()}")
 
     def reload_from_disk(self) -> pd.DataFrame:
         """
@@ -233,7 +238,7 @@ class CaimanDataFrameExtensions:
         # Reset indices so there are no 'jumps'
         self._df.reset_index(drop=True, inplace=True)
         # Save new df to disc
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        self.save_to_disk(max_index_diff=1)
 
     @warning_experimental("This feature is new and the might improve in the future")
     def get_params_diffs(self, algo: str, item_name: str) -> pd.Series:

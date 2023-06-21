@@ -57,8 +57,12 @@ class _BasePathExtensions:
     def __init__(self, data: Union[pd.DataFrame, pd.Series]):
         self._data = data
 
-    def set_batch_path(self, path: Union[str, Path]):
-        self._data.attrs["batch_path"] = Path(path)
+    def set_batch_path(self, path: Union[str, Path], file_format: str):
+        self._data.attrs["batch_path"] = str(path)
+        self._data.attrs["file_format"] = file_format
+
+    def get_file_format(self):
+        return self._data.attrs["file_format"]
 
     def get_batch_path(self) -> Path:
         """
@@ -71,7 +75,7 @@ class _BasePathExtensions:
         """
         if "batch_path" in self._data.attrs.keys():
             if self._data.attrs["batch_path"] is not None:
-                return self._data.attrs["batch_path"]
+                return Path(self._data.attrs["batch_path"])
         else:
             raise ValueError("Batch path is not set")
 
@@ -186,7 +190,7 @@ def load_batch(path: Union[str, Path], file_format: str = "pickle") -> pd.DataFr
 
     df = reader(Path(path))
 
-    df.paths.set_batch_path(path)
+    df.paths.set_batch_path(path, file_format=file_format)
 
     # check to see if added and ran timestamp are in df
     if all(item in df.columns for item in ["added_time", "ran_time", "algo_duration"]):
@@ -253,7 +257,7 @@ def create_batch(
         add_columns = list()
 
     df = pd.DataFrame(columns=DATAFRAME_COLUMNS + add_columns)
-    df.paths.set_batch_path(path)
+    df.paths.set_batch_path(path, file_format=file_format)
 
     writer = getattr(df, f"to_{file_format}")
 
