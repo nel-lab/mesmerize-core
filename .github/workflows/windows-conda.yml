@@ -33,7 +33,7 @@ jobs:
       - shell: bash -l {0}
         run: |
           conda activate mescore
-          mamba install pytest
+          mamba install pytest pytables
           caimanmanager.py install
           pip install .
           DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
