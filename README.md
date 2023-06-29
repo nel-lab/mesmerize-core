@@ -74,10 +74,10 @@ The instructions below will install `mesmerize-core`.
 For visualization install `fastplotlib` into the same environment as `mesmerize-core`:
 
 ```bash
-pip install fastplotlib
+pip install "fastplotlib[notebook]"
 ```
 
-You may need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#install-vulkan-drivers
+You may need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#graphics-drivers
 
 ### Conda
 
@@ -136,10 +136,10 @@ import mesmerize_core
 mesmerize_core.__version__
 ```
 
-6. Install `fastplotlib` for visualization into the same environment (run this in the anaconda prompt, not ipython). You may also need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#install-vulkan-drivers
+6. Install `fastplotlib` for visualization into the same environment (run this in the anaconda prompt, not ipython). You may also need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#graphics-drivers
 
 ```bash
-pip install fastplotlib
+pip install "fastplotlib[notebook]"
 ```
 
 ### python virtual environments
@@ -168,7 +168,7 @@ caimanmanager.py install
 pip install mesmerize-core
 
 # install fastplotlib
-pip install fastplotlib
+pip install "fastplotlib[notebook]"
 
 # you should now be able to import mesmerize_core
 # start ipython
