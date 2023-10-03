@@ -142,6 +142,12 @@ mesmerize_core.__version__
 pip install "fastplotlib[notebook]"
 ```
 
+**Optional: install `simplejpeg` for much faster notebook visualization, you will need C compilers and [libjpeg-turbo](https://libjpeg-turbo.org/) for this to work:**
+
+```bash
+pip install simplejpeg
+```
+
 ### python virtual environments
 
 ```bash
