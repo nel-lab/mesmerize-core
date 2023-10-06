@@ -19,7 +19,7 @@ class PynappleExtension:
 
         framerate = cnmf_obj.params.data["fr"]
 
-        n_frames = cnmf_obj.estimates.C[1]
+        n_frames = cnmf_obj.estimates.C.shape[1]
 
         duration_seconds = n_frames / framerate
 
@@ -31,7 +31,7 @@ class PynappleExtension:
             t=timestamps,
             d=cnmf_obj.estimates.C.T,
             time_units="s",
-            columns=list(map(range(n_components)))
+            columns=list(map(str, range(n_components)))
         )
 
         return tsdframe
