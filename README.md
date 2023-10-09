@@ -116,15 +116,13 @@ mamba activate mescore
 
 4. Install `caimanmanager`
 
+If you are using an older version of `caiman` < 1.9.16, then please see [Step 4 in the old README](https://github.com/nel-lab/mesmerize-core/blob/09a81f856a6728cc3aff62f967d2dce308214c63/README.md#conda).
+
 ```bash
 caimanmanager install
 ```
 
-
-```bash
-```
-
-If you continue to have issues with this step, please post an issue on the caiman github or gitter: https://github.com/flatironinstitute/CaImAn/issues 
+If you have issues with this step, please post an issue on the caiman github or gitter: https://github.com/flatironinstitute/CaImAn/issues 
 
 5. Run `ipython` and verify that `mesmerize_core` is installed:
 
