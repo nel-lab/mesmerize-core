@@ -105,9 +105,7 @@ def make_runfile(
 
             if "CONDA_PREFIX" in os.environ.keys():
                 f.write(
-                    f'export CONDA_PREFIX={os.environ["CONDA_PREFIX"]}\n'
-                    f'export CONDA_PYTHON_EXE={os.environ["CONDA_PYTHON_EXE"]}\n'
-                    f'export CONDA_PREFIX_1={os.environ["CONDA_PREFIX_1"]}\n'
+                    f'conda activate {os.environ["CONDA_PREFIX"]}\n'
                 )
 
             elif "VIRTUAL_ENV" in os.environ.keys():
@@ -117,8 +115,8 @@ def make_runfile(
                     f'export LD_LIBRARY_PATH={os.environ["LD_LIBRARY_PATH"]}\n'
                 )
 
-            if "PYTHONPATH" in os.environ.keys():
-                f.write(f'export PYTHONPATH={os.environ["PYTHONPATH"]}\n')
+                if "PYTHONPATH" in os.environ.keys():
+                    f.write(f'export PYTHONPATH={os.environ["PYTHONPATH"]}\n')
 
             # for k, v in os.environ.items():  # copy the current environment
             #     if '\n' in v:
