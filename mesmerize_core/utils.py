@@ -105,7 +105,7 @@ def make_runfile(
 
             if "CONDA_PREFIX" in os.environ.keys():
                 f.write(
-                    f'conda activate {os.environ["CONDA_PREFIX"]}\n'
+                    f'{os.environ["CONDA_EXE"] activate {os.environ["CONDA_PREFIX"]}\n'
                 )
 
             elif "VIRTUAL_ENV" in os.environ.keys():
