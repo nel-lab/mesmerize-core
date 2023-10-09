@@ -122,7 +122,6 @@ caimanmanager install
 
 
 ```bash
-python C:\Users\your-username\anaconda3\envs\your-env-name\bin\caimanmanager install
 ```
 
 If you continue to have issues with this step, please post an issue on the caiman github or gitter: https://github.com/flatironinstitute/CaImAn/issues 
