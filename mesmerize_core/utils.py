@@ -130,7 +130,7 @@ def make_runfile(
             if "CONDA_PREFIX" in os.environ.keys():
                 # add command to run the python script in the conda environment loaded
                 # at the time that this shell script was generated
-                f.write(f'conda run -n {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}')
+                f.write(f'conda run -p {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}')
             else:
                 f.write(f"python {module_path} {args_str}")  # call the script to run
 
