@@ -110,8 +110,8 @@ def make_runfile(
                     f'export LD_LIBRARY_PATH={os.environ["LD_LIBRARY_PATH"]}\n'
                 )
 
-                if "PYTHONPATH" in os.environ.keys():
-                    f.write(f'export PYTHONPATH={os.environ["PYTHONPATH"]}\n')
+            if "PYTHONPATH" in os.environ.keys():
+                f.write(f'export PYTHONPATH={os.environ["PYTHONPATH"]}\n')
 
             # for k, v in os.environ.items():  # copy the current environment
             #     if '\n' in v:
