@@ -103,13 +103,7 @@ def make_runfile(
 
             f.write(f"#!/bin/bash\n")
 
-            if "CONDA_PREFIX" in os.environ.keys():
-                f.write(
-                    f'conda init\n'
-                    f'conda activate {os.environ["CONDA_PREFIX"]}\n'
-                )
-
-            elif "VIRTUAL_ENV" in os.environ.keys():
+            if "VIRTUAL_ENV" in os.environ.keys():
                 f.write(
                     f'export PATH={os.environ["PATH"]}\n'
                     f'export VIRTUAL_ENV={os.environ["VIRTUAL_ENV"]}\n'
@@ -133,7 +127,10 @@ def make_runfile(
 
             f.write(f"export OPENBLAS_NUM_THREADS=1\n" f"export MKL_NUM_THREADS=1\n")
 
-            f.write(f"python {module_path} {args_str}")  # call the script to run
+            if "CONDA_PREFIX" in os.environ.keys():
+                f.write(f'conda run -n {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}')
+            else:
+                f.write(f"python {module_path} {args_str}")  # call the script to run
 
     else:
         with open(sh_file, "w") as f:
