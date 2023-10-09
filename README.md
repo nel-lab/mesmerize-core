@@ -120,7 +120,6 @@ mamba activate mescore
 caimanmanager install
 ```
 
-The `caimanmanager` step may cause issues, especially on Windows. Assuming your anaconda is in your user directory a workaround is to call it using the full path:
 
 ```bash
 python C:\Users\your-username\anaconda3\envs\your-env-name\bin\caimanmanager install
