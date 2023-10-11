@@ -116,17 +116,13 @@ mamba activate mescore
 
 4. Install `caimanmanager`
 
-```bash
-caimanmanager.py install
-```
-
-The `caimanmanager.py` step may cause issues, especially on Windows. Assuming your anaconda is in your user directory a workaround is to call it using the full path:
+If you are using an older version of `caiman` < 1.9.16, then please see [Step 4 in the old README](https://github.com/nel-lab/mesmerize-core/blob/09a81f856a6728cc3aff62f967d2dce308214c63/README.md#conda).
 
 ```bash
-python C:\Users\your-username\anaconda3\envs\your-env-name\bin\caimanmanager.py install
+caimanmanager install
 ```
 
-If you continue to have issues with this step, please post an issue on the caiman github or gitter: https://github.com/flatironinstitute/CaImAn/issues 
+If you have issues with this step, please post an issue on the caiman github or gitter: https://github.com/flatironinstitute/CaImAn/issues 
 
 5. Run `ipython` and verify that `mesmerize_core` is installed:
 
@@ -168,7 +164,7 @@ git clone https://github.com/flatironinstitute/CaImAn.git
 cd CaImAn
 pip install -r requirements.txt
 pip install .
-caimanmanager.py install
+caimanmanager install
 
 # install mesmerize-core
 pip install mesmerize-core
@@ -212,7 +208,7 @@ cd mesmerize-core
 mamba env update -n mesmerize-core --file environment.yml
 
 # install caimanmanager
-caimanmanager.py install
+caimanmanager install
 
 # install mesmerize-core
 pip install .
@@ -242,7 +238,7 @@ git clone https://github.com/flatironinstitute/CaImAn.git
 cd CaImAn
 pip install -r requirements.txt
 pip install .
-caimanmanager.py install
+caimanmanager install
 
 # clone this repo and install mesmerize-core
 cd ..
