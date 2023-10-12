@@ -246,7 +246,7 @@ class CaimanDataFrameExtensions:
         self._df.to_pickle(self._df.paths.get_batch_path())
 
     @warning_experimental("This feature is new and the might improve in the future")
-    def get_params_diffs(self, algo: str, item_name: str) -> pd.Series:
+    def get_params_diffs(self, algo: str, item_name: str) -> pd.DataFrame:
         """
         Get the parameters that differ for a given `item_name` run with a given `algo`
 
@@ -260,8 +260,8 @@ class CaimanDataFrameExtensions:
 
         Returns
         -------
-        pd.Series
-            pandas Series (rows) with dicts containing only the
+        pd.DataFrame
+            pandas DataFrame) with dicts containing only the
             parameters that vary between batch items for the given
             `item_name`. The returned index corresponds to the
             index of the original DataFrame
@@ -286,9 +286,16 @@ class CaimanDataFrameExtensions:
         counts = Counter([av[0] for av in all_variants])
         variants_exist = [param[0] for param in counts.items() if param[1] > 1]
 
-        diffs = sub_df["params"].apply(lambda p: {k: p["main"][k] for k in variants_exist})
+        # gives a series where each item is a dict that has the unique params that correspond to a row
+        # the indices of this series correspond to the index of the row in the parent dataframe
+        diffs: pd.Series = sub_df["params"].apply(
+            lambda p: {k: p["main"][k] for k in variants_exist if k in p["main"].keys()}
+        )
 
-        return diffs
+        # return as a nicely formatted dataframe
+        diffs_df = pd.DataFrame.from_dict(diffs.tolist(), dtype=object).set_index(diffs.index)
+
+        return diffs_df
 
     @warning_experimental("This feature will change in the future and directly return the "
                           " a DataFrame of children (rows, ie. child batch items row) "
