@@ -245,7 +245,6 @@ class CaimanDataFrameExtensions:
         # Save new df to disc
         self._df.to_pickle(self._df.paths.get_batch_path())
 
-    @warning_experimental("This feature is new and the might improve in the future")
     def get_params_diffs(self, algo: str, item_name: str) -> pd.DataFrame:
         """
         Get the parameters that differ for a given `item_name` run with a given `algo`
