@@ -315,7 +315,11 @@ class CNMFExtensions:
     @_component_indices_parser
     @cnmf_cache.use_cache
     def get_temporal(
-        self, component_indices: Union[np.ndarray, str] = None, add_background: bool = False, return_copy=True
+        self,
+        component_indices: Union[np.ndarray, str] = None,
+        add_background: bool = False,
+        add_residuals: bool = False,
+        return_copy=True
     ) -> np.ndarray:
         """
         Get the temporal components for this CNMF item, basically ``CNMF.estimates.C``
@@ -329,8 +333,11 @@ class CNMFExtensions:
             | if ``"bad"`` uses bad components, i.e. ``Estimates.idx_components_bad``
             | if ``np.ndarray``, uses the indices in the provided array
 
-        add_background: bool
-            if ``True``, add the temporal background, ``cnmf.estimates.C + cnmf.estimates.f``
+        add_background: bool, default False
+            if ``True``, add the temporal background, adds ``cnmf.estimates.f``
+
+        add_residuals: bool, default False
+            if ``True``, add residuals, i.e. ``cnmf.estimates.YrA``
 
         return_copy: bool
             | if ``True`` returns a copy of the cached value in memory.
@@ -369,10 +376,14 @@ class CNMFExtensions:
         C = cnmf_obj.estimates.C[component_indices]
         f = cnmf_obj.estimates.f
 
+        temporal = C
+
         if add_background:
-            return C + f
-        else:
-            return C
+            temporal += f
+        elif add_residuals:
+            temporal += cnmf_obj.estimates.YrA
+
+        return temporal
 
     @validate("cnmf")
     @_component_indices_parser
