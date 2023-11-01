@@ -37,25 +37,25 @@ Video tutorial/virtual workshop from September 2022: https://www.youtube.com/wat
 
 # Visualization
 
-For visualization we strongly recommend [`fastplotlib`](https://github.com/kushalkolar/fastplotlib), a very new but very fast plotting library. Here are some examples of `fastplotlib` visualizations using `mesmerize-core` outputs. You can create these interactive plots within jupyter notebooks, therefore they will also work on cloud computing intrastructure!
+We recommend either [fastplotlib](https://github.com/fastplotlib/fastplotlib) or [mesmerize-viz](https://github.com/kushalkolar/mesmerize-viz) for visualization. Mesmerize-viz gives you ready-to-use viuslizations for motion correction and CNMF - including component exploration, interactive component evaluation using metrics, and manual addition or removal of components. 
 
-### View raw and motion corrected movie side by side:
+Note that `mesmerize-viz` is very new and we are always happy to help (same for `mesmerize-core` and `fastplotlib`!). Installation instructions for `mesmerize-viz` are at the repo, it has very few dependencies so installation should be straight-forward: https://github.com/kushalkolar/mesmerize-viz
 
-![mcorr](https://user-images.githubusercontent.com/9403332/210932452-5ed344dd-9a82-41ee-adc5-a9476e1f03a5.gif)
+You can still find the demo notebooks with pure fastplotlib visualizations here: https://github.com/nel-lab/mesmerize-core/tree/master/with-fastplotlib/notebooks
 
-### Contours from CNMF, good components shown here in cyan and bad components in magenta:
+### Motion correction visualization using mesmerize-viz
 
-![cnmf](https://user-images.githubusercontent.com/9403332/210932670-d797d301-839c-48d9-b11f-3330e076e0e4.gif)
+https://github.com/nel-lab/mesmerize-core/assets/9403332/34413fa4-6041-4418-ab66-ddd7dca03e19
 
-### Input movie, constructed movie `(A * C)`, residuals `(Y - A * C - b * f)`, and reconstructed background `(b * f)`:
+### Explore CNMF variants
 
-![cnmf-rcm](https://user-images.githubusercontent.com/9403332/210932903-b994359b-62d4-49fd-aa6b-cd4855ba873e.gif)
+https://github.com/nel-lab/mesmerize-core/assets/9403332/3453d6fb-0dae-4520-b2c2-8156d8ce7b58
 
-### Interactive Component evaluation after CNMF:
+### CNMF Componment Evaluation
 
-https://user-images.githubusercontent.com/9403332/191207883-2393664d-b5e1-49a5-84d1-8ed7eadcf7a0.mp4
+https://github.com/nel-lab/mesmerize-core/assets/9403332/b6e8f6df-6bd4-4167-96eb-38c5095c8770
 
-As mentioned, fastplotlib is meant to be a fast plotting library which can handle **millions** of points. You can create highly complex and interactive plots to combine outputs from the CaImAn algorithms with other experimentally relevant analysis, such as behavioral data.
+If you use fastplotlib directly you can create highly complex and interactive plots to combine outputs from the CaImAn algorithms with other experimentally relevant analysis, such as behavioral data.
 
 ![epic](https://user-images.githubusercontent.com/9403332/210304473-f36f2aaf-319e-435b-bcc8-0e8d3e1ef282.gif)
 
