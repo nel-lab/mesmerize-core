@@ -381,7 +381,7 @@ class CNMFExtensions:
         if add_background:
             temporal += f
         elif add_residuals:
-            temporal += cnmf_obj.estimates.YrA
+            temporal += cnmf_obj.estimates.YrA[component_indices]
 
         return temporal
 
