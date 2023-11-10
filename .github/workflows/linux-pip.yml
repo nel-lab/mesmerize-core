@@ -37,7 +37,7 @@ jobs:
         cd CaImAn
         pip install -r requirements.txt
         pip install .
-        caimanmanager.py install
+        caimanmanager install
 
     - name: Install mesmerize-core
       run: |
