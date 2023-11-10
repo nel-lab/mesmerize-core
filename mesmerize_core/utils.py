@@ -125,12 +125,15 @@ def make_runfile(
                     f'export MESMERIZE_N_PROCESSES={os.environ["MESMERIZE_N_PROCESSES"]}\n'
                 )
 
-            f.write(f"export OPENBLAS_NUM_THREADS=1\n" f"export MKL_NUM_THREADS=1\n")
+            f.write(
+                f"export OPENBLAS_NUM_THREADS=1\n"
+                f"export MKL_NUM_THREADS=1\n"
+            )
 
             if "CONDA_PREFIX" in os.environ.keys():
-                # add command to run the python script in the conda environment loaded
-                # at the time that this shell script was generated
-                f.write(f'conda run -p {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}')
+                # add command to run the python script in the conda environment
+                # that was active at the time that this shell script was generated
+                f.write(f'{os.environ["CONDA_EXE"]} run -p {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}')
             else:
                 f.write(f"python {module_path} {args_str}")  # call the script to run
 
@@ -152,6 +155,8 @@ def make_runfile(
 
     st = os.stat(sh_file)
     os.chmod(sh_file, st.st_mode | S_IEXEC)
+
+    print(sh_file)
 
     return sh_file
 
