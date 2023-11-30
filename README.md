@@ -39,9 +39,9 @@ Video tutorial/virtual workshop from September 2022: https://www.youtube.com/wat
 
 We recommend either [fastplotlib](https://github.com/fastplotlib/fastplotlib) or [mesmerize-viz](https://github.com/kushalkolar/mesmerize-viz) for visualization. Mesmerize-viz gives you ready-to-use viuslizations for motion correction and CNMF - including component exploration, interactive component evaluation using metrics, and manual addition or removal of components. 
 
-Note that `mesmerize-viz` is very new and we are always happy to help (same for `mesmerize-core` and `fastplotlib`!). Installation instructions for `mesmerize-viz` are at the repo, it has very few dependencies so installation should be straight-forward: https://github.com/kushalkolar/mesmerize-viz
+Note that `mesmerize-viz` is very new and we are always happy to help (same for `mesmerize-core` and `fastplotlib`!). Installation instructions for `mesmerize-viz` are at the repo, it has very few dependencies so installation should be straightforward: https://github.com/kushalkolar/mesmerize-viz
 
-You can still find the demo notebooks with pure fastplotlib visualizations here: https://github.com/nel-lab/mesmerize-core/tree/master/with-fastplotlib/notebooks
+:exclamation: **Harware requirements** The large CNMF visualizations with contours etc. usually require either a dedicated GPU or integrated GPU with access to at least 1GB of VRAM. 
 
 ### Motion correction visualization using mesmerize-viz
 
