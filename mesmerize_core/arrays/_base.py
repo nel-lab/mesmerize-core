@@ -71,7 +71,7 @@ class LazyArray(ABC):
         int
             number of bytes for the array if it were fully computed
         """
-        return np.prod(self.shape + (np.dtype(self.dtype).itemsize,))
+        return np.prod(self.shape + (np.dtype(self.dtype).itemsize,), dtype=np.int64)
 
     @property
     def nbytes_gb(self) -> float:
