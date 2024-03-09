@@ -7,8 +7,6 @@
 [![Documentation Status](https://readthedocs.org/projects/mesmerize-core/badge/?version=latest)](https://mesmerize-core.readthedocs.io/en/latest/?badge=latest)
 [![Conda Version](https://img.shields.io/conda/vn/conda-forge/mesmerize-core.svg)](https://anaconda.org/conda-forge/mesmerize-core)
 
-[![Gitter](https://badges.gitter.im/mesmerize_discussion/mesmerize-viz.svg)](https://gitter.im/mesmerize_discussion/mesmerize-viz?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-
 ### Mesmerize core backend
 [**Installation**](https://github.com/nel-lab/mesmerize-core#installation) | [**Examples**](https://github.com/nel-lab/mesmerize-core#examples)
 
@@ -25,9 +23,9 @@ We recommend starting out with the demo notebook ```notebooks/mcorr_cnmf.ipynb``
 Documentation is available at: https://mesmerize-core.readthedocs.io/ \
 User guide: https://mesmerize-core.readthedocs.io/en/latest/user_guide.html
 
-Please use the GitHub issue tracker for any issues. For smaller questions or discussion use gitter.
+## Getting Help
 
-gitter: https://gitter.im/mesmerize_discussion/mesmerize-viz
+Please use the GitHub issue tracker for any issues, and discussions for discussions. We no longer use gitter. If you are in the Slack, we usually only respond on slack around workshops. GitHub is for long term support.
 
 Video tutorial/virtual workshop from September 2022: https://www.youtube.com/watch?v=0AGiAaslJdk
 
