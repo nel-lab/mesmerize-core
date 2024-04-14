@@ -27,7 +27,7 @@ User guide: https://mesmerize-core.readthedocs.io/en/latest/user_guide.html
 
 Please use the GitHub issue tracker for any issues, and discussions for discussions. We no longer use gitter. If you are in the Slack, we usually only respond on slack around workshops. GitHub is for long term support.
 
-Video tutorial/virtual workshop from September 2022: https://www.youtube.com/watch?v=0AGiAaslJdk
+Video tutorial/virtual workshop from September 2022 (quite outdated, if you have question post on github): https://www.youtube.com/watch?v=0AGiAaslJdk
 
 # Overview
 
@@ -35,25 +35,17 @@ Video tutorial/virtual workshop from September 2022: https://www.youtube.com/wat
 
 # Visualization
 
-We recommend either [fastplotlib](https://github.com/fastplotlib/fastplotlib) or [mesmerize-viz](https://github.com/kushalkolar/mesmerize-viz) for visualization. Mesmerize-viz gives you ready-to-use viuslizations for motion correction and CNMF - including component exploration, interactive component evaluation using metrics, and manual addition or removal of components. 
+Install [mesmerize-viz](https://github.com/kushalkolar/mesmerize-viz) for visualization. Mesmerize-viz gives you ready-to-use viuslizations for motion correction and CNMF - including component exploration, interactive component evaluation using metrics, and manual addition or removal of components. 
 
-Note that `mesmerize-viz` is very new and we are always happy to help (same for `mesmerize-core` and `fastplotlib`!). Installation instructions for `mesmerize-viz` are at the repo, it has very few dependencies so installation should be straightforward: https://github.com/kushalkolar/mesmerize-viz
+```
+pip install mesmerize-viz
+```
 
 :exclamation: **Harware requirements** The large CNMF visualizations with contours etc. usually require either a dedicated GPU or integrated GPU with access to at least 1GB of VRAM. 
 
-### Motion correction visualization using mesmerize-viz
+You may need to install drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#graphics-drivers
 
-https://github.com/nel-lab/mesmerize-core/assets/9403332/34413fa4-6041-4418-ab66-ddd7dca03e19
-
-### Explore CNMF variants
-
-https://github.com/nel-lab/mesmerize-core/assets/9403332/3453d6fb-0dae-4520-b2c2-8156d8ce7b58
-
-### CNMF Componment Evaluation
-
-https://github.com/nel-lab/mesmerize-core/assets/9403332/b6e8f6df-6bd4-4167-96eb-38c5095c8770
-
-If you use fastplotlib directly you can create highly complex and interactive plots to combine outputs from the CaImAn algorithms with other experimentally relevant analysis, such as behavioral data.
+If you use `fastplotlib` directly you can create highly complex and interactive plots to combine outputs from the CaImAn algorithms with other experimentally relevant analysis, such as behavioral data.
 
 ![epic](https://user-images.githubusercontent.com/9403332/210304473-f36f2aaf-319e-435b-bcc8-0e8d3e1ef282.gif)
 
@@ -61,27 +53,17 @@ If you use fastplotlib directly you can create highly complex and interactive pl
 
 **See the `notebooks` directory for detailed examples.**
 
-Note that [`fastplotlib`](https://github.com/kushalkolar/fastplotlib) is required for the visualizations.
-
 # Installation
 
 ## For users
 
 The instructions below will install `mesmerize-core`.
 
-For visualization install `fastplotlib` into the same environment as `mesmerize-core`:
-
-```bash
-pip install "fastplotlib[notebook]"
-```
-
-You may need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#graphics-drivers
-
 ### Conda
 
-`mesmerize-core` is availabe as a conda package which also gives you CaImAn! These instructions will give you a working `mesmerize-core` along with `caiman` in the same environment.
+`mesmerize-core` is available as a conda package which also gives you CaImAn. These instructions will give you a working `mesmerize-core` along with `caiman` in the same environment.
 
-**Important note: Sometimes conda or mamba will get stuck at a step, such as creating an environment or installing a package. I found that pressing `Enter` on your keyboard can sometimes help it continue when it pauses.**
+**Important note: Sometimes conda or mamba will get stuck at a step, such as creating an environment or installing a package. Pressing `Enter` on your keyboard can sometimes help it continue when it pauses.**
 
 1. Install `mamba` into your base environment. Skip this step if you have `mamba`. This step may take 10 minutes and display several messages like "Solving environment: failed with..." but it should eventually install `mamba`.
 
@@ -130,13 +112,13 @@ import mesmerize_core
 mesmerize_core.__version__
 ```
 
-6. Install `fastplotlib` for visualization into the same environment (run this in the anaconda prompt, not ipython). You may also need to install Vulkan drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#graphics-drivers
+6. Install `mesmerize-viz` for visualization into the same environment (run this in the anaconda prompt, not ipython). You may also need to install graphics drivers depending on your system, see the `fastplotlib` repo for more information: https://github.com/kushalkolar/fastplotlib#graphics-drivers
 
 ```bash
-pip install "fastplotlib[notebook]"
+pip install mesmerize-viz
 ```
 
-**Optional: install `simplejpeg` for much faster notebook visualization, you will need C compilers and [libjpeg-turbo](https://libjpeg-turbo.org/) for this to work:**
+**Strongly recommended: install `simplejpeg` for much faster notebook visualization, you will need C compilers and [libjpeg-turbo](https://libjpeg-turbo.org/) for this to work:**
 
 ```bash
 pip install simplejpeg
@@ -167,8 +149,11 @@ caimanmanager install
 # install mesmerize-core
 pip install mesmerize-core
 
-# install fastplotlib
-pip install "fastplotlib[notebook]"
+# install mesmerize-viz
+pip install mesmerize-viz
+
+# install simplejpeg
+pip install simplejpeg
 
 # you should now be able to import mesmerize_core
 # start ipython
