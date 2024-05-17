@@ -103,14 +103,7 @@ def make_runfile(
 
             f.write(f"#!/bin/bash\n")
 
-            if "CONDA_PREFIX" in os.environ.keys():
-                f.write(
-                    f'export CONDA_PREFIX={os.environ["CONDA_PREFIX"]}\n'
-                    f'export CONDA_PYTHON_EXE={os.environ["CONDA_PYTHON_EXE"]}\n'
-                    f'export CONDA_PREFIX_1={os.environ["CONDA_PREFIX_1"]}\n'
-                )
-
-            elif "VIRTUAL_ENV" in os.environ.keys():
+            if "VIRTUAL_ENV" in os.environ.keys():
                 f.write(
                     f'export PATH={os.environ["PATH"]}\n'
                     f'export VIRTUAL_ENV={os.environ["VIRTUAL_ENV"]}\n'
@@ -132,9 +125,17 @@ def make_runfile(
                     f'export MESMERIZE_N_PROCESSES={os.environ["MESMERIZE_N_PROCESSES"]}\n'
                 )
 
-            f.write(f"export OPENBLAS_NUM_THREADS=1\n" f"export MKL_NUM_THREADS=1\n")
+            f.write(
+                f"export OPENBLAS_NUM_THREADS=1\n"
+                f"export MKL_NUM_THREADS=1\n"
+            )
 
-            f.write(f"python {module_path} {args_str}")  # call the script to run
+            if "CONDA_PREFIX" in os.environ.keys():
+                # add command to run the python script in the conda environment
+                # that was active at the time that this shell script was generated
+                f.write(f'{os.environ["CONDA_EXE"]} run -p {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}')
+            else:
+                f.write(f"python {module_path} {args_str}")  # call the script to run
 
     else:
         with open(sh_file, "w") as f:
@@ -154,6 +155,8 @@ def make_runfile(
 
     st = os.stat(sh_file)
     os.chmod(sh_file, st.st_mode | S_IEXEC)
+
+    print(sh_file)
 
     return sh_file
 
