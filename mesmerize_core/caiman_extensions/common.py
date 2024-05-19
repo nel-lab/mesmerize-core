@@ -463,6 +463,7 @@ class CaimanSeriesExtensions:
         runfile_path: str,
         algo: str,
         uuid,
+        log_dir: Optional[str] = None,
         **kwargs
     ):
         # raise NotImplementedError("Not yet implemented, just a placeholder")
@@ -473,8 +474,14 @@ class CaimanSeriesExtensions:
         else:
             n_procs = psutil.cpu_count() - 1
 
+        if log_dir is None:
+            log_dir_path = Path(runfile_path).parent
+        else:
+            log_dir_path = Path(log_dir)
+
         submission_command = (
-            f'sbatch --job-name={algo}-{str(uuid)[:8]} --ntasks=1 --cpus-per-task={n_procs} --wrap="{runfile_path}"'
+            f'sbatch --job-name={algo}-{str(uuid)[:8]} --ntasks=1 --cpus-per-task={n_procs} ' +
+            f'--output={log_dir_path / "slurm-%x.out"} --wrap="{runfile_path}"'
         )
 
         return Popen(submission_command.split(" "))
