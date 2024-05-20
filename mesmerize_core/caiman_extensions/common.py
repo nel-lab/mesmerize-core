@@ -265,31 +265,50 @@ class CaimanDataFrameExtensions:
             `item_name`. The returned index corresponds to the
             index of the original DataFrame
 
-        """
+        """            
+        def get_all_params(params_dict: dict):
+            params = []
+            for key1, val1 in params_dict["main"].items():
+                if isinstance(val1, dict):
+                    for key2, val2 in val1.items():
+                        params.append((f'{key1}.{key2}', val2))
+                else:
+                    params.append((key1, val1))
+            return tuple(params)
+        
+        def get_specific_params(params_dict: dict, param_names: list[str]):
+            params = {}
+            for name in param_names:
+                if '.' in name:
+                    key1, key2 = name.split('.')
+                    if key1 in params_dict["main"] and key2 in params_dict["main"][key1]:
+                        params[name] = params_dict["main"][key1][key2]
+                elif name in params_dict["main"]:
+                    params[name] = params_dict["main"][name]
+            return params                    
+
         sub_df = self._df[self._df["item_name"] == item_name]
         sub_df = sub_df[sub_df["algo"] == algo]
 
         if sub_df.index.size == 0:
             raise NameError(f"The given `item_name`: {item_name}, does not exist in the DataFrame")
 
-        all_variants = set(
-            tuple(
-                chain.from_iterable(
-                    [
-                        tuple(p["main"].items()) for p in sub_df.params.values
-                    ]
-                )
-            )
-        )
-
-        counts = Counter([av[0] for av in all_variants])
-        variants_exist = [param[0] for param in counts.items() if param[1] > 1]
+        # build list of params that differ between different parameter sets
+        first_values = {}
+        variants_exist = []
+        for p in sub_df.params.values:
+            for key, val in get_all_params(p):
+                if key not in first_values:
+                    first_values[key] = val
+                elif not np.isscalar(first_values[key]) or not np.isscalar(val):
+                    if not np.array_equal(first_values[key], val):
+                        variants_exist.append(key)
+                elif first_values[key] != val:
+                    variants_exist.append(key)
 
         # gives a series where each item is a dict that has the unique params that correspond to a row
         # the indices of this series correspond to the index of the row in the parent dataframe
-        diffs: pd.Series = sub_df["params"].apply(
-            lambda p: {k: p["main"][k] for k in variants_exist if k in p["main"].keys()}
-        )
+        diffs: pd.Series = sub_df["params"].apply(lambda p: get_specific_params(p, variants_exist))
 
         # return as a nicely formatted dataframe
         diffs_df = pd.DataFrame.from_dict(diffs.tolist(), dtype=object).set_index(diffs.index)
