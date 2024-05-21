@@ -10,6 +10,7 @@ from shutil import move as move_file
 import os
 import time
 from datetime import datetime
+from filelock import FileLock, Timeout
 
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
@@ -121,13 +122,29 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
     cm.stop_server(dview=dview)
 
-    # Add dictionary to output column of series
-    df.loc[df["uuid"] == uuid, "outputs"] = [d]
-    # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
-    df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
-    # save dataframe to disc
-    df.to_pickle(batch_path)
+    # lock batch file while writing back results
+    batch_lock = FileLock(batch_path + '.lock', timeout=30)
+    try:
+        with batch_lock:
+            df = load_batch(batch_path)
+
+            # Add dictionary to output column of series
+            df.loc[df["uuid"] == uuid, "outputs"] = [d]
+            # Add ran timestamp to ran_time column of series
+            df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
+            df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
+            # save dataframe to disc
+            df.to_pickle(batch_path)
+    except Timeout:
+        # Print a message with details in lieu of writing to the batch file
+        msg = f"Batch file could not be written to within {batch_lock.timeout} seconds."
+        if d["success"]:
+            msg += f"\nRun succeeded; results are in {output_dir}."
+        else:
+            msg += f"Run failed. Traceback:\n"
+            msg += d["traceback"]
+
+        raise RuntimeError(msg)
 
 
 @click.command()

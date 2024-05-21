@@ -8,3 +8,4 @@ dependencies:
   - tqdm
   - psutil
   - pydata-sphinx-theme < 0.10.0
+  - filelock

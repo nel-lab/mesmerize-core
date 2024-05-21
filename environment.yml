@@ -8,3 +8,4 @@ dependencies:
   - jupyterlab
   - tqdm
   - psutil
+  - filelock
