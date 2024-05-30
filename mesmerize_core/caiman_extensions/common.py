@@ -461,6 +461,7 @@ class CaimanSeriesExtensions:
     def _run_slurm(
         self,
         runfile_path: str,
+        wait: bool,
         log_dir: Optional[Union[str, Path]] = None,
         partition: Optional[Union[str, list[str]]] = None,
         **kwargs
@@ -484,15 +485,20 @@ class CaimanSeriesExtensions:
         else:
             log_dir_path = Path(log_dir)
 
+        # --wait means that the lifetme of the created process corresponds to the lifetime of the job
         submission_opts = (f'--job-name={self._series["algo"]}-{str(self._series["uuid"])[:8]} --ntasks=1 ' +
-            f'--cpus-per-task={n_procs} --output={log_dir_path / "slurm-%x.out"}')
+            f'--cpus-per-task={n_procs} --output={log_dir_path / "slurm-%x.out"} --wait')
         
         if partition is not None:
             if isinstance(partition, str):
                 partition = [partition]
             submission_opts += f' --partition={",".join(partition)}'
 
-        return Popen(['sbatch', *submission_opts.split(" "), runfile_path])
+        self.process = Popen(['sbatch', *submission_opts.split(" "), runfile_path])
+        if wait:
+            self.process.wait()
+        
+        return self.process
 
     @cnmf_cache.invalidate()
     def run(
