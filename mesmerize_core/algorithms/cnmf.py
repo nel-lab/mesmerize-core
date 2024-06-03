@@ -12,7 +12,7 @@ from shutil import move as move_file
 import os
 import time
 from datetime import datetime
-from filelock import FileLock, Timeout
+from filelock import SoftFileLock, Timeout
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -140,7 +140,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     cm.stop_server(dview=dview)
 
     # lock batch file while writing back results
-    batch_lock = FileLock(batch_path + '.lock', timeout=30)
+    batch_lock = SoftFileLock(batch_path + '.lock', timeout=30)
     try:
         with batch_lock:
             df = load_batch(batch_path)
