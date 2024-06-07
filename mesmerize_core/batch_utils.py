@@ -1,9 +1,12 @@
+from datetime import datetime
 import os
 from pathlib import Path
 from typing import Union
 
+from filelock import SoftFileLock, Timeout
 import pandas as pd
 
+from .caiman_extensions.common import OverwriteError
 from .utils import validate_path
 
 CURRENT_BATCH_PATH: Path = None  # only one batch at a time
@@ -232,9 +235,9 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
         os.makedirs(Path(path).parent)
 
     df = pd.DataFrame(columns=DATAFRAME_COLUMNS)
+    df.to_pickle(path)  # save before adding platform-dependent batch path
+     
     df.paths.set_batch_path(path)
-
-    df.to_pickle(path)
 
     return df
 
@@ -245,3 +248,54 @@ def get_full_raw_data_path(path: Union[Path, str]) -> Path:
         return PARENT_DATA_PATH.joinpath(path)
 
     return path
+
+class BatchLock(SoftFileLock):
+    """Locks a batch file for safe writing, returning the dataframe in the 'as' clause"""
+    def __init__(self, batch_path: Union[Path, str], *args, **kwargs):
+        super().__init__(batch_path + ".lock", *args, **kwargs)
+        self.batch_path = batch_path
+    
+    def __enter__(self) -> pd.DataFrame:
+        super().__enter__()   # may throw Timeout
+        return load_batch(self.batch_path)
+
+
+def open_batch_for_safe_writing(batch_path: Union[Path, str], lock_timeout: float = 30) -> BatchLock:
+    """Just a more self-documenting constructor"""
+    return BatchLock(batch_path, timeout=lock_timeout)
+
+
+def save_results_safely(batch_path: Union[Path, str], uuid, results: dict,
+                        runtime: float, lock_timeout: float = 30):
+    """
+    Try to load the given batch and save results to the given item
+    Uses a file lock to ensure that no other process is writing to the same batch using this function,
+    which gives up after lock_timeout seconds (set to -1 to never give up)
+    """
+    try:
+        with open_batch_for_safe_writing(batch_path, lock_timeout=lock_timeout) as df:
+            # Add dictionary to output column of series
+            df.loc[df["uuid"] == uuid, "outputs"] = [results]
+            # Add ran timestamp to ran_time column of series
+            df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
+            df.loc[df["uuid"] == uuid, "algo_duration"] = str(runtime) + " sec"
+           
+            # save dataframe to disk
+            df.caiman.save_to_disk()
+
+    except BaseException as e:
+        # Print a message with details in lieu of writing to the batch file
+        msg = f"Batch file could not be written to"
+        if isinstance(e, Timeout):
+            msg += f" (file locked for {lock_timeout} seconds)"
+        elif isinstance(e, OverwriteError):
+            msg += f" (items would be overwritten, even though file was locked)"
+
+        if results["success"]:
+            output_dir = Path(batch_path).parent.joinpath(str(uuid))
+            msg += f"\nRun succeeded; results are in {output_dir}."
+        else:
+            msg += f"Run failed. Traceback:\n"
+            msg += results["traceback"]
+
+        raise RuntimeError(msg)

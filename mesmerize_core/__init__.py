@@ -3,6 +3,7 @@ from .batch_utils import (
     get_parent_raw_data_path,
     load_batch,
     create_batch,
+    save_results_safely
 )
 from .caiman_extensions import *
 from pathlib import Path
@@ -16,6 +17,7 @@ __all__ = [
     "get_parent_raw_data_path",
     "load_batch",
     "create_batch",
+    "save_results_safely",
     "CaimanDataFrameExtensions",
     "CaimanSeriesExtensions",
     "CNMFExtensions",

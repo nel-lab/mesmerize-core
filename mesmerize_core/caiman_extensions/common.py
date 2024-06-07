@@ -6,8 +6,6 @@ from subprocess import Popen
 from typing import *
 from uuid import UUID, uuid4
 from shutil import rmtree
-from itertools import chain
-from collections import Counter
 from datetime import datetime
 import time
 from copy import deepcopy
@@ -22,7 +20,8 @@ from ..batch_utils import (
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
     get_parent_raw_data_path,
-    load_batch
+    load_batch,
+    open_batch_for_safe_writing
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
@@ -35,6 +34,23 @@ ALGO_MODULES = {
     "mcorr": algorithms.mcorr,
     "cnmfe": algorithms.cnmfe,
 }
+
+
+class OverwriteError(IndexError):
+    """
+    Error indicating that items in saved batch file may be overwritten
+    max_index_diff: The number of rows allowed to be added to or removed from the saved dataframe
+    """
+    def __init__(self, max_index_diff: int):
+        super().__init__(
+            f"The number of rows in the DataFrame on disk differs more "
+            f"than has been allowed by the `max_index_diff` kwarg which "
+            f"is set to <{max_index_diff}>. This is to prevent overwriting "
+            f"the full DataFrame with a sub-DataFrame. If you still wish "
+            f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
+            f"with `max_index_diff` set to the highest allowable difference "
+            f"in row number."
+    )
 
 
 @pd.api.extensions.register_dataframe_accessor("caiman")
@@ -130,37 +146,33 @@ class CaimanDataFrameExtensions:
         self._df.loc[self._df.index.size] = s
 
         # Save DataFrame to disk
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        self.save_to_disk(max_index_diff=1)
 
-    def save_to_disk(self, max_index_diff: int = 0):
+    def save_to_disk(self, max_index_diff: int = 0, lock_timeout: float = 1):
         """
         Saves DataFrame to disk, copies to a backup before overwriting existing file.
         """
         path: Path = self._df.paths.get_batch_path()
 
-        disk_df = load_batch(path)
+        with open_batch_for_safe_writing(path, lock_timeout=lock_timeout) as disk_df:
+            # check that max_index_diff is not exceeded
+            if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
+                raise OverwriteError(max_index_diff)
 
-        # check that max_index_diff is not exceeded
-        if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
-            raise IndexError(
-                f"The number of rows in the DataFrame on disk differs more "
-                f"than has been allowed by the `max_index_diff` kwarg which "
-                f"is set to <{max_index_diff}>. This is to prevent overwriting "
-                f"the full DataFrame with a sub-DataFrame. If you still wish "
-                f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
-                f"with `max_index_diff` set to the highest allowable difference "
-                f"in row number."
-            )
+            bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
-        bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
-
-        shutil.copyfile(path, bak)
-        try:
-            self._df.to_pickle(path)
-            os.remove(bak)
-        except:
-            shutil.copyfile(bak, path)
-            raise IOError(f"Could not save dataframe to disk.")
+            shutil.copyfile(path, bak)
+            try:
+                # don't save batch path because it's redundant/possibly incorrect when loading from disk
+                del self._df.attrs["batch_path"]
+                self._df.to_pickle(path)
+                os.remove(bak)
+            except:
+                shutil.copyfile(bak, path)
+                raise IOError(f"Could not save dataframe to disk.")
+            finally:
+                # restore batch path
+                self._df.paths.set_batch_path(path)
 
     def reload_from_disk(self) -> pd.DataFrame:
         """
@@ -244,8 +256,8 @@ class CaimanDataFrameExtensions:
         self._df.drop([index], inplace=True)
         # Reset indices so there are no 'jumps'
         self._df.reset_index(drop=True, inplace=True)
-        # Save new df to disc
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        # Save new df to disk
+        self.save_to_disk(max_index_diff=1)
 
     def get_params_diffs(self, algo: str, item_name: str) -> pd.DataFrame:
         """
