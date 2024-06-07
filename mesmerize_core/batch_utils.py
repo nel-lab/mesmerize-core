@@ -10,7 +10,7 @@ CURRENT_BATCH_PATH: Path = None  # only one batch at a time
 PARENT_DATA_PATH: Path = None
 
 COMPUTE_BACKEND_SUBPROCESS = "subprocess"  #: subprocess backend
-COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend, not yet implemented
+COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend
 COMPUTE_BACKEND_LOCAL = "local"
 
 COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM, COMPUTE_BACKEND_LOCAL]

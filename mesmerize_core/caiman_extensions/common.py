@@ -1,6 +1,7 @@
 import os
 import shutil
 from pathlib import Path
+import psutil
 from subprocess import Popen
 from typing import *
 from uuid import UUID, uuid4
@@ -460,14 +461,23 @@ class CaimanSeriesExtensions:
     def _run_slurm(
         self,
         runfile_path: str,
+        algo: str,
+        uuid,
         **kwargs
     ):
-        raise NotImplementedError("Not yet implemented, just a placeholder")
-        # submission_command = (
-        #     f'sbatch --ntasks=1 --cpus-per-task=16 --mem=90000 --wrap="{runfile_path}"'
-        # )
-        #
-        # Popen(submission_command.split(" "))
+        # raise NotImplementedError("Not yet implemented, just a placeholder")
+
+        # this needs to match what's in the runfile
+        if 'MESMERIZE_N_PROCESSES' in os.environ:
+            n_procs = os.environ['MESMERIZE_N_PROCESSES']
+        else:
+            n_procs = psutil.cpu_count() - 1
+
+        submission_command = (
+            f'sbatch --job-name={algo}-{str(uuid)[:8]} --ntasks=1 --cpus-per-task={n_procs} --wrap="{runfile_path}"'
+        )
+
+        return Popen(submission_command.split(" "))
 
     @cnmf_cache.invalidate()
     def run(
@@ -546,7 +556,8 @@ class CaimanSeriesExtensions:
         )
         try:
             self.process = getattr(self, f"_run_{backend}")(
-                runfile_path, wait=wait, **kwargs
+                runfile_path, wait=wait, uuid=self._series["uuid"],
+                algo=self._series["algo"], **kwargs
             )
         except:
             with open(runfile_path, "r") as f:
