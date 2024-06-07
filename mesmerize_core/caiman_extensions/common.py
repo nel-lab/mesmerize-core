@@ -21,7 +21,8 @@ from ..batch_utils import (
     COMPUTE_BACKEND_LOCAL,
     get_parent_raw_data_path,
     load_batch,
-    open_batch_for_safe_writing
+    open_batch_for_safe_writing,
+    OverwriteError
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
@@ -34,23 +35,6 @@ ALGO_MODULES = {
     "mcorr": algorithms.mcorr,
     "cnmfe": algorithms.cnmfe,
 }
-
-
-class OverwriteError(IndexError):
-    """
-    Error indicating that items in saved batch file may be overwritten
-    max_index_diff: The number of rows allowed to be added to or removed from the saved dataframe
-    """
-    def __init__(self, max_index_diff: int):
-        super().__init__(
-            f"The number of rows in the DataFrame on disk differs more "
-            f"than has been allowed by the `max_index_diff` kwarg which "
-            f"is set to <{max_index_diff}>. This is to prevent overwriting "
-            f"the full DataFrame with a sub-DataFrame. If you still wish "
-            f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
-            f"with `max_index_diff` set to the highest allowable difference "
-            f"in row number."
-    )
 
 
 @pd.api.extensions.register_dataframe_accessor("caiman")
@@ -157,7 +141,15 @@ class CaimanDataFrameExtensions:
         with open_batch_for_safe_writing(path, lock_timeout=lock_timeout) as disk_df:
             # check that max_index_diff is not exceeded
             if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
-                raise OverwriteError(max_index_diff)
+                raise OverwriteError(
+                    f"The number of rows in the DataFrame on disk differs more "
+                    f"than has been allowed by the `max_index_diff` kwarg which "
+                    f"is set to <{max_index_diff}>. This is to prevent overwriting "
+                    f"the full DataFrame with a sub-DataFrame. If you still wish "
+                    f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
+                    f"with `max_index_diff` set to the highest allowable difference "
+                    f"in row number."
+                )
 
             bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
