@@ -5,7 +5,7 @@ from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 import psutil
 import traceback
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from shutil import move as move_file
 import os
 import time
@@ -107,7 +107,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
             Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
         move_file(fname_new, cnmf_memmap_path)
 
-        cnmfe_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
+        # save path as realative path strings with forward slashes
+        cnmfe_memmap_path = str(PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent)))
 
         d.update(
             {

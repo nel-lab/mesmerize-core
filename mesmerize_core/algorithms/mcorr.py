@@ -7,7 +7,7 @@ from caiman.summary_images import local_correlations_movie_offline
 import psutil
 import pandas as pd
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import numpy as np
 from shutil import move as move_file
 import time
@@ -124,14 +124,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
 
-        # relative paths
-        cn_path = cn_path.relative_to(output_dir.parent)
-        mcorr_memmap_path = mcorr_memmap_path.relative_to(output_dir.parent)
-        shift_path = shift_path.relative_to(output_dir.parent)
+        # save paths as realative path strings with forward slashes
+        cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
+        mcorr_memmap_path = str(PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent)))
+        shift_path = str(PurePosixPath(shift_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+            d[f"{proj_type}-projection-path"] = str(PurePosixPath(proj_paths[proj_type].relative_to(
                 output_dir.parent
-            )
+            )))
 
         d.update(
             {

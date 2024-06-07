@@ -7,7 +7,7 @@ import psutil
 import numpy as np
 import pandas as pd
 import traceback
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from shutil import move as move_file
 import os
 import time
@@ -116,13 +116,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
             Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
         move_file(fname_new, cnmf_memmap_path)
 
-        cnmf_hdf5_path = output_path.relative_to(output_dir.parent)
-        cnmf_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
-        corr_img_path = corr_img_path.relative_to(output_dir.parent)
+        # save paths as realative path strings with forward slashes
+        cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
+        cnmf_memmap_path = str(PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent)))
+        corr_img_path = str(PurePosixPath(corr_img_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+            d[f"{proj_type}-projection-path"] = str(PurePosixPath(proj_paths[proj_type].relative_to(
                 output_dir.parent
-            )
+            )))
 
         d.update(
             {
