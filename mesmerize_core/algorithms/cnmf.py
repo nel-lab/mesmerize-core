@@ -4,6 +4,7 @@ import click
 import caiman as cm
 from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
+from caiman.paths import decode_mmap_filename_dict
 import numpy as np
 import traceback
 from pathlib import Path, PurePosixPath
@@ -48,13 +49,20 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
         cnmf_params = CNMFParams(params_dict=params["main"])
         # Run CNMF, denote boolean 'success' if CNMF completes w/out error
         try:
-            fname_new = cm.save_memmap(
-                [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
-            )
+            # only re-save memmap if necessary
+            save_new_mmap = True
+            if Path(input_movie_path).suffix == ".mmap":
+                mmap_info = decode_mmap_filename_dict(input_movie_path)
+                save_new_mmap = "order" not in mmap_info or mmap_info["order"] != "C"
 
-            print("making memmap")
-
-            Yr, dims, T = cm.load_memmap(fname_new)
+            if save_new_mmap:
+                print("making memmap")
+                fname_new = cm.save_memmap(
+                    [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
+                )
+                Yr, dims, T = cm.load_memmap(fname_new)
+            else:
+                Yr, dims, T = cm.load_memmap(input_movie_path)
 
             images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
@@ -93,10 +101,14 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
             # output dict for dataframe row (pd.Series)
             d = dict()
 
-            cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
             if IS_WINDOWS:
                 Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
-            move_file(fname_new, cnmf_memmap_path)
+
+            if save_new_mmap:
+                cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
+                move_file(fname_new, cnmf_memmap_path)
+            else:
+                cnmf_memmap_path = Path(input_movie_path)
 
             # save paths as relative path strings with forward slashes
             cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
