@@ -259,15 +259,18 @@ class OverwriteError(IndexError):
     pass
 
 
-class BatchLock(SoftFileLock):
-    """Locks a batch file for safe writing, returning the dataframe in the 'as' clause"""
+class BatchLock:
+    """Locks a batch file for safe writing, returning the dataframe in the target"""
     def __init__(self, batch_path: Union[Path, str], *args, **kwargs):
-        super().__init__(str(batch_path) + ".lock", *args, **kwargs)
+        self.lock = SoftFileLock(str(batch_path) + ".lock", *args, **kwargs)
         self.batch_path = batch_path
     
     def __enter__(self) -> pd.DataFrame:
-        super().__enter__()   # may throw Timeout
+        self.lock.__enter__()   # may throw Timeout
         return load_batch(self.batch_path)
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.lock.__exit__(exc_type, exc_value, traceback)
 
 
 def open_batch_for_safe_writing(batch_path: Union[Path, str], lock_timeout: float = 30) -> BatchLock:
