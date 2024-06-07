@@ -462,15 +462,11 @@ class CaimanSeriesExtensions:
         self,
         runfile_path: str,
         wait: bool,
-        log_dir: Optional[Union[str, Path]] = None,
         partition: Optional[Union[str, list[str]]] = None,
         **kwargs
     ):
         """
         Run on a cluster using SLURM. Configurable options (to pass to run):
-        - log_dir: where to store logs of stout/stderr from each job, in files named slurm-{algo}-{uuid8}.out,
-                   where uuid8 is the first 8 characters of the item's UUID. Defaults to the directory containing
-                   the runfile and output dir.
         - partition: if given, tells SLRUM to run the job on the given partition(s).
         """
 
@@ -480,14 +476,15 @@ class CaimanSeriesExtensions:
         else:
             n_procs = psutil.cpu_count() - 1
 
-        if log_dir is None:
-            log_dir_path = Path(runfile_path).parent
-        else:
-            log_dir_path = Path(log_dir)
+        # make sure we have a place to save log files
+        uuid = str(self._series["uuid"])
+        output_dir = Path(runfile_path).parent.joinpath(uuid)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f'{uuid}.log'
 
         # --wait means that the lifetme of the created process corresponds to the lifetime of the job
-        submission_opts = (f'--job-name={self._series["algo"]}-{str(self._series["uuid"])[:8]} --ntasks=1 ' +
-            f'--cpus-per-task={n_procs} --output={log_dir_path / "slurm-%x.out"} --wait')
+        submission_opts = (f'--job-name={self._series["algo"]}-{uuid[:8]} --ntasks=1 ' +
+            f'--cpus-per-task={n_procs} --output={output_path} --wait')
         
         if partition is not None:
             if isinstance(partition, str):
