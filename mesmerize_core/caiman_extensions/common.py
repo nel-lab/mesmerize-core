@@ -461,13 +461,9 @@ class CaimanSeriesExtensions:
     def _run_slurm(
         self,
         runfile_path: str,
-        algo: str,
-        uuid,
-        log_dir: Optional[str] = None,
+        log_dir: Optional[Union[str, Path]] = None,
         **kwargs
     ):
-        # raise NotImplementedError("Not yet implemented, just a placeholder")
-
         # this needs to match what's in the runfile
         if 'MESMERIZE_N_PROCESSES' in os.environ:
             n_procs = os.environ['MESMERIZE_N_PROCESSES']
@@ -480,8 +476,8 @@ class CaimanSeriesExtensions:
             log_dir_path = Path(log_dir)
 
         submission_command = (
-            f'sbatch --job-name={algo}-{str(uuid)[:8]} --ntasks=1 --cpus-per-task={n_procs} ' +
-            f'--output={log_dir_path / "slurm-%x.out"} --wrap="{runfile_path}"'
+            f'sbatch --job-name={self._series["algo"]}-{str(self._series["uuid"])[:8]} --ntasks=1 ' +
+            f'--cpus-per-task={n_procs} --output={log_dir_path / "slurm-%x.out"} {runfile_path}'
         )
 
         return Popen(submission_command.split(" "))
@@ -563,8 +559,7 @@ class CaimanSeriesExtensions:
         )
         try:
             self.process = getattr(self, f"_run_{backend}")(
-                runfile_path, wait=wait, uuid=self._series["uuid"],
-                algo=self._series["algo"], **kwargs
+                runfile_path, wait=wait, **kwargs
             )
         except:
             with open(runfile_path, "r") as f:
