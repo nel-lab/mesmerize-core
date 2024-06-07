@@ -262,7 +262,7 @@ class OverwriteError(IndexError):
 class BatchLock(SoftFileLock):
     """Locks a batch file for safe writing, returning the dataframe in the 'as' clause"""
     def __init__(self, batch_path: Union[Path, str], *args, **kwargs):
-        super().__init__(batch_path + ".lock", *args, **kwargs)
+        super().__init__(str(batch_path) + ".lock", *args, **kwargs)
         self.batch_path = batch_path
     
     def __enter__(self) -> pd.DataFrame:
