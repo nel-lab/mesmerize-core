@@ -132,13 +132,13 @@ class CaimanDataFrameExtensions:
         # Save DataFrame to disk
         self.save_to_disk(max_index_diff=1)
 
-    def save_to_disk(self, max_index_diff: int = 0, lock_timeout: float = 1):
+    def save_to_disk(self, max_index_diff: int = 0):
         """
         Saves DataFrame to disk, copies to a backup before overwriting existing file.
         """
         path: Path = self._df.paths.get_batch_path()
 
-        with open_batch_for_safe_writing(path, lock_timeout=lock_timeout) as disk_df:
+        with open_batch_for_safe_writing(path) as disk_df:
             # check that max_index_diff is not exceeded
             if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
                 raise OverwriteError(

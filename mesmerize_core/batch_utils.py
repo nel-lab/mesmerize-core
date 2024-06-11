@@ -261,8 +261,9 @@ class OverwriteError(IndexError):
 
 class BatchLock:
     """Locks a batch file for safe writing, returning the dataframe in the target"""
-    def __init__(self, batch_path: Union[Path, str], *args, **kwargs):
-        self.lock = SoftFileLock(str(batch_path) + ".lock", *args, **kwargs)
+    TIMEOUT = 30  # must be consistent or else nested re-entrant locks break
+    def __init__(self, batch_path: Union[Path, str]):
+        self.lock = SoftFileLock(str(batch_path) + ".lock", is_singleton=True, timeout=self.TIMEOUT)
         self.batch_path = batch_path
     
     def __enter__(self) -> pd.DataFrame:
@@ -273,20 +274,19 @@ class BatchLock:
         self.lock.__exit__(exc_type, exc_value, traceback)
 
 
-def open_batch_for_safe_writing(batch_path: Union[Path, str], lock_timeout: float = 30) -> BatchLock:
+def open_batch_for_safe_writing(batch_path: Union[Path, str]) -> BatchLock:
     """Just a more self-documenting constructor"""
-    return BatchLock(batch_path, timeout=lock_timeout)
+    return BatchLock(batch_path)
 
 
-def save_results_safely(batch_path: Union[Path, str], uuid, results: dict,
-                        runtime: float, lock_timeout: float = 30):
+def save_results_safely(batch_path: Union[Path, str], uuid, results: dict, runtime: float):
     """
     Try to load the given batch and save results to the given item
     Uses a file lock to ensure that no other process is writing to the same batch using this function,
     which gives up after lock_timeout seconds (set to -1 to never give up)
     """
     try:
-        with open_batch_for_safe_writing(batch_path, lock_timeout=lock_timeout) as df:
+        with open_batch_for_safe_writing(batch_path) as df:
             # Add dictionary to output column of series
             df.loc[df["uuid"] == uuid, "outputs"] = [results]
             # Add ran timestamp to ran_time column of series
@@ -300,7 +300,7 @@ def save_results_safely(batch_path: Union[Path, str], uuid, results: dict,
         # Print a message with details in lieu of writing to the batch file
         msg = f"Batch file could not be written to"
         if isinstance(e, Timeout):
-            msg += f" (file locked for {lock_timeout} seconds)"
+            msg += f" (file locked for {BatchLock.TIMEOUT} seconds)"
         elif isinstance(e, OverwriteError):
             msg += f" (items would be overwritten, even though file was locked)"
 
@@ -308,7 +308,7 @@ def save_results_safely(batch_path: Union[Path, str], uuid, results: dict,
             output_dir = Path(batch_path).parent.joinpath(str(uuid))
             msg += f"\nRun succeeded; results are in {output_dir}."
         else:
-            msg += f"Run failed. Traceback:\n"
+            msg += f"\nRun failed.\n"
             msg += results["traceback"]
 
         raise RuntimeError(msg)

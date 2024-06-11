@@ -123,7 +123,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
 
-        # save paths as realative path strings with forward slashes
+        # save paths as relative path strings with forward slashes
         cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
         mcorr_memmap_path = str(PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent)))
         shift_path = str(PurePosixPath(shift_path.relative_to(output_dir.parent)))
