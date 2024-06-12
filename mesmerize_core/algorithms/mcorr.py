@@ -10,6 +10,9 @@ from pathlib import Path, PurePosixPath
 import numpy as np
 from shutil import move as move_file
 import time
+import pkg_resources
+from packaging.version import Version
+
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -88,25 +91,30 @@ def run_algo(batch_path, uuid, data_path: str = None):
             )
             np.save(str(proj_paths[proj_type]), p_img)
 
-        print("Computing correlation image")
-        Cns = local_correlations_movie_offline(
-            [str(mcorr_memmap_path)],
-            remove_baseline=True,
-            window=1000,
-            stride=1000,
-            winSize_baseline=100,
-            quantil_min_baseline=10,
-            dview=dview,
-        )
-        Cn = Cns.max(axis=0)
-        Cn[np.isnan(Cn)] = 0
-        cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
-        np.save(str(cn_path), Cn, allow_pickle=False)
-
-        # output dict for pandas series for dataframe row
-        d = dict()
-
-        print("finished computing correlation image")
+        is3D = len(dims) == 3
+        if is3D and Version(pkg_resources.get_distribution('caiman').version) < Version('1.11.2'):
+            # is3D parameter only (to be) added in version 1.11.2
+            print("Skipping correlation image of 3D movie (not supported)")
+            cn_path = None
+        else:
+            print("Computing correlation image")
+            kwargs = {'is3D': True} if is3D else {}
+            Cns = local_correlations_movie_offline(
+                [str(mcorr_memmap_path)],
+                remove_baseline=True,
+                window=1000,
+                stride=1000,
+                winSize_baseline=100,
+                quantil_min_baseline=10,
+                dview=dview,
+                **kwargs
+            )
+            Cn = Cns.max(axis=0)
+            Cn[np.isnan(Cn)] = 0
+            cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
+            np.save(str(cn_path), Cn, allow_pickle=False)
+            
+            print("finished computing correlation image")
 
         # Compute shifts
         if opts.motion["pw_rigid"] == True:
@@ -120,8 +128,12 @@ def run_algo(batch_path, uuid, data_path: str = None):
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
 
+        # output dict for pandas series for dataframe row
+        d = dict()
+
         # save paths as relative path strings with forward slashes
-        cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
+        if cn_path is not None:
+            cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
         mcorr_memmap_path = str(PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent)))
         shift_path = str(PurePosixPath(shift_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
