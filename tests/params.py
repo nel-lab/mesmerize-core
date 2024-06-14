@@ -9,6 +9,17 @@ test_params = {
             "pw_rigid": True,
             "gSig_filt": None,
         },
+        "optional_outputs":
+            {
+            "corr_image":
+                {
+                    "remove_baseline": True,
+                    "window": 1000,
+                    "stride": 1000,
+                    "winSize_baseline": 100,
+                    "quantil_min_baseline": 10,
+                },
+            },
     },
     "cnmf": {
         "main": {
