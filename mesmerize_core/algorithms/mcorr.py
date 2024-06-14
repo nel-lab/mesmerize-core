@@ -10,9 +10,6 @@ from pathlib import Path, PurePosixPath
 import numpy as np
 from shutil import move as move_file
 import time
-from datetime import datetime
-from filelock import SoftFileLock, Timeout
-
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
