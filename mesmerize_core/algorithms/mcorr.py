@@ -10,9 +10,6 @@ from pathlib import Path, PurePosixPath
 import numpy as np
 from shutil import move as move_file
 import time
-import pkg_resources
-from packaging.version import Version
-
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -91,23 +88,15 @@ def run_algo(batch_path, uuid, data_path: str = None):
             )
             np.save(str(proj_paths[proj_type]), p_img)
 
-        is3D = len(dims) == 3
-        if is3D and Version(pkg_resources.get_distribution('caiman').version) < Version('1.11.2'):
-            # is3D parameter only (to be) added in version 1.11.2
-            print("Skipping correlation image of 3D movie (not supported)")
-            cn_path = None
-        else:
-            print("Computing correlation image")
-            kwargs = {'is3D': True} if is3D else {}
+        def run_correlation(remove_baseline=True) -> Path:
             Cns = local_correlations_movie_offline(
-                [str(mcorr_memmap_path)],
-                remove_baseline=True,
+                str(mcorr_memmap_path),
+                remove_baseline=remove_baseline,
                 window=1000,
                 stride=1000,
                 winSize_baseline=100,
                 quantil_min_baseline=10,
                 dview=dview,
-                **kwargs
             )
             Cn = Cns.max(axis=0)
             Cn[np.isnan(Cn)] = 0
@@ -115,6 +104,20 @@ def run_algo(batch_path, uuid, data_path: str = None):
             np.save(str(cn_path), Cn, allow_pickle=False)
             
             print("finished computing correlation image")
+            return cn_path
+
+        try:
+            print("Computing correlation image")
+            cn_path = run_correlation()
+
+        except ValueError as err:
+            # Test for error that occurs in movie.removeBL before bug was fixed
+            is3D = len(dims) == 3
+            if is3D and len(err.args) == 1 and err.args[0] == "axes don't match array":
+                print("Computing correlation on 3D image failed - trying without baseline (use caiman >= 1.11.2 to fix)")
+                cn_path = run_correlation(remove_baseline=False)
+            else:
+                raise
 
         # Compute shifts
         if opts.motion["pw_rigid"] == True:
@@ -132,8 +135,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
         d = dict()
 
         # save paths as relative path strings with forward slashes
-        if cn_path is not None:
-            cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
+        cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
         mcorr_memmap_path = str(PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent)))
         shift_path = str(PurePosixPath(shift_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
