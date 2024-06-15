@@ -9,6 +9,7 @@ from shutil import rmtree
 from datetime import datetime
 import time
 from copy import deepcopy
+import shlex
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ from ..batch_utils import (
     get_parent_raw_data_path,
     load_batch,
     open_batch_for_safe_writing,
-    OverwriteError
+    PreventOverwriteError
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
@@ -141,7 +142,7 @@ class CaimanDataFrameExtensions:
         with open_batch_for_safe_writing(path) as disk_df:
             # check that max_index_diff is not exceeded
             if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
-                raise OverwriteError(
+                raise PreventOverwriteError(
                     f"The number of rows in the DataFrame on disk differs more "
                     f"than has been allowed by the `max_index_diff` kwarg which "
                     f"is set to <{max_index_diff}>. This is to prevent overwriting "
@@ -466,12 +467,18 @@ class CaimanSeriesExtensions:
         self,
         runfile_path: str,
         wait: bool,
-        partition: Optional[Union[str, list[str]]] = None,
+        sbatch_opts: str = '',
         **kwargs
     ):
         """
         Run on a cluster using SLURM. Configurable options (to pass to run):
-        - partition: if given, tells SLRUM to run the job on the given partition(s).
+        - sbatch_opts: A single string containing additional options for sbatch.
+                       The following options are configured here, but can be overridden:
+                       --job-name
+                       --cpus-per-task (only controls number of CPUs allocated to the job; the number used for
+                                        parallel processing is controlled by os.environ['MESMERIZE_N_PROCESSES'])
+                       The following options should NOT be overridden:
+                       --ntasks, --output, --wait
         """
 
         # this needs to match what's in the runfile
@@ -487,15 +494,15 @@ class CaimanSeriesExtensions:
         output_path = output_dir / f'{uuid}.log'
 
         # --wait means that the lifetme of the created process corresponds to the lifetime of the job
-        submission_opts = (f'--job-name={self._series["algo"]}-{uuid[:8]} --ntasks=1 ' +
-            f'--cpus-per-task={n_procs} --output={output_path} --wait')
+        submission_opts = [
+            f'--job-name={self._series["algo"]}-{uuid[:8]}',
+            '--ntasks=1',
+            f'--cpus-per-task={n_procs}',
+            f'--output={output_path}',
+            '--wait'
+            ] + shlex.split(sbatch_opts)
         
-        if partition is not None:
-            if isinstance(partition, str):
-                partition = [partition]
-            submission_opts += f' --partition={",".join(partition)}'
-
-        self.process = Popen(['sbatch', *submission_opts.split(" "), runfile_path])
+        self.process = Popen(['sbatch', *submission_opts, runfile_path])
         if wait:
             self.process.wait()
         

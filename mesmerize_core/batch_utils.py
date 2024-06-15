@@ -249,13 +249,10 @@ def get_full_raw_data_path(path: Union[Path, str]) -> Path:
     return path
 
 
-class OverwriteError(IndexError):
-    """
-    Error thrown when trying to write to an existing batch file, but there is a risk
-    of overwriting existing data.
-    Note this is a subclass of IndexError to avoid a breaking change, because
-    IndexError was previously thrown from df.caiman.save_to_disk.
-    """
+class PreventOverwriteError(IndexError):
+    """  
+    Error thrown when trying to write to an existing batch file with a potential risk of removing existing rows.  
+    """  
     pass
 
 
@@ -283,7 +280,7 @@ def save_results_safely(batch_path: Union[Path, str], uuid, results: dict, runti
     """
     Try to load the given batch and save results to the given item
     Uses a file lock to ensure that no other process is writing to the same batch using this function,
-    which gives up after lock_timeout seconds (set to -1 to never give up)
+    which gives up after lock_timeout seconds.
     """
     try:
         with open_batch_for_safe_writing(batch_path) as df:
@@ -301,7 +298,7 @@ def save_results_safely(batch_path: Union[Path, str], uuid, results: dict, runti
         msg = f"Batch file could not be written to"
         if isinstance(e, Timeout):
             msg += f" (file locked for {BatchLock.TIMEOUT} seconds)"
-        elif isinstance(e, OverwriteError):
+        elif isinstance(e, PreventOverwriteError):
             msg += f" (items would be overwritten, even though file was locked)"
 
         if results["success"]:
