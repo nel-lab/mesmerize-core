@@ -96,6 +96,10 @@ def make_runfile(
         args_str = ""
 
     if not IS_WINDOWS:
+        # remove file first if it exists - avoid issues with ownership
+        if os.path.exists(sh_file):
+            os.remove(sh_file)
+
         with open(sh_file, "w") as f:
 
             f.write(f"#!/bin/bash\n")
