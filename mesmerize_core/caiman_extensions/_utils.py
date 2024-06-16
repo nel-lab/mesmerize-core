@@ -3,7 +3,7 @@ from typing import Union
 from uuid import UUID
 
 from mesmerize_core.caiman_extensions._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, \
-    WrongAlgorithmExtensionError
+    WrongAlgorithmExtensionError, PreventOverwriteError
 
 
 def validate(algo: str = None):
@@ -27,6 +27,19 @@ def validate(algo: str = None):
         return wrapper
 
     return dec
+
+
+def _verify_and_lock_batch_file(func):
+    """Acquires lock and ensures batch file has the same items as current df before calling wrapped function"""
+    @wraps(func)
+    def wrapper(instance, *args, **kwargs):
+        with instance._batch_lock:
+            disk_df = instance.reload_from_disk()
+            # check whether all the same UUIDs are present with the same indices
+            if not instance._df["uuid"].equals(disk_df["uuid"]):
+                raise PreventOverwriteError("Items on disk do not match current DataFrame; reload to synchronize")
+            return func(instance, *args, **kwargs)
+    return wrapper
 
 
 def _index_parser(func):

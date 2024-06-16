@@ -11,10 +11,10 @@ import os
 import time
 
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
-    from mesmerize_core import set_parent_raw_data_path, load_batch, save_results_safely
+    from mesmerize_core import set_parent_raw_data_path, load_batch
     from mesmerize_core.utils import IS_WINDOWS
 else:  # when running with local backend
-    from ..batch_utils import set_parent_raw_data_path, load_batch, save_results_safely
+    from ..batch_utils import set_parent_raw_data_path, load_batch
     from ..utils import IS_WINDOWS
 
 
@@ -23,7 +23,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     set_parent_raw_data_path(data_path)
 
     df = load_batch(batch_path)
-    item = df[df["uuid"] == uuid].squeeze()
+    item = df.caiman.uloc(uuid)
 
     input_movie_path = item["input_movie_path"]
     # resolve full path
@@ -122,7 +122,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     cm.stop_server(dview=dview)
 
     runtime = round(time.time() - algo_start, 2)
-    save_results_safely(batch_path, uuid, d, runtime)
+    df.caiman.update_item_with_results(uuid, d, runtime)
 
 
 @click.command()

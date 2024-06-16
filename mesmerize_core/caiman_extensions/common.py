@@ -13,17 +13,16 @@ import shlex
 
 import numpy as np
 import pandas as pd
+from filelock import SoftFileLock, Timeout
 
-from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError
-from ._utils import validate, _index_parser
+from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError, PreventOverwriteError
+from ._utils import validate, _index_parser, _verify_and_lock_batch_file
 from ..batch_utils import (
     COMPUTE_BACKENDS,
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
     get_parent_raw_data_path,
     load_batch,
-    open_batch_for_safe_writing,
-    PreventOverwriteError
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
@@ -46,6 +45,8 @@ class CaimanDataFrameExtensions:
 
     def __init__(self, df: pd.DataFrame):
         self._df = df
+        self._batch_lock = SoftFileLock(str(df.paths.get_batch_path()) + ".lock",
+                                        timeout=30, is_singleton=True)
 
     def uloc(self, u: Union[str, UUID]) -> pd.Series:
         """
@@ -63,6 +64,7 @@ class CaimanDataFrameExtensions:
 
         return df_u.squeeze()
 
+    @_verify_and_lock_batch_file
     def add_item(self, algo: str, item_name: str, input_movie_path: Union[str, pd.Series], params: dict):
         """
         Add an item to the DataFrame to organize parameters
@@ -131,41 +133,87 @@ class CaimanDataFrameExtensions:
         self._df.loc[self._df.index.size] = s
 
         # Save DataFrame to disk
-        self.save_to_disk(max_index_diff=1)
+        self._save_to_disk_unsafe()
 
-    def save_to_disk(self, max_index_diff: int = 0):
+    @_verify_and_lock_batch_file
+    @_index_parser
+    def update_item(self, index: int, updates: Union[dict, pd.Series]):
+        """
+        Update the item with the given uuid with the data in updated_row and write to disk.
+
+        Parameters
+        ----------
+        index: int, str or UUID
+            The index of the batch item to update as a numerical ``int`` index, ``str`` representing
+            a UUID, or a UUID object.
+
+        updates: dict or Series
+            Data to change in the selected row. Each key in updates (or index entry if it is a Series)
+            should match a column name. If not, that data will not be saved.
+        """
+        row = self._df.iloc[index]
+        row.update(updates)
+        self._df.iloc[index] = row
+        self.save_to_disk()
+
+    def update_item_with_results(self, uuid: Union[str, UUID], results: dict, run_duration: float):
+        """Helper for algorithms to save their results to disk"""
+        updates = {
+            "outputs": results,
+            "ran_time": datetime.now().isoformat(timespec="seconds", sep="T"),
+            "algo_duration": str(run_duration) + " sec"
+        }
+        try:
+            # reload first because it should be safe since we have a UUID and we want to
+            # avoid failing to save results just because other items were added/removed
+            with self._batch_lock:
+                self._df = self.reload_from_disk()
+                self.update_item(uuid, updates)
+
+        except Exception as e:
+            # TODO maybe handle differently
+            # Print a message with details in lieu of writing to the batch file
+            msg = f"Batch file could not be written to"
+            if isinstance(e, Timeout):
+                msg += f" (file locked for {self._batch_lock.timeout} seconds)"
+            elif isinstance(e, PreventOverwriteError):
+                msg += f" (items would be overwritten, even though file was locked)"
+
+            if results["success"]:
+                output_dir = self._df.paths.get_batch_path().parent.joinpath(str(uuid))
+                msg += f"\nRun succeeded; results are in {output_dir}."
+            else:
+                msg += f"\nRun failed.\n"
+                msg += results["traceback"]
+
+            raise RuntimeError(msg)
+
+    @_verify_and_lock_batch_file
+    def save_to_disk(self):
         """
         Saves DataFrame to disk, copies to a backup before overwriting existing file.
+        Raises PreventOverwriteError if the df on disk has a different set of items than
+        the one in memory (before saving).
         """
+        self._save_to_disk_unsafe()
+
+    def _save_to_disk_unsafe(self):   
         path: Path = self._df.paths.get_batch_path()
+        bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
-        with open_batch_for_safe_writing(path) as disk_df:
-            # check that max_index_diff is not exceeded
-            if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
-                raise PreventOverwriteError(
-                    f"The number of rows in the DataFrame on disk differs more "
-                    f"than has been allowed by the `max_index_diff` kwarg which "
-                    f"is set to <{max_index_diff}>. This is to prevent overwriting "
-                    f"the full DataFrame with a sub-DataFrame. If you still wish "
-                    f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
-                    f"with `max_index_diff` set to the highest allowable difference "
-                    f"in row number."
-                )
-
-            bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
-
-            shutil.copyfile(path, bak)
-            try:
-                # don't save batch path because it's redundant/possibly incorrect when loading from disk
-                del self._df.attrs["batch_path"]
+        shutil.copyfile(path, bak)
+        try:
+            # don't save batch path because it's redundant/possibly incorrect when loading from disk
+            del self._df.attrs["batch_path"]
+            with self._batch_lock:  # ensure we have the lock to avoid messing up other "safe" operations
                 self._df.to_pickle(path)
-                os.remove(bak)
-            except:
-                shutil.copyfile(bak, path)
-                raise IOError(f"Could not save dataframe to disk.")
-            finally:
-                # restore batch path
-                self._df.paths.set_batch_path(path)
+            os.remove(bak)
+        except:
+            shutil.copyfile(bak, path)
+            raise IOError(f"Could not save dataframe to disk.")
+        finally:
+            # restore batch path
+            self._df.paths.set_batch_path(path)
 
     def reload_from_disk(self) -> pd.DataFrame:
         """
@@ -184,6 +232,7 @@ class CaimanDataFrameExtensions:
         """
         return load_batch(self._df.paths.get_batch_path())
 
+    @_verify_and_lock_batch_file
     @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
         """
@@ -250,7 +299,7 @@ class CaimanDataFrameExtensions:
         # Reset indices so there are no 'jumps'
         self._df.reset_index(drop=True, inplace=True)
         # Save new df to disk
-        self.save_to_disk(max_index_diff=1)
+        self._save_to_disk_unsafe()
 
     def get_params_diffs(self, algo: str, item_name: str) -> pd.DataFrame:
         """
