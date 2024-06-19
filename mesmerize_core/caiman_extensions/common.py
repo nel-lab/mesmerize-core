@@ -139,7 +139,7 @@ class CaimanDataFrameExtensions:
     @_index_parser
     def update_item(self, index: int, updates: Union[dict, pd.Series]):
         """
-        Update the item with the given uuid with the data in updated_row and write to disk.
+        Update the item at the given index or UUID with the data in updates and write to disk.
 
         Parameters
         ----------
@@ -148,10 +148,12 @@ class CaimanDataFrameExtensions:
             a UUID, or a UUID object.
 
         updates: dict or Series
-            Data to change in the selected row. Each key in updates (or index entry if it is a Series)
-            should match a column name. If not, that data will not be saved.
+            Data to change in the selected row. Raises AttributeError if any key does not match a column name.
         """
         row = self._df.iloc[index]
+        for key in updates.keys():
+            if key not in row:
+                raise AttributeError(f"Cannot update item; received unknown column name '{key}'")
         row.update(updates)
         self._df.iloc[index] = row
         self.save_to_disk()
@@ -197,7 +199,11 @@ class CaimanDataFrameExtensions:
         """
         self._save_to_disk_unsafe()
 
-    def _save_to_disk_unsafe(self):   
+    def _save_to_disk_unsafe(self):
+        """
+        Saves the DataFrame to disk, without checking that the number and ID of items match
+        what is currently on disk first. Should never be used directly; use save_to_disk instead.
+        """
         path: Path = self._df.paths.get_batch_path()
         bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
@@ -208,9 +214,9 @@ class CaimanDataFrameExtensions:
             with self._batch_lock:  # ensure we have the lock to avoid messing up other "safe" operations
                 self._df.to_pickle(path)
             os.remove(bak)
-        except:
+        except BaseException as err:
             shutil.copyfile(bak, path)
-            raise IOError(f"Could not save dataframe to disk.")
+            raise IOError(f"Could not save dataframe to disk.") from err
         finally:
             # restore batch path
             self._df.paths.set_batch_path(path)
