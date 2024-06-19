@@ -12,3 +12,10 @@ class WrongAlgorithmExtensionError(Exception):
 
 class DependencyError(Exception):
     pass
+
+
+class PreventOverwriteError(IndexError):
+    """  
+    Error thrown when trying to write to an existing batch file with a potential risk of removing existing rows.  
+    """  
+    pass
