@@ -117,24 +117,24 @@ class _BasePathExtensions:
             (<batch_dir> or <raw_data_dir>, <relative_path>)
 
         """
-        path = Path(path)
+        path = Path(path).resolve()
         # check if input movie is within batch dir
-        if self.get_batch_path().parent in path.parents:
-            return self.get_batch_path().parent, path.relative_to(
-                self.get_batch_path().parent
-            )
+        batch_parent_abs = self.get_batch_path().parent.resolve()
+        if batch_parent_abs in path.parents:
+            return batch_parent_abs, path.relative_to(batch_parent_abs)
 
         # else check if in parent raw data dir
-        elif get_parent_raw_data_path() is not None:
-            if get_parent_raw_data_path() in path.parents:
-                return get_parent_raw_data_path(), path.relative_to(
-                    get_parent_raw_data_path()
-                )
+        else:
+            raw_data_path = get_parent_raw_data_path()
+            if raw_data_path is not None:
+                raw_data_path_abs = raw_data_path.resolve()
+                if raw_data_path_abs in path.parents:
+                    return raw_data_path_abs, path.relative_to(raw_data_path_abs)
 
         raise NotADirectoryError(
                 f"Could not split `path`:\n{path}"
-                f"\nnot relative to either batch path:\n{self.get_batch_path()}"
-                f"\nor parent raw data path:\n{get_parent_raw_data_path()}"
+                f"\nnot relative to either batch path:\n{batch_parent_abs}"
+                f"\nor parent raw data path:\n{raw_data_path_abs if raw_data_path is not None else '(not set)'}"
             )
 
 

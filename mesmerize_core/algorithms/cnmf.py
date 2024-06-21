@@ -34,7 +34,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     input_movie_path = str(df.paths.resolve(input_movie_path))
 
     # make output dir
-    output_dir = Path(batch_path).parent.joinpath(str(uuid))
+    output_dir = Path(batch_path).parent.joinpath(str(uuid)).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     params = item["params"]
@@ -97,14 +97,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
         print("performing eval")
         cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
-        output_path = output_dir.joinpath(f"{uuid}.hdf5").resolve()
+        output_path = output_dir.joinpath(f"{uuid}.hdf5")
 
         cnm.save(str(output_path))
 
         Cn = cm.local_correlations(images.transpose(1, 2, 0))
         Cn[np.isnan(Cn)] = 0
 
-        corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy").resolve()
+        corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy")
         np.save(str(corr_img_path), Cn, allow_pickle=False)
 
         # output dict for dataframe row (pd.Series)

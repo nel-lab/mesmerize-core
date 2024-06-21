@@ -30,7 +30,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     # resolve full path
     input_movie_path = str(df.paths.resolve(input_movie_path))
 
-    output_dir = Path(batch_path).parent.joinpath(str(uuid))
+    output_dir = Path(batch_path).parent.joinpath(str(uuid)).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     params = item["params"]
@@ -90,7 +90,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
         print("evaluating components")
         cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
-        cnmf_hdf5_path = output_dir.joinpath(f"{uuid}.hdf5").resolve()
+        cnmf_hdf5_path = output_dir.joinpath(f"{uuid}.hdf5")
         cnm.save(str(cnmf_hdf5_path))
 
         # save output paths to outputs dict
