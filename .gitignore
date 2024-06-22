@@ -134,4 +134,4 @@ dmypy.json
 # test files
 tests/tmp
 tests/videos
-
+tests/ground_truths*

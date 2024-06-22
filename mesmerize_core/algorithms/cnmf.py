@@ -5,20 +5,18 @@ from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 import psutil
 import numpy as np
-import pandas as pd
 import traceback
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from shutil import move as move_file
 import os
 import time
-from datetime import datetime
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
-    from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core import set_parent_raw_data_path, load_batch, save_results_safely
     from mesmerize_core.utils import IS_WINDOWS
 else:  # when running with local backend
-    from ..batch_utils import set_parent_raw_data_path, load_batch
+    from ..batch_utils import set_parent_raw_data_path, load_batch, save_results_safely
     from ..utils import IS_WINDOWS
 
 
@@ -101,7 +99,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
         cnm.save(str(output_path))
 
-        Cn = cm.local_correlations(images.transpose(1, 2, 0))
+        Cn = cm.local_correlations(images, swap_dim=False)
         Cn[np.isnan(Cn)] = 0
 
         corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy").resolve()
@@ -115,13 +113,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
             Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
         move_file(fname_new, cnmf_memmap_path)
 
-        cnmf_hdf5_path = output_path.relative_to(output_dir.parent)
-        cnmf_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
-        corr_img_path = corr_img_path.relative_to(output_dir.parent)
+        # save paths as relative path strings with forward slashes
+        cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
+        cnmf_memmap_path = str(PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent)))
+        corr_img_path = str(PurePosixPath(corr_img_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+            d[f"{proj_type}-projection-path"] = str(PurePosixPath(proj_paths[proj_type].relative_to(
                 output_dir.parent
-            )
+            )))
 
         d.update(
             {
@@ -137,15 +136,9 @@ def run_algo(batch_path, uuid, data_path: str = None):
         d = {"success": False, "traceback": traceback.format_exc()}
 
     cm.stop_server(dview=dview)
-
-    # Add dictionary to output column of series
-    df.loc[df["uuid"] == uuid, "outputs"] = [d]
-    # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
-    df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
-    # save dataframe to disc
-    df.to_pickle(batch_path)
-
+    
+    runtime = round(time.time() - algo_start, 2)
+    save_results_safely(batch_path, uuid, d, runtime)
 
 @click.command()
 @click.option("--batch-path", type=str)

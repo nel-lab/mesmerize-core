@@ -5,20 +5,17 @@ from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
 from caiman.summary_images import local_correlations_movie_offline
 import psutil
-import pandas as pd
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import numpy as np
 from shutil import move as move_file
 import time
-from datetime import datetime
-
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
-    from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core import set_parent_raw_data_path, load_batch, save_results_safely
 else:  # when running with local backend
-    from ..batch_utils import set_parent_raw_data_path, load_batch
+    from ..batch_utils import set_parent_raw_data_path, load_batch, save_results_safely
 
 
 def run_algo(batch_path, uuid, data_path: str = None):
@@ -91,25 +88,36 @@ def run_algo(batch_path, uuid, data_path: str = None):
             )
             np.save(str(proj_paths[proj_type]), p_img)
 
-        print("Computing correlation image")
-        Cns = local_correlations_movie_offline(
-            [str(mcorr_memmap_path)],
-            remove_baseline=True,
-            window=1000,
-            stride=1000,
-            winSize_baseline=100,
-            quantil_min_baseline=10,
-            dview=dview,
-        )
-        Cn = Cns.max(axis=0)
-        Cn[np.isnan(Cn)] = 0
-        cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
-        np.save(str(cn_path), Cn, allow_pickle=False)
+        def run_correlation(remove_baseline=True) -> Path:
+            Cns = local_correlations_movie_offline(
+                str(mcorr_memmap_path),
+                remove_baseline=remove_baseline,
+                window=1000,
+                stride=1000,
+                winSize_baseline=100,
+                quantil_min_baseline=10,
+                dview=dview,
+            )
+            Cn = Cns.max(axis=0)
+            Cn[np.isnan(Cn)] = 0
+            cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
+            np.save(str(cn_path), Cn, allow_pickle=False)
+            
+            print("finished computing correlation image")
+            return cn_path
 
-        # output dict for pandas series for dataframe row
-        d = dict()
+        try:
+            print("Computing correlation image")
+            cn_path = run_correlation()
 
-        print("finished computing correlation image")
+        except ValueError as err:
+            # Test for error that occurs in movie.removeBL before bug was fixed
+            is3D = len(dims) == 3
+            if is3D and len(err.args) == 1 and err.args[0] == "axes don't match array":
+                print("Computing correlation on 3D image failed - trying without baseline (use caiman >= 1.11.2 to fix)")
+                cn_path = run_correlation(remove_baseline=False)
+            else:
+                raise
 
         # Compute shifts
         if params["main"]["pw_rigid"] == True:
@@ -123,14 +131,17 @@ def run_algo(batch_path, uuid, data_path: str = None):
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
 
-        # relative paths
-        cn_path = cn_path.relative_to(output_dir.parent)
-        mcorr_memmap_path = mcorr_memmap_path.relative_to(output_dir.parent)
-        shift_path = shift_path.relative_to(output_dir.parent)
+        # output dict for pandas series for dataframe row
+        d = dict()
+
+        # save paths as relative path strings with forward slashes
+        cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
+        mcorr_memmap_path = str(PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent)))
+        shift_path = str(PurePosixPath(shift_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+            d[f"{proj_type}-projection-path"] = str(PurePosixPath(proj_paths[proj_type].relative_to(
                 output_dir.parent
-            )
+            )))
 
         d.update(
             {
@@ -148,13 +159,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
     cm.stop_server(dview=dview)
 
-    # Add dictionary to output column of series
-    df.loc[df["uuid"] == uuid, "outputs"] = [d]
-    # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
-    df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
-    # Save DataFrame to disk
-    df.to_pickle(batch_path)
+    runtime = round(time.time() - algo_start, 2)
+    save_results_safely(batch_path, uuid, d, runtime)
 
 
 @click.command()

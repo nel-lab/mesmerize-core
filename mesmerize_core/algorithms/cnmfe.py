@@ -5,17 +5,16 @@ from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 import psutil
 import traceback
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from shutil import move as move_file
 import os
 import time
-from datetime import datetime
 
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
-    from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core import set_parent_raw_data_path, load_batch, save_results_safely
     from mesmerize_core.utils import IS_WINDOWS
 else:  # when running with local backend
-    from ..batch_utils import set_parent_raw_data_path, load_batch
+    from ..batch_utils import set_parent_raw_data_path, load_batch, save_results_safely
     from ..utils import IS_WINDOWS
 
 
@@ -106,7 +105,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
             Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
         move_file(fname_new, cnmf_memmap_path)
 
-        cnmfe_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
+        # save path as relative path strings with forward slashes
+        cnmfe_memmap_path = str(PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent)))
 
         d.update(
             {
@@ -121,13 +121,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
     cm.stop_server(dview=dview)
 
-    # Add dictionary to output column of series
-    df.loc[df["uuid"] == uuid, "outputs"] = [d]
-    # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
-    df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
-    # save dataframe to disc
-    df.to_pickle(batch_path)
+    runtime = round(time.time() - algo_start, 2)
+    save_results_safely(batch_path, uuid, d, runtime)
 
 
 @click.command()

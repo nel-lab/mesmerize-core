@@ -1,12 +1,11 @@
 import os
 import shutil
 from pathlib import Path
+import psutil
 from subprocess import Popen
 from typing import *
 from uuid import UUID, uuid4
 from shutil import rmtree
-from itertools import chain
-from collections import Counter
 from datetime import datetime
 import time
 from copy import deepcopy
@@ -21,7 +20,9 @@ from ..batch_utils import (
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
     get_parent_raw_data_path,
-    load_batch
+    load_batch,
+    open_batch_for_safe_writing,
+    OverwriteError
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
@@ -129,7 +130,7 @@ class CaimanDataFrameExtensions:
         self._df.loc[self._df.index.size] = s
 
         # Save DataFrame to disk
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        self.save_to_disk(max_index_diff=1)
 
     def save_to_disk(self, max_index_diff: int = 0):
         """
@@ -137,29 +138,33 @@ class CaimanDataFrameExtensions:
         """
         path: Path = self._df.paths.get_batch_path()
 
-        disk_df = load_batch(path)
+        with open_batch_for_safe_writing(path) as disk_df:
+            # check that max_index_diff is not exceeded
+            if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
+                raise OverwriteError(
+                    f"The number of rows in the DataFrame on disk differs more "
+                    f"than has been allowed by the `max_index_diff` kwarg which "
+                    f"is set to <{max_index_diff}>. This is to prevent overwriting "
+                    f"the full DataFrame with a sub-DataFrame. If you still wish "
+                    f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
+                    f"with `max_index_diff` set to the highest allowable difference "
+                    f"in row number."
+                )
 
-        # check that max_index_diff is not exceeded
-        if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
-            raise IndexError(
-                f"The number of rows in the DataFrame on disk differs more "
-                f"than has been allowed by the `max_index_diff` kwarg which "
-                f"is set to <{max_index_diff}>. This is to prevent overwriting "
-                f"the full DataFrame with a sub-DataFrame. If you still wish "
-                f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
-                f"with `max_index_diff` set to the highest allowable difference "
-                f"in row number."
-            )
+            bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
-        bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
-
-        shutil.copyfile(path, bak)
-        try:
-            self._df.to_pickle(path)
-            os.remove(bak)
-        except:
-            shutil.copyfile(bak, path)
-            raise IOError(f"Could not save dataframe to disk.")
+            shutil.copyfile(path, bak)
+            try:
+                # don't save batch path because it's redundant/possibly incorrect when loading from disk
+                del self._df.attrs["batch_path"]
+                self._df.to_pickle(path)
+                os.remove(bak)
+            except:
+                shutil.copyfile(bak, path)
+                raise IOError(f"Could not save dataframe to disk.")
+            finally:
+                # restore batch path
+                self._df.paths.set_batch_path(path)
 
     def reload_from_disk(self) -> pd.DataFrame:
         """
@@ -243,8 +248,8 @@ class CaimanDataFrameExtensions:
         self._df.drop([index], inplace=True)
         # Reset indices so there are no 'jumps'
         self._df.reset_index(drop=True, inplace=True)
-        # Save new df to disc
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        # Save new df to disk
+        self.save_to_disk(max_index_diff=1)
 
     def get_params_diffs(self, algo: str, item_name: str) -> pd.DataFrame:
         """
@@ -460,14 +465,41 @@ class CaimanSeriesExtensions:
     def _run_slurm(
         self,
         runfile_path: str,
+        wait: bool,
+        partition: Optional[Union[str, list[str]]] = None,
         **kwargs
     ):
-        raise NotImplementedError("Not yet implemented, just a placeholder")
-        # submission_command = (
-        #     f'sbatch --ntasks=1 --cpus-per-task=16 --mem=90000 --wrap="{runfile_path}"'
-        # )
-        #
-        # Popen(submission_command.split(" "))
+        """
+        Run on a cluster using SLURM. Configurable options (to pass to run):
+        - partition: if given, tells SLRUM to run the job on the given partition(s).
+        """
+
+        # this needs to match what's in the runfile
+        if 'MESMERIZE_N_PROCESSES' in os.environ:
+            n_procs = os.environ['MESMERIZE_N_PROCESSES']
+        else:
+            n_procs = psutil.cpu_count() - 1
+
+        # make sure we have a place to save log files
+        uuid = str(self._series["uuid"])
+        output_dir = Path(runfile_path).parent.joinpath(uuid)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f'{uuid}.log'
+
+        # --wait means that the lifetme of the created process corresponds to the lifetime of the job
+        submission_opts = (f'--job-name={self._series["algo"]}-{uuid[:8]} --ntasks=1 ' +
+            f'--cpus-per-task={n_procs} --output={output_path} --wait')
+        
+        if partition is not None:
+            if isinstance(partition, str):
+                partition = [partition]
+            submission_opts += f' --partition={",".join(partition)}'
+
+        self.process = Popen(['sbatch', *submission_opts.split(" "), runfile_path])
+        if wait:
+            self.process.wait()
+        
+        return self.process
 
     @cnmf_cache.invalidate()
     def run(
