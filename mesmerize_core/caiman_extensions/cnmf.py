@@ -308,13 +308,10 @@ class CNMFExtensions:
         coordinates = list()
         coms = list()
 
-        for contour in contours:
-            coors = contour["coordinates"]
-            coors = coors[~np.isnan(coors).any(axis=1)]
-            coordinates.append(coors)
 
-            com = coors.mean(axis=0)
-            coms.append(com)
+        for contour in contours:
+            coordinates.append(contour["coordinates"])
+            coms.append(contour["CoM"][::-1])
 
         return coordinates, coms
 
