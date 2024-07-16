@@ -137,7 +137,7 @@ class CaimanDataFrameExtensions:
 
     @_verify_and_lock_batch_file
     @_index_parser
-    def update_item(self, index: int, updates: Union[dict, pd.Series]):
+    def update_item(self, index: Union[int, str, UUID], updates: Union[dict, pd.Series]):
         """
         Update the item at the given index or UUID with the data in updates and write to disk.
 
@@ -214,7 +214,7 @@ class CaimanDataFrameExtensions:
             with self._batch_lock:  # ensure we have the lock to avoid messing up other "safe" operations
                 self._df.to_pickle(path)
             os.remove(bak)
-        except BaseException as err:
+        except (Exception, KeyboardInterrupt) as err:
             shutil.copyfile(bak, path)
             raise IOError(f"Could not save dataframe to disk.") from err
         finally:
