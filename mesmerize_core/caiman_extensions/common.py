@@ -1,27 +1,28 @@
 import os
 import shutil
 from pathlib import Path
+import psutil
 from subprocess import Popen
 from typing import *
 from uuid import UUID, uuid4
 from shutil import rmtree
-from itertools import chain
-from collections import Counter
 from datetime import datetime
 import time
 from copy import deepcopy
+import shlex
 
 import numpy as np
 import pandas as pd
+from filelock import SoftFileLock, Timeout
 
-from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError
-from ._utils import validate, _index_parser
+from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError, PreventOverwriteError
+from ._utils import validate, _index_parser, _verify_and_lock_batch_file
 from ..batch_utils import (
     COMPUTE_BACKENDS,
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
     get_parent_raw_data_path,
-    load_batch
+    load_batch,
 )
 from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
@@ -44,6 +45,8 @@ class CaimanDataFrameExtensions:
 
     def __init__(self, df: pd.DataFrame):
         self._df = df
+        self._batch_lock = SoftFileLock(str(df.paths.get_batch_path()) + ".lock",
+                                        timeout=30, is_singleton=True)
 
     def uloc(self, u: Union[str, UUID]) -> pd.Series:
         """
@@ -61,6 +64,7 @@ class CaimanDataFrameExtensions:
 
         return df_u.squeeze()
 
+    @_verify_and_lock_batch_file
     def add_item(self, algo: str, item_name: str, input_movie_path: Union[str, pd.Series], params: dict):
         """
         Add an item to the DataFrame to organize parameters
@@ -129,37 +133,93 @@ class CaimanDataFrameExtensions:
         self._df.loc[self._df.index.size] = s
 
         # Save DataFrame to disk
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        self._save_to_disk_unsafe()
 
-    def save_to_disk(self, max_index_diff: int = 0):
+    @_verify_and_lock_batch_file
+    @_index_parser
+    def update_item(self, index: Union[int, str, UUID], updates: Union[dict, pd.Series]):
+        """
+        Update the item at the given index or UUID with the data in updates and write to disk.
+
+        Parameters
+        ----------
+        index: int, str or UUID
+            The index of the batch item to update as a numerical ``int`` index, ``str`` representing
+            a UUID, or a UUID object.
+
+        updates: dict or Series
+            Data to change in the selected row. Raises AttributeError if any key does not match a column name.
+        """
+        row = self._df.iloc[index]
+        for key in updates.keys():
+            if key not in row:
+                raise AttributeError(f"Cannot update item; received unknown column name '{key}'")
+        row.update(updates)
+        self._df.iloc[index] = row
+        self.save_to_disk()
+
+    def update_item_with_results(self, uuid: Union[str, UUID], results: dict, run_duration: float):
+        """Helper for algorithms to save their results to disk"""
+        updates = {
+            "outputs": results,
+            "ran_time": datetime.now().isoformat(timespec="seconds", sep="T"),
+            "algo_duration": str(run_duration) + " sec"
+        }
+        try:
+            # reload first because it should be safe since we have a UUID and we want to
+            # avoid failing to save results just because other items were added/removed
+            with self._batch_lock:
+                self._df = self.reload_from_disk()
+                self.update_item(uuid, updates)
+
+        except Exception as e:
+            # TODO maybe handle differently
+            # Print a message with details in lieu of writing to the batch file
+            msg = f"Batch file could not be written to"
+            if isinstance(e, Timeout):
+                msg += f" (file locked for {self._batch_lock.timeout} seconds)"
+            elif isinstance(e, PreventOverwriteError):
+                msg += f" (items would be overwritten, even though file was locked)"
+
+            if results["success"]:
+                output_dir = self._df.paths.get_batch_path().parent.joinpath(str(uuid))
+                msg += f"\nRun succeeded; results are in {output_dir}."
+            else:
+                msg += f"\nRun failed.\n"
+                msg += results["traceback"]
+
+            raise RuntimeError(msg)
+
+    @_verify_and_lock_batch_file
+    def save_to_disk(self):
         """
         Saves DataFrame to disk, copies to a backup before overwriting existing file.
+        Raises PreventOverwriteError if the df on disk has a different set of items than
+        the one in memory (before saving).
+        """
+        self._save_to_disk_unsafe()
+
+    def _save_to_disk_unsafe(self):
+        """
+        Saves the DataFrame to disk, without checking that the number and ID of items match
+        what is currently on disk first. Should never be used directly; use save_to_disk instead.
         """
         path: Path = self._df.paths.get_batch_path()
-
-        disk_df = load_batch(path)
-
-        # check that max_index_diff is not exceeded
-        if abs(disk_df.index.size - self._df.index.size) > max_index_diff:
-            raise IndexError(
-                f"The number of rows in the DataFrame on disk differs more "
-                f"than has been allowed by the `max_index_diff` kwarg which "
-                f"is set to <{max_index_diff}>. This is to prevent overwriting "
-                f"the full DataFrame with a sub-DataFrame. If you still wish "
-                f"to save the smaller DataFrame, use `caiman.save_to_disk()` "
-                f"with `max_index_diff` set to the highest allowable difference "
-                f"in row number."
-            )
-
         bak = path.with_suffix(path.suffix + f"bak.{time.time()}")
 
         shutil.copyfile(path, bak)
         try:
-            self._df.to_pickle(path)
+            # don't save batch path because it's redundant/possibly incorrect when loading from disk
+            del self._df.attrs["batch_path"]
+            with self._batch_lock:  # ensure we have the lock to avoid messing up other "safe" operations
+                self._df.to_pickle(path)
             os.remove(bak)
-        except:
+        except (Exception, KeyboardInterrupt) as err:
             shutil.copyfile(bak, path)
-            raise IOError(f"Could not save dataframe to disk.")
+            raise IOError(f"Could not save dataframe to disk.") from err
+        finally:
+            # restore batch path
+            self._df.paths.set_batch_path(path)
 
     def reload_from_disk(self) -> pd.DataFrame:
         """
@@ -178,6 +238,7 @@ class CaimanDataFrameExtensions:
         """
         return load_batch(self._df.paths.get_batch_path())
 
+    @_verify_and_lock_batch_file
     @_index_parser
     def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
         """
@@ -243,8 +304,8 @@ class CaimanDataFrameExtensions:
         self._df.drop([index], inplace=True)
         # Reset indices so there are no 'jumps'
         self._df.reset_index(drop=True, inplace=True)
-        # Save new df to disc
-        self._df.to_pickle(self._df.paths.get_batch_path())
+        # Save new df to disk
+        self._save_to_disk_unsafe()
 
     def get_params_diffs(self, algo: str, item_name: str) -> pd.DataFrame:
         """
@@ -460,14 +521,47 @@ class CaimanSeriesExtensions:
     def _run_slurm(
         self,
         runfile_path: str,
+        wait: bool,
+        sbatch_opts: str = '',
         **kwargs
     ):
-        raise NotImplementedError("Not yet implemented, just a placeholder")
-        # submission_command = (
-        #     f'sbatch --ntasks=1 --cpus-per-task=16 --mem=90000 --wrap="{runfile_path}"'
-        # )
-        #
-        # Popen(submission_command.split(" "))
+        """
+        Run on a cluster using SLURM. Configurable options (to pass to run):
+        - sbatch_opts: A single string containing additional options for sbatch.
+                       The following options are configured here, but can be overridden:
+                       --job-name
+                       --cpus-per-task (only controls number of CPUs allocated to the job; the number used for
+                                        parallel processing is controlled by os.environ['MESMERIZE_N_PROCESSES'])
+                       The following options should NOT be overridden:
+                       --ntasks, --output, --wait
+        """
+
+        # this needs to match what's in the runfile
+        if 'MESMERIZE_N_PROCESSES' in os.environ:
+            n_procs = os.environ['MESMERIZE_N_PROCESSES']
+        else:
+            n_procs = psutil.cpu_count() - 1
+
+        # make sure we have a place to save log files
+        uuid = str(self._series["uuid"])
+        output_dir = Path(runfile_path).parent.joinpath(uuid)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f'{uuid}.log'
+
+        # --wait means that the lifetme of the created process corresponds to the lifetime of the job
+        submission_opts = [
+            f'--job-name={self._series["algo"]}-{uuid[:8]}',
+            '--ntasks=1',
+            f'--cpus-per-task={n_procs}',
+            f'--output={output_path}',
+            '--wait'
+            ] + shlex.split(sbatch_opts)
+        
+        self.process = Popen(['sbatch', *submission_opts, runfile_path])
+        if wait:
+            self.process.wait()
+        
+        return self.process
 
     @cnmf_cache.invalidate()
     def run(

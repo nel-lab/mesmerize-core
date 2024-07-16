@@ -5,13 +5,11 @@ from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 import psutil
 import numpy as np
-import pandas as pd
 import traceback
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from shutil import move as move_file
 import os
 import time
-from datetime import datetime
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -27,7 +25,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     set_parent_raw_data_path(data_path)
 
     df = load_batch(batch_path)
-    item = df[df["uuid"] == uuid].squeeze()
+    item = df.caiman.uloc(uuid)
 
     input_movie_path = item["input_movie_path"]
     # resolve full path
@@ -115,13 +113,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
             Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
         move_file(fname_new, cnmf_memmap_path)
 
-        cnmf_hdf5_path = output_path.relative_to(output_dir.parent)
-        cnmf_memmap_path = cnmf_memmap_path.relative_to(output_dir.parent)
-        corr_img_path = corr_img_path.relative_to(output_dir.parent)
+        # save paths as relative path strings with forward slashes
+        cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
+        cnmf_memmap_path = str(PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent)))
+        corr_img_path = str(PurePosixPath(corr_img_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+            d[f"{proj_type}-projection-path"] = str(PurePosixPath(proj_paths[proj_type].relative_to(
                 output_dir.parent
-            )
+            )))
 
         d.update(
             {
@@ -137,15 +136,9 @@ def run_algo(batch_path, uuid, data_path: str = None):
         d = {"success": False, "traceback": traceback.format_exc()}
 
     cm.stop_server(dview=dview)
-
-    # Add dictionary to output column of series
-    df.loc[df["uuid"] == uuid, "outputs"] = [d]
-    # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
-    df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
-    # save dataframe to disc
-    df.to_pickle(batch_path)
-
+    
+    runtime = round(time.time() - algo_start, 2)
+    df.caiman.update_item_with_results(uuid, d, runtime)
 
 @click.command()
 @click.option("--batch-path", type=str)

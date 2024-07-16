@@ -5,14 +5,11 @@ from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
 from caiman.summary_images import local_correlations_movie_offline
 import psutil
-import pandas as pd
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import numpy as np
 from shutil import move as move_file
 import time
-from datetime import datetime
-
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -28,7 +25,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     batch_path = Path(batch_path)
     df = load_batch(batch_path)
 
-    item = df[df["uuid"] == uuid].squeeze()
+    item = df.caiman.uloc(uuid)
     # resolve full path
     input_movie_path = str(df.paths.resolve(item["input_movie_path"]))
 
@@ -123,14 +120,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
 
-        # relative paths
-        cn_path = cn_path.relative_to(output_dir.parent)
-        mcorr_memmap_path = mcorr_memmap_path.relative_to(output_dir.parent)
-        shift_path = shift_path.relative_to(output_dir.parent)
+        # save paths as relative path strings with forward slashes
+        cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
+        mcorr_memmap_path = str(PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent)))
+        shift_path = str(PurePosixPath(shift_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = proj_paths[proj_type].relative_to(
+            d[f"{proj_type}-projection-path"] = str(PurePosixPath(proj_paths[proj_type].relative_to(
                 output_dir.parent
-            )
+            )))
 
         d.update(
             {
@@ -148,13 +145,8 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
     cm.stop_server(dview=dview)
 
-    # Add dictionary to output column of series
-    df.loc[df["uuid"] == uuid, "outputs"] = [d]
-    # Add ran timestamp to ran_time column of series
-    df.loc[df["uuid"] == uuid, "ran_time"] = datetime.now().isoformat(timespec="seconds", sep="T")
-    df.loc[df["uuid"] == uuid, "algo_duration"] = str(round(time.time() - algo_start, 2)) + " sec"
-    # Save DataFrame to disk
-    df.to_pickle(batch_path)
+    runtime = round(time.time() - algo_start, 2)
+    df.caiman.update_item_with_results(uuid, d, runtime)
 
 
 @click.command()
