@@ -106,11 +106,6 @@ class CaimanDataFrameExtensions:
         # get relative path
         input_movie_path = self._df.paths.split(input_movie_path)[1]
 
-        # convert lists to tuples so that get_params_diffs works
-        for k in list(params["main"].keys()):
-            if isinstance(params["main"][k], list):
-                params["main"][k] = tuple(params["main"][k])
-
         # Create a pandas Series (Row) with the provided arguments
         s = pd.Series(
             {
