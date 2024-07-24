@@ -99,7 +99,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
         cnm.save(str(output_path))
 
-        Cn = cm.local_correlations(images.transpose(1, 2, 0))
+        Cn = cm.local_correlations(images, swap_dim=False)
         Cn[np.isnan(Cn)] = 0
 
         corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy").resolve()
