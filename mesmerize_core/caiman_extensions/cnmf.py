@@ -275,6 +275,8 @@ class CNMFExtensions:
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
+        Note, the centers of mass are different from those computed by CaImAn.
+        They are based on the contours and can be used to compute click targets for visualizations.
 
         Parameters
         ----------
@@ -310,8 +312,11 @@ class CNMFExtensions:
 
 
         for contour in contours:
-            coordinates.append(contour["coordinates"])
-            coms.append(contour["CoM"][::-1])
+            coors = contour["coordinates"]
+            coordinates.append(coors)
+
+            com = np.nanmean(coors, axis=0)
+            coms.append(com)
 
         return coordinates, coms
 
