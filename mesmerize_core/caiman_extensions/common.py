@@ -559,6 +559,7 @@ class CaimanSeriesExtensions:
             self,
             backend: Optional[str] = None,
             wait: bool = True,
+            n_processes: int = None,
             **kwargs
     ):
         """
@@ -596,6 +597,11 @@ class CaimanSeriesExtensions:
                 f"Invalid or unavailable `backend`, choose from the following backends:\n"
                 f"{COMPUTE_BACKENDS}"
             )
+
+        if n_processes is not None:
+            if not isinstance(n_processes, int):
+                raise TypeError("n_processes argument must be int")
+            os.environ["MESMERIZE_N_PROCESSES"] = str(n_processes)
 
         batch_path = self._series.paths.get_batch_path()
 
