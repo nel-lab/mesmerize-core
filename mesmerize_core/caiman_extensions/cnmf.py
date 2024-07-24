@@ -310,7 +310,6 @@ class CNMFExtensions:
         coordinates = list()
         coms = list()
 
-
         for contour in contours:
             coors = contour["coordinates"]
             coordinates.append(coors)
