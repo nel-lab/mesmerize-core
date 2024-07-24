@@ -88,36 +88,23 @@ def run_algo(batch_path, uuid, data_path: str = None):
             )
             np.save(str(proj_paths[proj_type]), p_img)
 
-        def run_correlation(remove_baseline=True) -> Path:
-            Cns = local_correlations_movie_offline(
-                str(mcorr_memmap_path),
-                remove_baseline=remove_baseline,
-                window=1000,
-                stride=1000,
-                winSize_baseline=100,
-                quantil_min_baseline=10,
-                dview=dview,
-            )
-            Cn = Cns.max(axis=0)
-            Cn[np.isnan(Cn)] = 0
-            cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
-            np.save(str(cn_path), Cn, allow_pickle=False)
-            
-            print("finished computing correlation image")
-            return cn_path
+        print("Computing correlation image")
+        Cns = local_correlations_movie_offline(
+            str(mcorr_memmap_path),
+            remove_baseline=True,
+            window=1000,
+            stride=1000,
+            winSize_baseline=100,
+            quantil_min_baseline=10,
+            dview=dview,
+        )
+        Cn = Cns.max(axis=0)
+        Cn[np.isnan(Cn)] = 0
+        cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
+        np.save(str(cn_path), Cn, allow_pickle=False)
+        
+        print("finished computing correlation image")
 
-        try:
-            print("Computing correlation image")
-            cn_path = run_correlation()
-
-        except ValueError as err:
-            # Test for error that occurs in movie.removeBL before bug was fixed
-            is3D = len(dims) == 3
-            if is3D and len(err.args) == 1 and err.args[0] == "axes don't match array":
-                print("Computing correlation on 3D image failed - trying without baseline (use caiman >= 1.11.2 to fix)")
-                cn_path = run_correlation(remove_baseline=False)
-            else:
-                raise
 
         # Compute shifts
         if opts.motion["pw_rigid"] == True:
