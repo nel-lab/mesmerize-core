@@ -10,6 +10,7 @@ from datetime import datetime
 import time
 from copy import deepcopy
 import shlex
+import asyncio
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,7 @@ from ..batch_utils import (
     COMPUTE_BACKENDS,
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
+    COMPUTE_BACKEND_ASYNC,
     get_parent_raw_data_path,
     load_batch,
 )
@@ -480,15 +482,27 @@ class CaimanSeriesExtensions:
             batch_path: Path,
             uuid: UUID,
             data_path: Union[Path, None],
-    ):
+            dview=None
+    ) -> DummyProcess:
+        coroutine = self._run_local_async(algo, batch_path, uuid, data_path, dview)
+        asyncio.run(coroutine)
+        return DummyProcess()
+
+    def _run_local_async(
+            self,
+            algo: str,
+            batch_path: Path,
+            uuid: UUID,
+            data_path: Union[Path, None],
+            dview=None
+    ) -> Coroutine:
         algo_module = getattr(algorithms, algo)
-        algo_module.run_algo(
+        return algo_module.run_algo_async(
             batch_path=str(batch_path),
             uuid=str(uuid),
-            data_path=str(data_path)
+            data_path=str(data_path),
+            dview=dview
         )
-
-        return DummyProcess()
 
     def _run_subprocess(
         self,
@@ -599,13 +613,14 @@ class CaimanSeriesExtensions:
 
         batch_path = self._series.paths.get_batch_path()
 
-        if backend == COMPUTE_BACKEND_LOCAL:
-            print(f"Running {self._series.uuid} with local backend")
-            return self._run_local(
+        if backend in [COMPUTE_BACKEND_LOCAL, COMPUTE_BACKEND_ASYNC]:
+            print(f"Running {self._series.uuid} with {backend} backend")
+            return getattr(self, f"_run_{backend}")(
                 algo=self._series["algo"],
                 batch_path=batch_path,
                 uuid=self._series["uuid"],
                 data_path=get_parent_raw_data_path(),
+                dview=kwargs.get("dview")
             )
 
         # Create the runfile in the batch dir using this Series' UUID as the filename
