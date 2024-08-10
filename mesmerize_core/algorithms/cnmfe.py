@@ -1,3 +1,4 @@
+import asyncio
 import click
 import numpy as np
 import caiman as cm
@@ -18,7 +19,10 @@ else:  # when running with local backend
     from ..utils import IS_WINDOWS
 
 
-def run_algo(batch_path, uuid, data_path: str = None):
+def run_algo(batch_path, uuid, data_path: str = None, dview=None):
+    asyncio.run(run_algo_async(batch_path, uuid, data_path=data_path, dview=dview))
+
+async def run_algo_async(batch_path, uuid, data_path: str = None, dview=None):
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
@@ -35,18 +39,23 @@ def run_algo(batch_path, uuid, data_path: str = None):
     params = item["params"]
     print("cnmfe params:", params)
 
-    # adapted from current demo notebook
-    if "MESMERIZE_N_PROCESSES" in os.environ.keys():
-        try:
-            n_processes = int(os.environ["MESMERIZE_N_PROCESSES"])
-        except:
-            n_processes = psutil.cpu_count() - 1
+    if 'multiprocessing' in str(type(dview)) and hasattr(dview, '_processes'):
+        n_processes = dview._processes
+    elif 'ipyparallel' in str(type(dview)):
+        n_processes = len(dview)
     else:
-        n_processes = psutil.cpu_count() - 1
-    # Start cluster for parallel processing
-    c, dview, n_processes = cm.cluster.setup_cluster(
-        backend="local", n_processes=n_processes, single_thread=False
-    )
+        # adapted from current demo notebook
+        if "MESMERIZE_N_PROCESSES" in os.environ.keys():
+            try:
+                n_processes = int(os.environ["MESMERIZE_N_PROCESSES"])
+            except:
+                n_processes = psutil.cpu_count() - 1
+        else:
+            n_processes = psutil.cpu_count() - 1
+        # Start cluster for parallel processing
+        c, dview, n_processes = cm.cluster.setup_cluster(
+            backend="multiprocessing", n_processes=n_processes, single_thread=False
+        )
 
     try:
         fname_new = cm.save_memmap(
