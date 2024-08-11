@@ -17,9 +17,11 @@ import time
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
     from mesmerize_core.utils import IS_WINDOWS
+    from mesmerize_core.algorithms._utils import ensure_server
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
     from ..utils import IS_WINDOWS
+    from ._utils import ensure_server
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None):
@@ -46,108 +48,85 @@ async def run_algo_async(batch_path, uuid, data_path: str = None, dview=None):
         f"Starting CNMF item:\n{item}\nWith params:{params}"
     )
 
-    if 'multiprocessing' in str(type(dview)) and hasattr(dview, '_processes'):
-        n_processes = dview._processes
-    elif 'ipyparallel' in str(type(dview)):
-        n_processes = len(dview)
-    else:
-        # adapted from current demo notebook
-        if "MESMERIZE_N_PROCESSES" in os.environ.keys():
-            try:
-                n_processes = int(os.environ["MESMERIZE_N_PROCESSES"])
-            except:
-                n_processes = psutil.cpu_count() - 1
-        else:
-            n_processes = psutil.cpu_count() - 1
-        # Start cluster for parallel processing
-        c, dview, n_processes = cm.cluster.setup_cluster(
-            backend="multiprocessing", n_processes=n_processes, single_thread=False
-        )
+    with ensure_server(dview) as (dview, n_processes):
 
-    # merge cnmf and eval kwargs into one dict
-    cnmf_params = CNMFParams(params_dict=params["main"])
-    # Run CNMF, denote boolean 'success' if CNMF completes w/out error
-    try:
-        fname_new = cm.save_memmap(
-            [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
-        )
-
-        print("making memmap")
-
-        Yr, dims, T = cm.load_memmap(fname_new)
-        images = np.reshape(Yr.T, [T] + list(dims), order="F")
-
-        proj_paths = dict()
-        for proj_type in ["mean", "std", "max"]:
-            p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
-            proj_paths[proj_type] = output_dir.joinpath(
-                f"{uuid}_{proj_type}_projection.npy"
-            )
-            np.save(str(proj_paths[proj_type]), p_img)
-
-        # in fname new load in memmap order C
-        cm.stop_server(dview=dview)
-        c, dview, n_processes = cm.cluster.setup_cluster(
-            backend="local", n_processes=None, single_thread=False
-        )
-
-        print("performing CNMF")
-        cnm = cnmf.CNMF(n_processes, params=cnmf_params, dview=dview)
-
-        print("fitting images")
-        cnm.fit(images)
-        #
-        if "refit" in params.keys():
-            if params["refit"] is True:
-                print("refitting")
-                cnm = cnm.refit(images, dview=dview)
-
-        print("performing eval")
-        cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
-
-        output_path = output_dir.joinpath(f"{uuid}.hdf5")
-
-        cnm.save(str(output_path))
-
-        Cn = cm.local_correlations(images, swap_dim=False)
-        Cn[np.isnan(Cn)] = 0
-
-        corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy")
-        np.save(str(corr_img_path), Cn, allow_pickle=False)
-
-        # output dict for dataframe row (pd.Series)
-        d = dict()
-
-        cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
-        if IS_WINDOWS:
-            Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
-        move_file(fname_new, cnmf_memmap_path)
-
-        # save paths as relative path strings with forward slashes
-        cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
-        cnmf_memmap_path = str(
-            PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent))
-        )
-        corr_img_path = str(PurePosixPath(corr_img_path.relative_to(output_dir.parent)))
-        for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = str(
-                PurePosixPath(proj_paths[proj_type].relative_to(output_dir.parent))
+        # merge cnmf and eval kwargs into one dict
+        cnmf_params = CNMFParams(params_dict=params["main"])
+        # Run CNMF, denote boolean 'success' if CNMF completes w/out error
+        try:
+            fname_new = cm.save_memmap(
+                [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
             )
 
-        d.update(
-            {
-                "cnmf-hdf5-path": cnmf_hdf5_path,
-                "cnmf-memmap-path": cnmf_memmap_path,
-                "corr-img-path": corr_img_path,
-                "success": True,
-                "traceback": None,
-            }
-        )
+            print("making memmap")
 
-    except:
-        d = {"success": False, "traceback": traceback.format_exc()}
+            Yr, dims, T = cm.load_memmap(fname_new)
 
-    cm.stop_server(dview=dview)
+            images = np.reshape(Yr.T, [T] + list(dims), order="F")
+
+            proj_paths = dict()
+            for proj_type in ["mean", "std", "max"]:
+                p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
+                proj_paths[proj_type] = output_dir.joinpath(
+                    f"{uuid}_{proj_type}_projection.npy"
+                )
+                np.save(str(proj_paths[proj_type]), p_img)
+
+            print("performing CNMF")
+            cnm = cnmf.CNMF(n_processes, params=cnmf_params, dview=dview)
+
+            print("fitting images")
+            cnm.fit(images)
+            #
+            if "refit" in params.keys():
+                if params["refit"] is True:
+                    print("refitting")
+                    cnm = cnm.refit(images, dview=dview)
+
+            print("performing eval")
+            cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
+
+            output_path = output_dir.joinpath(f"{uuid}.hdf5")
+
+            cnm.save(str(output_path))
+
+            Cn = cm.local_correlations(images, swap_dim=False)
+            Cn[np.isnan(Cn)] = 0
+
+            corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy")
+            np.save(str(corr_img_path), Cn, allow_pickle=False)
+
+            # output dict for dataframe row (pd.Series)
+            d = dict()
+
+            cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
+            if IS_WINDOWS:
+                Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
+            move_file(fname_new, cnmf_memmap_path)
+
+            # save paths as relative path strings with forward slashes
+            cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
+            cnmf_memmap_path = str(
+                PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent))
+            )
+            corr_img_path = str(PurePosixPath(corr_img_path.relative_to(output_dir.parent)))
+            for proj_type in proj_paths.keys():
+                d[f"{proj_type}-projection-path"] = str(
+                    PurePosixPath(proj_paths[proj_type].relative_to(output_dir.parent))
+                )
+
+            d.update(
+                {
+                    "cnmf-hdf5-path": cnmf_hdf5_path,
+                    "cnmf-memmap-path": cnmf_memmap_path,
+                    "corr-img-path": corr_img_path,
+                    "success": True,
+                    "traceback": None,
+                }
+            )
+
+        except:
+            d = {"success": False, "traceback": traceback.format_exc()}
 
     runtime = round(time.time() - algo_start, 2)
     df.caiman.update_item_with_results(uuid, d, runtime)
