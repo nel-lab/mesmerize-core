@@ -10,7 +10,7 @@ from datetime import datetime
 import time
 from copy import deepcopy
 import shlex
-import asyncio
+from concurrent.futures import ThreadPoolExecutor, Future
 
 import numpy as np
 import pandas as pd
@@ -460,10 +460,24 @@ class CaimanDataFrameExtensions:
                 return r["uuid"]
 
 
-class DummyProcess:
+class Waitable(Protocol):
+    """An object that we can call "wait" on"""
+    def wait(self) -> None: ...
+
+
+class DummyProcess(Waitable):
     """Dummy process for local backend"""
-    def wait(self):
+    def wait(self) -> None:
         pass
+
+
+class WaitableFuture(Waitable):
+    """Adaptor for future returned from Executor.submit"""
+    def __init__(self, future: Future[None]):
+        self.future = future
+    
+    def wait(self) -> None:
+        return self.future.result()
 
 
 @pd.api.extensions.register_series_accessor("caiman")
@@ -474,7 +488,7 @@ class CaimanSeriesExtensions:
 
     def __init__(self, s: pd.Series):
         self._series = s
-        self.process: Popen = None
+        self.process: Optional[Waitable] = None
 
     def _run_local(
             self,
@@ -484,9 +498,15 @@ class CaimanSeriesExtensions:
             data_path: Union[Path, None],
             dview=None
     ) -> DummyProcess:
-        coroutine = self._run_local_async(algo, batch_path, uuid, data_path, dview)
-        asyncio.run(coroutine)
-        return DummyProcess()
+        algo_module = getattr(algorithms, algo)
+        algo_module.run_algo(
+            batch_path=str(batch_path),
+            uuid=str(uuid),
+            data_path=str(data_path),
+            dview=dview
+        )
+        self.process = DummyProcess()
+        return self.process
 
     def _run_local_async(
             self,
@@ -495,14 +515,18 @@ class CaimanSeriesExtensions:
             uuid: UUID,
             data_path: Union[Path, None],
             dview=None
-    ) -> Coroutine:
+    ) -> WaitableFuture:
         algo_module = getattr(algorithms, algo)
-        return algo_module.run_algo_async(
-            batch_path=str(batch_path),
-            uuid=str(uuid),
-            data_path=str(data_path),
-            dview=dview
-        )
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                algo_module.run_algo,
+                batch_path=str(batch_path),
+                uuid=str(uuid),
+                data_path=str(data_path),
+                dview=dview
+                )
+            self.process = WaitableFuture(future)
+            return self.process
 
     def _run_subprocess(
         self,

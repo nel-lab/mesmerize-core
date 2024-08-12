@@ -1,11 +1,9 @@
 import traceback
-import asyncio
 import click
 import caiman as cm
 from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
 from caiman.summary_images import local_correlations_movie_offline
-import psutil
 import os
 from pathlib import Path, PurePosixPath
 import numpy as np
@@ -22,9 +20,6 @@ else:  # when running with local backend
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None):
-    asyncio.run(run_algo_async(batch_path, uuid, data_path=data_path, dview=dview))
-
-async def run_algo_async(batch_path, uuid, data_path: str = None, dview=None):
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 

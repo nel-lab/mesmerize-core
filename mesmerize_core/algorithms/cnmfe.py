@@ -1,14 +1,11 @@
-import asyncio
 import click
 import numpy as np
 import caiman as cm
 from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
-import psutil
 import traceback
 from pathlib import Path, PurePosixPath
 from shutil import move as move_file
-import os
 import time
 
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -22,9 +19,6 @@ else:  # when running with local backend
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None):
-    asyncio.run(run_algo_async(batch_path, uuid, data_path=data_path, dview=dview))
-
-async def run_algo_async(batch_path, uuid, data_path: str = None, dview=None):
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
