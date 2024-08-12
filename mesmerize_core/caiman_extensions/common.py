@@ -10,6 +10,7 @@ from datetime import datetime
 import time
 from copy import deepcopy
 import shlex
+from concurrent.futures import ThreadPoolExecutor, Future
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,7 @@ from ..batch_utils import (
     COMPUTE_BACKENDS,
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
+    COMPUTE_BACKEND_ASYNC,
     get_parent_raw_data_path,
     load_batch,
 )
@@ -458,10 +460,24 @@ class CaimanDataFrameExtensions:
                 return r["uuid"]
 
 
-class DummyProcess:
+class Waitable(Protocol):
+    """An object that we can call "wait" on"""
+    def wait(self) -> None: ...
+
+
+class DummyProcess(Waitable):
     """Dummy process for local backend"""
-    def wait(self):
+    def wait(self) -> None:
         pass
+
+
+class WaitableFuture(Waitable):
+    """Adaptor for future returned from Executor.submit"""
+    def __init__(self, future: Future[None]):
+        self.future = future
+    
+    def wait(self) -> None:
+        return self.future.result()
 
 
 @pd.api.extensions.register_series_accessor("caiman")
@@ -472,7 +488,7 @@ class CaimanSeriesExtensions:
 
     def __init__(self, s: pd.Series):
         self._series = s
-        self.process: Popen = None
+        self.process: Optional[Waitable] = None
 
     def _run_local(
             self,
@@ -480,15 +496,37 @@ class CaimanSeriesExtensions:
             batch_path: Path,
             uuid: UUID,
             data_path: Union[Path, None],
-    ):
+            dview=None
+    ) -> DummyProcess:
         algo_module = getattr(algorithms, algo)
         algo_module.run_algo(
             batch_path=str(batch_path),
             uuid=str(uuid),
-            data_path=str(data_path)
+            data_path=str(data_path),
+            dview=dview
         )
+        self.process = DummyProcess()
+        return self.process
 
-        return DummyProcess()
+    def _run_local_async(
+            self,
+            algo: str,
+            batch_path: Path,
+            uuid: UUID,
+            data_path: Union[Path, None],
+            dview=None
+    ) -> WaitableFuture:
+        algo_module = getattr(algorithms, algo)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                algo_module.run_algo,
+                batch_path=str(batch_path),
+                uuid=str(uuid),
+                data_path=str(data_path),
+                dview=dview
+                )
+            self.process = WaitableFuture(future)
+            return self.process
 
     def _run_subprocess(
         self,
@@ -599,13 +637,14 @@ class CaimanSeriesExtensions:
 
         batch_path = self._series.paths.get_batch_path()
 
-        if backend == COMPUTE_BACKEND_LOCAL:
-            print(f"Running {self._series.uuid} with local backend")
-            return self._run_local(
+        if backend in [COMPUTE_BACKEND_LOCAL, COMPUTE_BACKEND_ASYNC]:
+            print(f"Running {self._series.uuid} with {backend} backend")
+            return getattr(self, f"_run_{backend}")(
                 algo=self._series["algo"],
                 batch_path=batch_path,
                 uuid=self._series["uuid"],
                 data_path=get_parent_raw_data_path(),
+                dview=kwargs.get("dview")
             )
 
         # Create the runfile in the batch dir using this Series' UUID as the filename
