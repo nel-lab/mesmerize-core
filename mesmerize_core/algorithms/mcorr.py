@@ -90,7 +90,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
         print("Computing correlation image")
         Cns = local_correlations_movie_offline(
-            [str(mcorr_memmap_path)],
+            str(mcorr_memmap_path),
             remove_baseline=True,
             window=1000,
             stride=1000,
@@ -102,23 +102,26 @@ def run_algo(batch_path, uuid, data_path: str = None):
         Cn[np.isnan(Cn)] = 0
         cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
         np.save(str(cn_path), Cn, allow_pickle=False)
-
-        # output dict for pandas series for dataframe row
-        d = dict()
-
+        
         print("finished computing correlation image")
+
 
         # Compute shifts
         if opts.motion["pw_rigid"] == True:
             x_shifts = mc.x_shifts_els
             y_shifts = mc.y_shifts_els
             shifts = [x_shifts, y_shifts]
+            if hasattr(mc, 'z_shifts_els'):
+                shifts += mc.z_shifts_els
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
         else:
             shifts = mc.shifts_rig
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
+
+        # output dict for pandas series for dataframe row
+        d = dict()
 
         # save paths as relative path strings with forward slashes
         cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
