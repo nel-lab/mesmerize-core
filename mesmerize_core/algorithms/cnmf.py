@@ -82,8 +82,19 @@ def run_algo(batch_path, uuid, data_path: str = None):
             backend="local", n_processes=None, single_thread=False
         )
 
+        # load Ain if given
+        if 'Ain_path' in params and params['Ain_path'] is not None:
+            Ain_path_abs = output_dir / params['Ain_path']  # resolve relative to output dir
+            Ain = np.load(Ain_path_abs, allow_pickle=True)
+            if Ain.size == 1:  # sparse array loaded as object
+                Ain = Ain.item()
+            # to facilitate parameter comparison
+            cnmf_params.change_params({'init': {'method_init': f'Ain ({params['Ain_path']})'}})
+        else:
+            Ain = None
+
         print("performing CNMF")
-        cnm = cnmf.CNMF(n_processes, params=cnmf_params, dview=dview)
+        cnm = cnmf.CNMF(n_processes, params=cnmf_params, dview=dview, Ain=Ain)
 
         print("fitting images")
         cnm.fit(images)
