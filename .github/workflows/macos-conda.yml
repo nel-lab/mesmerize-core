@@ -24,12 +24,9 @@ jobs:
         channel-priority: true
         activate-environment: mescore
         environment-file: environment.yml
-
-    - name: Run conda init
-      run: |
-        conda init
         
     - name: Test mesmerize-core with pytest
+      shell: bash -el {0}
       run: |
         conda activate mescore
         mamba install pytest
