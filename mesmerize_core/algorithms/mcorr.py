@@ -105,14 +105,13 @@ def run_algo(batch_path, uuid, data_path: str = None):
         
         print("finished computing correlation image")
 
-
         # Compute shifts
         if opts.motion["pw_rigid"] == True:
             x_shifts = mc.x_shifts_els
             y_shifts = mc.y_shifts_els
             shifts = [x_shifts, y_shifts]
             if hasattr(mc, 'z_shifts_els'):
-                shifts += mc.z_shifts_els
+                shifts.append(mc.z_shifts_els)
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
         else:
