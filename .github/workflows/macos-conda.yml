@@ -27,6 +27,7 @@ jobs:
 
     - name: install mesmerize-core
       run: |
+        conda init
         conda activate mescore
         caimanmanager install
         pip install .
