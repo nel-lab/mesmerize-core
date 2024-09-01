@@ -25,15 +25,15 @@ jobs:
         activate-environment: mescore
         environment-file: environment.yml
 
-    - name: install mesmerize-core
+    - name: Run conda init
       run: |
         conda init
+        
+    - name: Test mesmerize-core with pytest
+      run: |
         conda activate mescore
+        mamba install pytest
         caimanmanager install
         pip install .
-        
-    - name: Test with pytest
-      run: |
-        mamba install pytest
         DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
