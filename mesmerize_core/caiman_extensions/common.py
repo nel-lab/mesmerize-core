@@ -368,14 +368,10 @@ class CaimanDataFrameExtensions:
 
         # gives a list where each item is a dict that has the unique params that correspond to a row
         # the indices of this series correspond to the index of the row in the parent dataframe
-        diffs = params_flat.map(lambda p: {key: p[key] for key in varying_params if key in p})
+        diffs = params_flat.map(lambda p: {key: p[key] if key in p else "<default>" for key in varying_params})
 
         # return as a nicely formatted dataframe
         diffs_df = pd.DataFrame.from_dict(diffs.tolist(), dtype=object).set_index(diffs.index)
-
-        # replace any missing parameters with a string for clarity
-        with pd.option_context('future.no_silent_downcasting', True):  # avoids warning about downcasting
-            diffs_df.fillna("<default>", inplace=True)
 
         return diffs_df
 

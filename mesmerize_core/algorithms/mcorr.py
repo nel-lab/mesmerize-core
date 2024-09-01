@@ -105,6 +105,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
         
         print("finished computing correlation image")
 
+
         # Compute shifts
         if opts.motion["pw_rigid"] == True:
             x_shifts = mc.x_shifts_els
