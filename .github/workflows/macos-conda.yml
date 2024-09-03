@@ -16,32 +16,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python '3.10'
-      uses: actions/setup-python@v3
+    - uses: conda-incubator/setup-miniconda@v3
       with:
         python-version: '3.10'
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
+        mamba-version: "*"
+        channels: conda-forge,defaults
+        channel-priority: true
+        activate-environment: mescore
+        environment-file: environment.yml
         
-    - name: Install mamba
+    - name: Test mesmerize-core with pytest
+      shell: bash -el {0}
       run: |
-        conda install -c conda-forge mamba
-        conda clean -a
-        
-        #   - name: install caiman
-        #     run: |
-        #       mamba install -c conda-forge caiman
-        
-    - name: install mesmerize-core
-      run: |
-        mamba env update -n base --file environment.yml
+        conda activate mescore
+        mamba install pytest
         caimanmanager install
         pip install .
-        
-    - name: Test with pytest
-      run: |
-        mamba install pytest
         DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 

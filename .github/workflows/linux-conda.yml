@@ -27,7 +27,7 @@ jobs:
         
     - name: Install mamba
       run: |
-        conda install -c conda-forge mamba
+        conda install -c conda-forge mamba python=3.10
         conda clean -a
         
         #   - name: install caiman
