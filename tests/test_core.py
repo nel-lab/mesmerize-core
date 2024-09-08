@@ -44,7 +44,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/record/6828096/files/ground_truths.zip"
+    url = f"https://zenodo.org/record/13732996/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -252,6 +252,15 @@ def test_mcorr():
     )
     )
 
+    # test to check shifts output path
+    assert (
+        batch_dir.joinpath(df.iloc[-1]["outputs"]["shifts"])
+        == df.paths.resolve(df.iloc[-1]["outputs"]["shifts"])
+        == batch_dir.joinpath(
+            str(df.iloc[-1]["uuid"]), f'{df.iloc[-1]["uuid"]}_shifts.npy'
+        )
+    )
+
     # test to check mean-projection output path
     assert (
             batch_dir.joinpath(df.iloc[-1]["outputs"]["mean-projection-path"])
@@ -302,6 +311,15 @@ def test_mcorr():
         ground_truths_dir.joinpath("mcorr", "mcorr_output.npy")
     )
     numpy.testing.assert_array_equal(mcorr_output, mcorr_output_actual)
+
+
+    # test to check mcorr get_shifts()
+    mcorr_shifts = df.iloc[-1].mcorr.get_shifts(pw_rigid=test_params[algo]["main"]["pw_rigid"])
+    mcorr_shifts_actual = numpy.load(
+        ground_truths_dir.joinpath("mcorr", "mcorr_shifts.npy")
+    )
+    numpy.testing.assert_array_equal(mcorr_shifts, mcorr_shifts_actual)
+
 
     # test to check caiman get_input_movie_path()
     assert df.iloc[-1].caiman.get_input_movie_path() == get_full_raw_data_path(

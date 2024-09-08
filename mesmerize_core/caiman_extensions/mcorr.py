@@ -5,7 +5,6 @@ import pandas as pd
 from caiman import load_memmap
 
 from ._utils import validate
-from typing import *
 
 
 @pd.api.extensions.register_series_accessor("mcorr")
@@ -92,9 +91,7 @@ class MCorrExtensions:
         return mc_movie
 
     @validate("mcorr")
-    def get_shifts(
-        self, pw_rigid: bool = False
-    ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+    def get_shifts(self, pw_rigid) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """
         Gets file path to shifts array (.npy file) for item, processes shifts array
         into a list of x and y shifts based on whether rigid or nonrigid
@@ -107,26 +104,16 @@ class MCorrExtensions:
             False = Rigid
         Returns:
         --------
-        List of Processed X and Y shifts arrays
+        List of Processed X and Y [and Z] shifts arrays
+        - For rigid correction, each element is a vector of length n_frames
+        - For pw_rigid correction, each element is an n_frames x n_patches matrix
         """
         path = self._series.paths.resolve(self._series["outputs"]["shifts"])
         shifts = np.load(str(path))
 
         if pw_rigid:
-            n_pts = shifts.shape[1]
-            n_lines = shifts.shape[2]
-            xs = [np.linspace(0, n_pts, n_pts)]
-            ys = []
-
-            for i in range(shifts.shape[0]):
-                for j in range(n_lines):
-                    ys.append(shifts[i, :, j])
+            shifts_by_dim = list(shifts)  # dims-length list of n_frames x n_patches matrices
         else:
-            n_pts = shifts.shape[0]
-            n_lines = shifts.shape[1]
-            xs = [np.linspace(0, n_pts, n_pts)]
-            ys = []
+            shifts_by_dim = list(shifts.T)  # dims-length list of n_frames-length vectors
 
-            for i in range(n_lines):
-                ys.append(shifts[:, i])
-        return xs, ys
+        return shifts_by_dim
