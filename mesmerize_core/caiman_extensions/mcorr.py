@@ -91,7 +91,7 @@ class MCorrExtensions:
         return mc_movie
 
     @validate("mcorr")
-    def get_shifts(self, pw_rigid) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    def get_shifts(self, pw_rigid) -> list[np.ndarray]:
         """
         Gets file path to shifts array (.npy file) for item, processes shifts array
         into a list of x and y shifts based on whether rigid or nonrigid
