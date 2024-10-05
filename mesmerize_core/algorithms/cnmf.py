@@ -72,8 +72,6 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
                 Ain = np.load(Ain_path_abs, allow_pickle=True)
                 if Ain.size == 1:  # sparse array loaded as object
                     Ain = Ain.item()
-                # to facilitate parameter comparison
-                cnmf_params.change_params({'init': {'method_init': f'Ain ({params["Ain_path"]})'}})
             else:
                 Ain = None
 
