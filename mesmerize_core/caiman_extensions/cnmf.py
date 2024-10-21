@@ -227,7 +227,7 @@ class CNMFExtensions:
         masks = np.zeros(shape=(dims[0], dims[1], len(component_indices)), dtype=bool)
 
         for n, ix in enumerate(component_indices):
-            s = cnmf_obj.estimates.A[:, ix].toarray().reshape(cnmf_obj.dims)
+            s = cnmf_obj.estimates.A[:, ix].toarray().reshape(cnmf_obj.dims, order='F')
             s[s >= threshold] = 1
             s[s < threshold] = 0
 
