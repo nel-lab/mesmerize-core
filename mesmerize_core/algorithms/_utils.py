@@ -32,31 +32,36 @@ def estimate_n_pixels_per_process(n_processes: int, T: int, dims: tuple[int, ...
 
 
 def make_chunk_projection(Yr_chunk: np.ndarray, proj_type: str):
-    return getattr(np, "nan" + proj_type)(Yr_chunk, axis=1)
+    return getattr(np, proj_type)(Yr_chunk, axis=1)
 
 def make_chunk_projection_helper(args: tuple[np.ndarray, str]):
     return make_chunk_projection(*args)
+
+
+def make_projection_parallel(Yr: np.ndarray, dims: tuple[int, ...], T: int,
+                             proj_type: str, dview: Optional[Cluster]) -> np.ndarray:
+    if dview is None:
+        p_img_flat = make_chunk_projection(Yr, proj_type)
+    else:
+        # use n_pixels_per_process from CNMF to avoid running out of memory
+        n_pix = Yr.shape[0]
+        p_img_flat = np.empty(n_pix, dtype=Yr.dtype)
+        chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
+        chunk_starts = range(0, n_pix, chunk_size)
+        chunk_slices = (slice(start, min(start + chunk_size, n_pix)) for start in chunk_starts)
+        chunks = (Yr[sl] for sl in chunk_slices)
+        args = ([ch, proj_type] for ch in chunks)
+        for chunk_slice, chunk_proj in zip(chunk_slices, dview.imap(make_chunk_projection_helper, args)):
+            p_img_flat[chunk_slice] = chunk_proj
+    
+    return np.reshape(p_img_flat, dims, order='F')
 
 
 def save_projections_parallel(uuid, Yr: np.ndarray, dims: tuple[int, ...], T: int,
                               output_dir: Path, dview: Optional[Cluster]) -> dict[str, Path]:
     proj_paths = dict()
     for proj_type in ["mean", "std", "max"]:
-        if dview is None:
-            p_img_flat = make_chunk_projection(Yr, proj_type)
-        else:
-            # use n_pixels_per_process from CNMF to avoid running out of memory
-            n_pix = Yr.shape[0]
-            p_img_flat = np.empty(n_pix, dtype=Yr.dtype)
-            chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
-            chunk_starts = range(0, n_pix, chunk_size)
-            chunk_slices = (slice(start, min(start + chunk_size, n_pix)) for start in chunk_starts)
-            chunks = (Yr[sl] for sl in chunk_slices)
-            args = ([ch, proj_type] for ch in chunks)
-            for chunk_slice, chunk_proj in zip(chunk_slices, dview.imap(make_chunk_projection_helper, args)):
-                p_img_flat[chunk_slice] = chunk_proj
-        
-        p_img = np.reshape(p_img_flat, dims, order='F')
+        p_img = make_projection_parallel(Yr, dims, T, "nan" + proj_type, dview=dview)
         proj_paths[proj_type] = output_dir.joinpath(
             f"{uuid}_{proj_type}_projection.npy"
         )
