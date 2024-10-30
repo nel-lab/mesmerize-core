@@ -13,10 +13,10 @@ import time
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
-    from mesmerize_core.algorithms._utils import ensure_server
+    from mesmerize_core.algorithms._utils import ensure_server, save_projections_parallel
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
-    from ._utils import ensure_server
+    from ._utils import ensure_server, save_projections_parallel
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None):
@@ -69,13 +69,9 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
             Yr, dims, T = cm.load_memmap(str(mcorr_memmap_path))
             images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
-            proj_paths = dict()
-            for proj_type in ["mean", "std", "max"]:
-                p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
-                proj_paths[proj_type] = output_dir.joinpath(
-                    f"{uuid}_{proj_type}_projection.npy"
-                )
-                np.save(str(proj_paths[proj_type]), p_img)
+            proj_paths = save_projections_parallel(
+                uuid=uuid, Yr=Yr, dims=dims, T=T, output_dir=output_dir, dview=dview
+            )
 
             print("Computing correlation image")
             Cns = local_correlations_movie_offline(
