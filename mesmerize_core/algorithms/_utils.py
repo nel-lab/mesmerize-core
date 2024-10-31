@@ -109,7 +109,7 @@ def make_projection_parallel(Yr: np.ndarray, dims: tuple[int, ...], T: int,
         chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
         chunk_starts = range(0, n_pix, chunk_size)
         chunk_slices = [slice(start, min(start + chunk_size, n_pix)) for start in chunk_starts]
-        args = ((Yr[chunk_slice], proj_type) for chunk_slice in chunk_slices)
+        args = ((np.asarray(Yr[chunk_slice]), proj_type) for chunk_slice in chunk_slices)
         for chunk_slice, chunk_proj in zip(chunk_slices, dview.imap(make_chunk_projection_helper, args)):
             p_img_flat[chunk_slice] = chunk_proj
     
