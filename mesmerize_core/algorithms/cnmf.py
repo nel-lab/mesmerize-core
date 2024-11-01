@@ -70,7 +70,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
         proj_paths = save_projections_parallel(
-            uuid=uuid, Yr=Yr, dims=dims, T=T, output_dir=output_dir, dview=dview
+            uuid=uuid, movie_path=fname_new, output_dir=output_dir, dview=dview
         )
 
         # in fname new load in memmap order C
