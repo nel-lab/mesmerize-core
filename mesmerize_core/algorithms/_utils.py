@@ -42,11 +42,11 @@ def make_chunk_projection_helper(args: tuple[str, slice, str]):
 
 
 def make_projection_parallel(movie_path: str, proj_type: str, dview: Optional[Cluster]) -> np.ndarray:
+    Yr, dims, T = cm.load_memmap(movie_path)
     if dview is None:
         p_img_flat = make_chunk_projection(Yr, proj_type)
     else:
         # use n_pixels_per_process from CNMF to avoid running out of memory
-        Yr, dims, T = cm.load_memmap(movie_path)
         n_pix = Yr.shape[0]
         chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
         chunk_starts = range(0, n_pix, chunk_size)
