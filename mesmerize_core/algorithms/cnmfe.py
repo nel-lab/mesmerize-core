@@ -48,7 +48,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
             # TODO: if projections already exist from mcorr we don't
             #  need to waste compute time re-computing them here
             proj_paths = save_projections_parallel(
-                uuid=uuid, Yr=Yr, dims=dims, T=T, output_dir=output_dir, dview=dview
+                uuid=uuid, movie_path=fname_new, output_dir=output_dir, dview=dview
             )
 
             d = dict()  # for output

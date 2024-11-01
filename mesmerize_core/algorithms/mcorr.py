@@ -70,7 +70,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
             images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
             proj_paths = save_projections_parallel(
-                uuid=uuid, Yr=Yr, dims=dims, T=T, output_dir=output_dir, dview=dview
+                uuid=uuid, movie_path=mcorr_memmap_path, output_dir=output_dir, dview=dview
             )
 
             print("Computing correlation image")

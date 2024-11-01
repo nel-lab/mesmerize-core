@@ -60,14 +60,16 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
                 fname_new = cm.save_memmap(
                     [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
                 )
-                Yr, dims, T = cm.load_memmap(fname_new)
+                cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
+                move_file(fname_new, cnmf_memmap_path)
             else:
-                Yr, dims, T = cm.load_memmap(input_movie_path)
+                cnmf_memmap_path = Path(input_movie_path)
 
+            Yr, dims, T = cm.load_memmap(str(cnmf_memmap_path))
             images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
             proj_paths = save_projections_parallel(
-                uuid=uuid, Yr=Yr, dims=dims, T=T, output_dir=output_dir, dview=dview
+                uuid=uuid, movie_path=cnmf_memmap_path, output_dir=output_dir, dview=dview
             )
 
             print("performing CNMF")
@@ -99,12 +101,6 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
             if IS_WINDOWS:
                 Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
-
-            if save_new_mmap:
-                cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
-                move_file(fname_new, cnmf_memmap_path)
-            else:
-                cnmf_memmap_path = Path(input_movie_path)
 
             # save paths as relative path strings with forward slashes
             cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
