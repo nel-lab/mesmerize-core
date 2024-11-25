@@ -4,6 +4,7 @@ import click
 import caiman as cm
 from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
+from caiman.summary_images import local_correlations_movie_offline
 from caiman.paths import decode_mmap_filename_dict
 import numpy as np
 import traceback
@@ -68,9 +69,25 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
             Yr, dims, T = cm.load_memmap(str(cnmf_memmap_path))
             images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
+            print("computing projections")
             proj_paths = save_projections_parallel(
                 uuid=uuid, movie_path=cnmf_memmap_path, output_dir=output_dir, dview=dview
             )
+
+            print("computing correlation image")
+            Cns = local_correlations_movie_offline(
+                str(cnmf_memmap_path),
+                remove_baseline=True,
+                window=1000,
+                stride=1000,
+                winSize_baseline=100,
+                quantil_min_baseline=10,
+                dview=dview,
+            )
+            Cn = Cns.max(axis=0)
+            Cn[np.isnan(Cn)] = 0
+            corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy")
+            np.save(str(corr_img_path), Cn, allow_pickle=False)
 
             print("performing CNMF")
             cnm = cnmf.CNMF(n_processes, params=cnmf_params, dview=dview)
@@ -89,12 +106,6 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
             output_path = output_dir.joinpath(f"{uuid}.hdf5")
 
             cnm.save(str(output_path))
-
-            Cn = cm.local_correlations(images, swap_dim=False)
-            Cn[np.isnan(Cn)] = 0
-
-            corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy")
-            np.save(str(corr_img_path), Cn, allow_pickle=False)
 
             # output dict for dataframe row (pd.Series)
             d = dict()
