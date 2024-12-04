@@ -10,6 +10,7 @@ from caiman.cluster import setup_cluster
 from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 import numpy as np
+import scipy.stats
 
 
 RetVal = TypeVar("RetVal")
@@ -91,26 +92,39 @@ def estimate_n_pixels_per_process(n_processes: int, T: int, dims: tuple[int, ...
     return npx_per_proc
 
 
-def make_chunk_projection(Yr_chunk: np.ndarray, proj_type: str):
-    return getattr(np, proj_type)(Yr_chunk, axis=1)
+def make_chunk_projection(Yr_chunk: np.ndarray, proj_type: str, ignore_nan=False):
+    if hasattr(scipy.stats, proj_type):
+        return getattr(scipy.stats, proj_type)(Yr_chunk, axis=1, nan_policy='omit' if ignore_nan else 'propagate')
+    
+    if hasattr(np, proj_type):
+        if ignore_nan:
+            if hasattr(np, "nan" + proj_type):
+                proj_type = "nan" + proj_type
+            else:
+                logging.warning(f"NaN-ignoring version of {proj_type} function does not exist; not ignoring NaNs")    
+        return getattr(np, proj_type)(Yr_chunk, axis=1)
+    
+    raise NotImplementedError(f"Projection type '{proj_type}' not implemented")
+
 
 def make_chunk_projection_helper(args: tuple[str, slice, str]):
-    Yr_name, chunk_slice, proj_type = args
+    Yr_name, chunk_slice, proj_type, ignore_nan = args
     Yr, _, _ = cm.load_memmap(Yr_name)
-    return make_chunk_projection(Yr[chunk_slice], proj_type)
+    return make_chunk_projection(Yr[chunk_slice], proj_type, ignore_nan=ignore_nan)
 
 
-def make_projection_parallel(movie_path: str, proj_type: str, dview: Optional[Cluster]) -> np.ndarray:
+def make_projection_parallel(movie_path: str, proj_type: str, dview: Optional[Cluster],
+                             ignore_nan=False) -> np.ndarray:
     Yr, dims, T = cm.load_memmap(movie_path)
     if dview is None:
-        p_img_flat = make_chunk_projection(Yr, proj_type)
+        p_img_flat = make_chunk_projection(Yr, proj_type, ignore_nan=ignore_nan)
     else:
         # use n_pixels_per_process from CNMF to avoid running out of memory
         n_pix = Yr.shape[0]
         chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
         chunk_starts = range(0, n_pix, chunk_size)
         chunk_slices = [slice(start, min(start + chunk_size, n_pix)) for start in chunk_starts]
-        args = [(movie_path, chunk_slice, proj_type) for chunk_slice in chunk_slices]
+        args = [(movie_path, chunk_slice, proj_type, ignore_nan) for chunk_slice in chunk_slices]
         map_fn = dview.map if isinstance(dview, Pool) else dview.map_sync
         chunk_projs = map_fn(make_chunk_projection_helper, args)
         p_img_flat = np.concatenate(chunk_projs, axis=0)
@@ -121,7 +135,7 @@ def save_projections_parallel(uuid, movie_path: Union[str, Path], output_dir: Pa
                               ) -> dict[str, Path]:
     proj_paths = dict()
     for proj_type in ["mean", "std", "max"]:
-        p_img = make_projection_parallel(str(movie_path), "nan" + proj_type, dview=dview)
+        p_img = make_projection_parallel(str(movie_path), proj_type, dview=dview, ignore_nan=True)
         proj_paths[proj_type] = output_dir.joinpath(
             f"{uuid}_{proj_type}_projection.npy"
         )
