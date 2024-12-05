@@ -107,15 +107,24 @@ def make_chunk_projection(Yr_chunk: np.ndarray, proj_type: str, ignore_nan=False
     raise NotImplementedError(f"Projection type '{proj_type}' not implemented")
 
 
-def make_chunk_projection_helper(args: tuple[str, slice, str]):
-    Yr_name, chunk_slice, proj_type, ignore_nan = args
-    Yr, _, _ = cm.load_memmap(Yr_name)
+def make_chunk_projection_helper(args: tuple[Union[str, np.ndarray], slice, str, bool]):
+    Yr, chunk_slice, proj_type, ignore_nan = args
+    if isinstance(Yr, str):
+        Yr, _, _ = cm.load_memmap(Yr)
     return make_chunk_projection(Yr[chunk_slice], proj_type, ignore_nan=ignore_nan)
 
 
-def make_projection_parallel(movie_path: str, proj_type: str, dview: Optional[Cluster],
+def make_projection_parallel(movie_or_path: Union[cm.movie, str], proj_type: str, dview: Optional[Cluster],
                              ignore_nan=False) -> np.ndarray:
-    Yr, dims, T = cm.load_memmap(movie_path)
+    if isinstance(movie_or_path, str):
+        movie_path = movie_or_path
+        Yr, dims, T = cm.load_memmap(movie_path)
+    else:
+        dview = None  # avoid doing in parallel if we already know it fits into memory
+        T = movie_or_path.shape[0]
+        dims = movie_or_path.shape[1:]
+        Yr = movie_or_path.reshape((T, -1), order='F').T
+
     if dview is None:
         p_img_flat = make_chunk_projection(Yr, proj_type, ignore_nan=ignore_nan)
     else:
