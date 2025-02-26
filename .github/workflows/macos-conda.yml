@@ -20,11 +20,11 @@ jobs:
       with:
         architecture: 'x64'
         python-version: '3.10'
-        mamba-version: "*"
         channels: conda-forge,defaults
         channel-priority: true
         activate-environment: mescore
         environment-file: environment.yml
+        miniforge-version: latest
         
     - name: Test mesmerize-core with pytest
       shell: bash -el {0}
