@@ -35,7 +35,6 @@ jobs:
         cd ..
         git clone https://github.com/flatironinstitute/CaImAn.git
         cd CaImAn
-        pip install -r requirements.txt
         pip install .
         caimanmanager install
 
