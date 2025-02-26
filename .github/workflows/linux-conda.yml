@@ -28,7 +28,7 @@ jobs:
     - name: Install mamba
       run: |
         mkdir -p $HOME/.conda_pkgs_cache
-        conda config --set pkgs_dirs $HOME/.conda_pkgs_cache
+        conda config --add pkgs_dirs "$HOME/.conda_pkgs_cache"
         conda install -c conda-forge mamba python=3.10
         conda clean -a
         

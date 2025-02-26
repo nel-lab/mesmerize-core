@@ -13,13 +13,12 @@ jobs:
     runs-on: macos-latest
     strategy:
       max-parallel: 5
-      matrix:
-        architecture: ["x64"]
 
     steps:
     - uses: actions/checkout@v3
     - uses: conda-incubator/setup-miniconda@v3
       with:
+        architecture: 'x64'
         python-version: '3.10'
         mamba-version: "*"
         channels: conda-forge,defaults
