@@ -15,7 +15,12 @@ import numpy as np
 import pandas as pd
 from filelock import SoftFileLock, Timeout
 
-from ._batch_exceptions import BatchItemNotRunError, BatchItemUnsuccessfulError, DependencyError, PreventOverwriteError
+from ._batch_exceptions import (
+    BatchItemNotRunError,
+    BatchItemUnsuccessfulError,
+    DependencyError,
+    PreventOverwriteError,
+)
 from ._utils import validate, _index_parser, _verify_and_lock_batch_file
 from ..batch_utils import (
     COMPUTE_BACKENDS,
@@ -45,8 +50,9 @@ class CaimanDataFrameExtensions:
 
     def __init__(self, df: pd.DataFrame):
         self._df = df
-        self._batch_lock = SoftFileLock(str(df.paths.get_batch_path()) + ".lock",
-                                        timeout=30, is_singleton=True)
+        self._batch_lock = SoftFileLock(
+            str(df.paths.get_batch_path()) + ".lock", timeout=30, is_singleton=True
+        )
 
     def uloc(self, u: Union[str, UUID]) -> pd.Series:
         """
@@ -65,7 +71,13 @@ class CaimanDataFrameExtensions:
         return df_u.squeeze()
 
     @_verify_and_lock_batch_file
-    def add_item(self, algo: str, item_name: str, input_movie_path: Union[str, pd.Series], params: dict):
+    def add_item(
+        self,
+        algo: str,
+        item_name: str,
+        input_movie_path: Union[str, pd.Series],
+        params: dict,
+    ):
         """
         Add an item to the DataFrame to organize parameters
         that can be used to run a CaImAn algorithm
@@ -132,7 +144,9 @@ class CaimanDataFrameExtensions:
 
     @_verify_and_lock_batch_file
     @_index_parser
-    def update_item(self, index: Union[int, str, UUID], updates: Union[dict, pd.Series]):
+    def update_item(
+        self, index: Union[int, str, UUID], updates: Union[dict, pd.Series]
+    ):
         """
         Update the item at the given index or UUID with the data in updates and write to disk.
 
@@ -148,17 +162,21 @@ class CaimanDataFrameExtensions:
         row = self._df.iloc[index]
         for key in updates.keys():
             if key not in row:
-                raise AttributeError(f"Cannot update item; received unknown column name '{key}'")
+                raise AttributeError(
+                    f"Cannot update item; received unknown column name '{key}'"
+                )
         row.update(updates)
         self._df.iloc[index] = row
         self.save_to_disk()
 
-    def update_item_with_results(self, uuid: Union[str, UUID], results: dict, run_duration: float):
+    def update_item_with_results(
+        self, uuid: Union[str, UUID], results: dict, run_duration: float
+    ):
         """Helper for algorithms to save their results to disk"""
         updates = {
             "outputs": results,
             "ran_time": datetime.now().isoformat(timespec="seconds", sep="T"),
-            "algo_duration": str(run_duration) + " sec"
+            "algo_duration": str(run_duration) + " sec",
         }
         try:
             # reload first because it should be safe since we have a UUID and we want to
@@ -235,7 +253,12 @@ class CaimanDataFrameExtensions:
 
     @_verify_and_lock_batch_file
     @_index_parser
-    def remove_item(self, index: Union[int, str, UUID], remove_data: bool = True, safe_removal: bool = True):
+    def remove_item(
+        self,
+        index: Union[int, str, UUID],
+        remove_data: bool = True,
+        safe_removal: bool = True,
+    ):
         """
         Remove a batch item from the DataFrame and delete all data associated
         to that batch item from disk if ``remove_data=True``
@@ -322,7 +345,8 @@ class CaimanDataFrameExtensions:
             `item_name`. The returned index corresponds to the
             index of the original DataFrame
 
-        """            
+        """
+
         def flatten_params(params_dict: dict):
             """
             Produce a flat dict with one entry for each parameter in the passed dict.
@@ -337,47 +361,69 @@ class CaimanDataFrameExtensions:
                 else:
                     params[key1] = val1
             return params
-        
+
         sub_df = self._df[self._df["item_name"] == item_name]
         sub_df = sub_df[sub_df["algo"] == algo]
 
         if sub_df.index.size == 0:
-            raise NameError(f"The given `item_name`: {item_name}, does not exist in the DataFrame")
+            raise NameError(
+                f"The given `item_name`: {item_name}, does not exist in the DataFrame"
+            )
 
         # get flattened parameters for each of the filtered items
         params_flat = sub_df.params.map(lambda p: flatten_params(p["main"]))
 
         # build list of params that differ between different parameter sets
-        common_params = deepcopy(params_flat.iat[0])  # holds the common value for parameters found in all sets (so far)
-        varying_params = set()  # set of parameter keys that appear in not all sets or with varying values
+        common_params = deepcopy(
+            params_flat.iat[0]
+        )  # holds the common value for parameters found in all sets (so far)
+        varying_params = (
+            set()
+        )  # set of parameter keys that appear in not all sets or with varying values
 
         for this_params in params_flat.iloc[1:]:
             # first, anything that's not in both this dict and the common set is considered varying
             common_paramset = set(common_params.keys())
-            for not_common_key in common_paramset.symmetric_difference(this_params.keys()):
+            for not_common_key in common_paramset.symmetric_difference(
+                this_params.keys()
+            ):
                 varying_params.add(not_common_key)
                 if not_common_key in common_paramset:
                     del common_params[not_common_key]
                     common_paramset.remove(not_common_key)
 
             # second, look at params in the common set and remove any that differ for this set
-            for key in common_paramset:  # iterate over this set rather than dict itself to avoid issues when deleting entries
-                if not np.array_equal(common_params[key], this_params[key]):  # (should also work for scalars/arbitrary objects)
+            for (
+                key
+            ) in (
+                common_paramset
+            ):  # iterate over this set rather than dict itself to avoid issues when deleting entries
+                if not np.array_equal(
+                    common_params[key], this_params[key]
+                ):  # (should also work for scalars/arbitrary objects)
                     varying_params.add(key)
                     del common_params[key]
 
         # gives a list where each item is a dict that has the unique params that correspond to a row
         # the indices of this series correspond to the index of the row in the parent dataframe
-        diffs = params_flat.map(lambda p: {key: p[key] if key in p else "<default>" for key in varying_params})
+        diffs = params_flat.map(
+            lambda p: {
+                key: p[key] if key in p else "<default>" for key in varying_params
+            }
+        )
 
         # return as a nicely formatted dataframe
-        diffs_df = pd.DataFrame.from_dict(diffs.tolist(), dtype=object).set_index(diffs.index)
+        diffs_df = pd.DataFrame.from_dict(diffs.tolist(), dtype=object).set_index(
+            diffs.index
+        )
 
         return diffs_df
 
-    @warning_experimental("This feature will change in the future and directly return the "
-                          " a DataFrame of children (rows, ie. child batch items row) "
-                          "instead of a list of UUIDs")
+    @warning_experimental(
+        "This feature will change in the future and directly return the "
+        " a DataFrame of children (rows, ie. child batch items row) "
+        "instead of a list of UUIDs"
+    )
     @_index_parser
     def get_children(self, index: Union[int, str, UUID]) -> List[UUID]:
         """
@@ -419,8 +465,10 @@ class CaimanDataFrameExtensions:
                 children.append(r["uuid"])
         return children
 
-    @warning_experimental("This feature will change in the future and directly return the "
-                          " pandas.Series (row, ie. batch item row) instead of the UUID")
+    @warning_experimental(
+        "This feature will change in the future and directly return the "
+        " pandas.Series (row, ie. batch item row) instead of the UUID"
+    )
     @_index_parser
     def get_parent(self, index: Union[int, str, UUID]) -> Union[UUID, None]:
         """
@@ -451,7 +499,11 @@ class CaimanDataFrameExtensions:
                 continue
             try:
                 _potential_parent = r.mcorr.get_output_path()
-            except (FileNotFoundError, BatchItemUnsuccessfulError, BatchItemNotRunError):
+            except (
+                FileNotFoundError,
+                BatchItemUnsuccessfulError,
+                BatchItemNotRunError,
+            ):
                 continue  # can't be a parent if it was unsuccessful
 
             if _potential_parent == input_movie_path:
@@ -460,6 +512,7 @@ class CaimanDataFrameExtensions:
 
 class DummyProcess:
     """Dummy process for local backend"""
+
     def wait(self):
         pass
 
@@ -475,27 +528,20 @@ class CaimanSeriesExtensions:
         self.process: Popen = None
 
     def _run_local(
-            self,
-            algo: str,
-            batch_path: Path,
-            uuid: UUID,
-            data_path: Union[Path, None],
+        self,
+        algo: str,
+        batch_path: Path,
+        uuid: UUID,
+        data_path: Union[Path, None],
     ):
         algo_module = getattr(algorithms, algo)
         algo_module.run_algo(
-            batch_path=str(batch_path),
-            uuid=str(uuid),
-            data_path=str(data_path)
+            batch_path=str(batch_path), uuid=str(uuid), data_path=str(data_path)
         )
 
         return DummyProcess()
 
-    def _run_subprocess(
-        self,
-        runfile_path: str,
-        wait: bool,
-        **kwargs
-    ):
+    def _run_subprocess(self, runfile_path: str, wait: bool, **kwargs):
 
         # Get the dir that contains the input movie
         parent_path = self._series.paths.resolve(self._series.input_movie_path).parent
@@ -510,11 +556,7 @@ class CaimanSeriesExtensions:
         return self.process
 
     def _run_slurm(
-        self,
-        runfile_path: str,
-        wait: bool,
-        sbatch_opts: str = '',
-        **kwargs
+        self, runfile_path: str, wait: bool, sbatch_opts: str = "", **kwargs
     ):
         """
         Run on a cluster using SLURM. Configurable options (to pass to run):
@@ -528,8 +570,8 @@ class CaimanSeriesExtensions:
         """
 
         # this needs to match what's in the runfile
-        if 'MESMERIZE_N_PROCESSES' in os.environ:
-            n_procs = os.environ['MESMERIZE_N_PROCESSES']
+        if "MESMERIZE_N_PROCESSES" in os.environ:
+            n_procs = os.environ["MESMERIZE_N_PROCESSES"]
         else:
             n_procs = psutil.cpu_count() - 1
 
@@ -537,30 +579,25 @@ class CaimanSeriesExtensions:
         uuid = str(self._series["uuid"])
         output_dir = Path(runfile_path).parent.joinpath(uuid)
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / f'{uuid}.log'
+        output_path = output_dir / f"{uuid}.log"
 
         # --wait means that the lifetme of the created process corresponds to the lifetime of the job
         submission_opts = [
             f'--job-name={self._series["algo"]}-{uuid[:8]}',
-            '--ntasks=1',
-            f'--cpus-per-task={n_procs}',
-            f'--output={output_path}',
-            '--wait'
-            ] + shlex.split(sbatch_opts)
-        
-        self.process = Popen(['sbatch', *submission_opts, runfile_path])
+            "--ntasks=1",
+            f"--cpus-per-task={n_procs}",
+            f"--output={output_path}",
+            "--wait",
+        ] + shlex.split(sbatch_opts)
+
+        self.process = Popen(["sbatch", *submission_opts, runfile_path])
         if wait:
             self.process.wait()
-        
+
         return self.process
 
     @cnmf_cache.invalidate()
-    def run(
-            self,
-            backend: Optional[str] = None,
-            wait: bool = True,
-            **kwargs
-    ):
+    def run(self, backend: Optional[str] = None, wait: bool = True, **kwargs):
         """
         Run a CaImAn algorithm in an external process using the chosen backend
 
@@ -649,7 +686,9 @@ class CaimanSeriesExtensions:
 
         return self._series.paths.resolve(self._series["input_movie_path"])
 
-    def get_input_movie(self, reader: callable = None, **kwargs) -> Union[np.ndarray, Any]:
+    def get_input_movie(
+        self, reader: callable = None, **kwargs
+    ) -> Union[np.ndarray, Any]:
         """
         Get the input movie
 
@@ -669,9 +708,7 @@ class CaimanSeriesExtensions:
 
         if reader is not None:
             if not callable(reader):
-                raise TypeError(
-                    f"reader must be a callable type, such as a function"
-                )
+                raise TypeError(f"reader must be a callable type, such as a function")
 
             return reader(path_str, **kwargs)
 
@@ -703,7 +740,7 @@ class CaimanSeriesExtensions:
     def get_projection(self, proj_type: str) -> np.ndarray:
         """
         Return the ``max``, ``mean``, or ``std`` (standard deviation) projection
-        
+
         Parameters
         ----------
         proj_type: str

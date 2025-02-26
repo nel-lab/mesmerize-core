@@ -7,5 +7,5 @@ __all__ = [
     "LazyArrayRCB",
     "LazyArrayResiduals",
     "LazyTiff",
-    "LazyVideo"
+    "LazyVideo",
 ]

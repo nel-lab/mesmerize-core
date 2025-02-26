@@ -14,9 +14,24 @@ COMPUTE_BACKEND_SUBPROCESS = "subprocess"  #: subprocess backend
 COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend
 COMPUTE_BACKEND_LOCAL = "local"
 
-COMPUTE_BACKENDS = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_SLURM, COMPUTE_BACKEND_LOCAL]
+COMPUTE_BACKENDS = [
+    COMPUTE_BACKEND_SUBPROCESS,
+    COMPUTE_BACKEND_SLURM,
+    COMPUTE_BACKEND_LOCAL,
+]
 
-DATAFRAME_COLUMNS = ["algo", "item_name", "input_movie_path", "params", "outputs", "added_time", "ran_time", "algo_duration", "comments", "uuid"]
+DATAFRAME_COLUMNS = [
+    "algo",
+    "item_name",
+    "input_movie_path",
+    "params",
+    "outputs",
+    "added_time",
+    "ran_time",
+    "algo_duration",
+    "comments",
+    "uuid",
+]
 
 
 def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
@@ -133,10 +148,10 @@ class _BasePathExtensions:
                     return raw_data_path_abs, path.relative_to(raw_data_path_abs)
 
         raise NotADirectoryError(
-                f"Could not split `path`:\n{path}"
-                f"\nnot relative to either batch path:\n{batch_parent_abs}"
-                f"\nor parent raw data path:\n{raw_data_path_abs if raw_data_path is not None else '(not set)'}"
-            )
+            f"Could not split `path`:\n{path}"
+            f"\nnot relative to either batch path:\n{batch_parent_abs}"
+            f"\nor parent raw data path:\n{raw_data_path_abs if raw_data_path is not None else '(not set)'}"
+        )
 
 
 @pd.api.extensions.register_dataframe_accessor("paths")
@@ -234,7 +249,7 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
 
     df = pd.DataFrame(columns=DATAFRAME_COLUMNS)
     df.to_pickle(path)  # save before adding platform-dependent batch path
-     
+
     df.paths.set_batch_path(path)
 
     return df
