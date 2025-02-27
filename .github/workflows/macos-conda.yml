@@ -28,5 +28,5 @@ jobs:
       run: |
         caimanmanager install
         pip install .
-        DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+        CONDA_EXE="$MAMBA_EXE" DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 
