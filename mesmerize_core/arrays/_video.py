@@ -16,11 +16,12 @@ from ._base import LazyArray
 
 class LazyVideo(LazyArray):
     def __init__(
-        self, path: Union[Path, str],
-            min_max: Tuple[int, int] = None,
-            as_grayscale: bool = False,
-            rgb_weights: Tuple[float, float, float] = (0.299, 0.587, 0.114),
-            **kwargs,
+        self,
+        path: Union[Path, str],
+        min_max: Tuple[int, int] = None,
+        as_grayscale: bool = False,
+        rgb_weights: Tuple[float, float, float] = (0.299, 0.587, 0.114),
+        **kwargs,
     ):
         """
         LazyVideo reader, basically just a wrapper for ``decord.VideoReader``.
@@ -138,9 +139,11 @@ class LazyVideo(LazyArray):
             a = self._video_reader[indices].asnumpy()
 
             # R + G + B -> grayscale
-            gray = a[..., 0] * self.rgb_weights[0] +\
-            a[..., 1] * self.rgb_weights[1] +\
-            a[..., 2] * self.rgb_weights[2]
+            gray = (
+                a[..., 0] * self.rgb_weights[0]
+                + a[..., 1] * self.rgb_weights[1]
+                + a[..., 2] * self.rgb_weights[2]
+            )
 
             return gray
 

@@ -12,6 +12,7 @@ class LazyArray(ABC):
     """
     Base class for arrays that exhibit lazy computation upon indexing
     """
+
     @property
     @abstractmethod
     def dtype(self) -> str:
@@ -122,10 +123,7 @@ class LazyArray(ABC):
     def save_hdf5(self, filename: Union[str, Path]):
         pass
 
-    def __getitem__(
-            self,
-            item: Union[int, Tuple[slice_or_int_or_range]]
-    ):
+    def __getitem__(self, item: Union[int, Tuple[slice_or_int_or_range]]):
         if isinstance(item, int):
             indexer = item
 
@@ -161,21 +159,25 @@ class LazyArray(ABC):
 
             if start is not None:
                 if start > self.n_frames:
-                    raise IndexError(f"Cannot index beyond `n_frames`.\n"
-                                     f"Desired frame start index of <{start}> "
-                                     f"lies beyond `n_frames` <{self.n_frames}>")
+                    raise IndexError(
+                        f"Cannot index beyond `n_frames`.\n"
+                        f"Desired frame start index of <{start}> "
+                        f"lies beyond `n_frames` <{self.n_frames}>"
+                    )
             if stop is not None:
                 if stop > self.n_frames:
-                    raise IndexError(f"Cannot index beyond `n_frames`.\n"
-                                     f"Desired frame stop index of <{stop}> "
-                                     f"lies beyond `n_frames` <{self.n_frames}>")
+                    raise IndexError(
+                        f"Cannot index beyond `n_frames`.\n"
+                        f"Desired frame stop index of <{stop}> "
+                        f"lies beyond `n_frames` <{self.n_frames}>"
+                    )
 
             if step is None:
                 step = 1
-            
+
             # convert indexer to slice if it was a range, allows things like decord.VideoReader slicing
             indexer = slice(start, stop, step)  # in case it was a range object
-            
+
             # dimension_0 is always time
             frames = self._compute_at_indices(indexer)
 
@@ -193,7 +195,9 @@ class LazyArray(ABC):
             return self._compute_at_indices(indexer)
 
     def __repr__(self):
-        return f"{self.__class__.__name__} @{hex(id(self))}\n" \
-               f"{self.__class__.__doc__}\n" \
-               f"Frames are computed only upon indexing\n" \
-               f"shape [frames, x, y]: {self.shape}\n"
+        return (
+            f"{self.__class__.__name__} @{hex(id(self))}\n"
+            f"{self.__class__.__doc__}\n"
+            f"Frames are computed only upon indexing\n"
+            f"shape [frames, x, y]: {self.shape}\n"
+        )

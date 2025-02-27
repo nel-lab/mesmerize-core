@@ -11,11 +11,12 @@ from ._base import LazyArray
 
 class LazyArrayRCM(LazyArray):
     """LazyArray for reconstructed movie, i.e. A ⊗ C"""
+
     def __init__(
-            self,
-            spatial: np.ndarray,
-            temporal: np.ndarray,
-            frame_dims: Tuple[int, int],
+        self,
+        spatial: np.ndarray,
+        temporal: np.ndarray,
+        frame_dims: Tuple[int, int],
     ):
         """
         Parameters
@@ -28,7 +29,7 @@ class LazyArrayRCM(LazyArray):
 
         frame_dims: Tuple[int, int]
             frame dimensions
-            
+
         """
 
         if spatial.shape[1] != temporal.shape[0]:
@@ -60,18 +61,22 @@ class LazyArrayRCM(LazyArray):
             spatial_min = self.spatial.min(axis=0)
 
         prods = list()
-        for t, s in iter_product([temporal_min, temporal_max], [spatial_min, spatial_max]):
+        for t, s in iter_product(
+            [temporal_min, temporal_max], [spatial_min, spatial_max]
+        ):
             _p = np.multiply(t, s)
             prods.append(np.nanmin(_p))
             prods.append(np.nanmax(_p))
-        
+
         self._max = np.max(prods)
         self._min = np.min(prods)
 
         temporal_mean = np.nanmean(self.temporal, axis=1)
         temporal_std = np.nanstd(self.temporal, axis=1)
 
-        self._mean_image = self.spatial.dot(temporal_mean).reshape(frame_dims, order="F")
+        self._mean_image = self.spatial.dot(temporal_mean).reshape(
+            frame_dims, order="F"
+        )
         self._max_image = self.spatial.dot(temporal_max).reshape(frame_dims, order="F")
         self._min_image = self.spatial.dot(temporal_min).reshape(frame_dims, order="F")
         self._std_image = self.spatial.dot(temporal_std).reshape(frame_dims, order="F")
@@ -127,13 +132,13 @@ class LazyArrayRCM(LazyArray):
     def std_image(self) -> np.ndarray:
         """standard deviation projection image"""
         return self._std_image
-    
+
     def _compute_at_indices(self, indices: Union[int, Tuple[int, int]]) -> np.ndarray:
-        rcm = self.spatial.dot(
-            self.temporal[:, indices]
-        ).reshape(
-            self.shape[1:] + (-1,), order="F"
-        ).transpose([2, 0, 1])
+        rcm = (
+            self.spatial.dot(self.temporal[:, indices])
+            .reshape(self.shape[1:] + (-1,), order="F")
+            .transpose([2, 0, 1])
+        )
 
         if rcm.shape[0] == 1:
             return rcm[0]  # 2d single frame
@@ -142,12 +147,13 @@ class LazyArrayRCM(LazyArray):
 
     def __repr__(self):
         r = super().__repr__()
-        return f"{r}" \
-               f"n_components: {self.n_components}"
+        return f"{r}" f"n_components: {self.n_components}"
 
     def __eq__(self, other):
         if not isinstance(other, LazyArrayRCM):
-            raise TypeError(f"cannot compute equality for against types that are not {self.__class__.__name__}")
+            raise TypeError(
+                f"cannot compute equality for against types that are not {self.__class__.__name__}"
+            )
 
         if (self.spatial == other.spatial) and (self.temporal == other.temporal):
             return True
@@ -163,12 +169,13 @@ class LazyArrayRCB(LazyArrayRCM):
 
 class LazyArrayResiduals(LazyArray):
     """Lazy array for residuals, i.e. Y - (A ⊗ C) - (b ⊗ f)"""
+
     def __init__(
-            self,
-            raw_movie: np.ndarray,
-            rcm: LazyArrayRCM,
-            rcb: LazyArrayRCB,
-            timeout: int = 10
+        self,
+        raw_movie: np.ndarray,
+        rcm: LazyArrayRCM,
+        rcb: LazyArrayRCB,
+        timeout: int = 10,
     ):
         """
         Create a LazyArray of the residuals, ``Y - (A ⊗ C) - (b ⊗ f)``
@@ -247,14 +254,18 @@ class LazyArrayResiduals(LazyArray):
     # TODO: implement min max for residuals
     @property
     def min(self) -> float:
-        warn("min and max not yet implemented for LazyArrayResiduals. "
-             "Using first frame of raw movie")
+        warn(
+            "min and max not yet implemented for LazyArrayResiduals. "
+            "Using first frame of raw movie"
+        )
         return float(self._raw_movie[0].min())
 
     @property
     def max(self) -> float:
-        warn("min and max not yet implemented for LazyArrayResiduals. "
-             "Using first frame of raw movie")
+        warn(
+            "min and max not yet implemented for LazyArrayResiduals. "
+            "Using first frame of raw movie"
+        )
         return float(self._raw_movie[0].max())
 
     def _compute_at_indices(self, indices: Union[int, slice]) -> np.ndarray:

@@ -24,7 +24,9 @@ def _component_indices_parser(func):
     @wraps(func)
     def _parser(instance, *args, **kwargs) -> Any:
         if "component_indices" in kwargs.keys():
-            component_indices: Union[np.ndarray, str, None] = kwargs["component_indices"]
+            component_indices: Union[np.ndarray, str, None] = kwargs[
+                "component_indices"
+            ]
         elif len(args) > 0:
             component_indices = args[0]  # always first positional arg in the extensions
         else:
@@ -46,7 +48,9 @@ def _component_indices_parser(func):
         if isinstance(component_indices, str):
             accepted = ["all", "good", "bad"]
             if component_indices not in accepted:
-                raise ValueError(f"Accepted `str` values for `component_indices` are: {accepted}")
+                raise ValueError(
+                    f"Accepted `str` values for `component_indices` are: {accepted}"
+                )
 
             if component_indices == "all":
                 component_indices = np.arange(cnmf_obj.estimates.A.shape[1])
@@ -62,6 +66,7 @@ def _component_indices_parser(func):
             args = (component_indices, *args[1:])
 
         return func(instance, *args, **kwargs)
+
     return _parser
 
 
@@ -76,6 +81,7 @@ def _check_permissions(func):
             )
 
         return func(instance, *args, **kwargs)
+
     return __check
 
 
@@ -188,7 +194,10 @@ class CNMFExtensions:
     @_component_indices_parser
     @cnmf_cache.use_cache
     def get_masks(
-        self, component_indices: Union[np.ndarray, str] = None, threshold: float = 0.01, return_copy=True
+        self,
+        component_indices: Union[np.ndarray, str] = None,
+        threshold: float = 0.01,
+        return_copy=True,
     ) -> np.ndarray:
         """
         | Get binary masks of the spatial components at the given ``component_indices``.
@@ -227,7 +236,7 @@ class CNMFExtensions:
         masks = np.zeros(shape=(dims[0], dims[1], len(component_indices)), dtype=bool)
 
         for n, ix in enumerate(component_indices):
-            s = cnmf_obj.estimates.A[:, ix].toarray().reshape(cnmf_obj.dims, order='F')
+            s = cnmf_obj.estimates.A[:, ix].toarray().reshape(cnmf_obj.dims, order="F")
             s[s >= threshold] = 1
             s[s < threshold] = 0
 
@@ -236,9 +245,7 @@ class CNMFExtensions:
         return masks
 
     @staticmethod
-    def _get_spatial_contours(
-        cnmf_obj: CNMF, component_indices, swap_dim
-    ):
+    def _get_spatial_contours(cnmf_obj: CNMF, component_indices, swap_dim):
 
         dims = cnmf_obj.dims
         if dims is None:
@@ -261,10 +268,10 @@ class CNMFExtensions:
     @_component_indices_parser
     @cnmf_cache.use_cache
     def get_contours(
-            self,
-            component_indices: Union[np.ndarray, str] = None,
-            swap_dim: bool = True,
-            return_copy=True
+        self,
+        component_indices: Union[np.ndarray, str] = None,
+        swap_dim: bool = True,
+        return_copy=True,
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """
         Get the contour and center of mass for each spatial footprint
@@ -319,7 +326,7 @@ class CNMFExtensions:
         component_indices: Union[np.ndarray, str] = None,
         add_background: bool = False,
         add_residuals: bool = False,
-        return_copy=True
+        return_copy=True,
     ) -> np.ndarray:
         """
         Get the temporal components for this CNMF item, basically ``CNMF.estimates.C``
@@ -389,10 +396,10 @@ class CNMFExtensions:
     @_component_indices_parser
     @cnmf_cache.use_cache
     def get_rcm(
-            self,
-            component_indices: Union[np.ndarray, str] = None,
-            temporal_components: np.ndarray = None,
-            return_copy=False
+        self,
+        component_indices: Union[np.ndarray, str] = None,
+        temporal_components: np.ndarray = None,
+        return_copy=False,
     ) -> LazyArrayRCM:
         """
         Return the reconstructed movie with no background, i.e. ``A ⊗ C``, as a ``LazyArray``.
@@ -467,8 +474,10 @@ class CNMFExtensions:
         elif cnmf_obj.dims is not None:
             dims = cnmf_obj.dims
         else:
-            raise AttributeError(f"`dims` not found in the CNMF data, it is usually found in one of the following:\n"
-                                 f"`cnmf_obj.estimates.dims` or `cnmf_obj.dims`")
+            raise AttributeError(
+                f"`dims` not found in the CNMF data, it is usually found in one of the following:\n"
+                f"`cnmf_obj.estimates.dims` or `cnmf_obj.dims`"
+            )
 
         spatial = cnmf_obj.estimates.A[:, component_indices]
         temporal = temporal_components[component_indices, :]
@@ -477,7 +486,9 @@ class CNMFExtensions:
 
     @validate("cnmf")
     @cnmf_cache.use_cache
-    def get_rcb(self,) -> LazyArrayRCB:
+    def get_rcb(
+        self,
+    ) -> LazyArrayRCB:
         """
         Return the reconstructed background, ``(b ⊗ f)``
 
@@ -519,8 +530,10 @@ class CNMFExtensions:
         elif cnmf_obj.dims is not None:
             dims = cnmf_obj.dims
         else:
-            raise AttributeError(f"`dims` not found in the CNMF data, it is usually found in one of the following:\n"
-                                 f"`cnmf_obj.estimates.dims` or `cnmf_obj.dims`")
+            raise AttributeError(
+                f"`dims` not found in the CNMF data, it is usually found in one of the following:\n"
+                f"`cnmf_obj.estimates.dims` or `cnmf_obj.dims`"
+            )
 
         spatial = cnmf_obj.estimates.b
         temporal = cnmf_obj.estimates.f
@@ -576,13 +589,13 @@ class CNMFExtensions:
     @_check_permissions
     @cnmf_cache.invalidate()
     def run_detrend_dfof(
-            self,
-            quantileMin: float = 8,
-            frames_window: int = 500,
-            flag_auto: bool = True,
-            use_fast: bool = False,
-            use_residuals: bool = True,
-            detrend_only: bool = False
+        self,
+        quantileMin: float = 8,
+        frames_window: int = 500,
+        flag_auto: bool = True,
+        use_fast: bool = False,
+        use_residuals: bool = True,
+        detrend_only: bool = False,
     ) -> None:
         """
         | Uses caiman's detrend_df_f.
@@ -630,7 +643,7 @@ class CNMFExtensions:
             flag_auto=flag_auto,
             use_fast=use_fast,
             use_residuals=use_residuals,
-            detrend_only=detrend_only
+            detrend_only=detrend_only,
         )
 
         # remove current hdf5 file
@@ -644,9 +657,7 @@ class CNMFExtensions:
     @_component_indices_parser
     @cnmf_cache.use_cache
     def get_detrend_dfof(
-            self,
-            component_indices: Union[np.ndarray, str] = None,
-            return_copy: bool = True
+        self, component_indices: Union[np.ndarray, str] = None, return_copy: bool = True
     ):
         """
         Get the detrended dF/F0 curves after calling ``run_detrend_dfof``.
@@ -732,8 +743,7 @@ class CNMFExtensions:
 
         cnmf_obj.params.quality.update(params)
         cnmf_obj.estimates.filter_components(
-            imgs=self._series.caiman.get_input_movie(),
-            params=cnmf_obj.params
+            imgs=self._series.caiman.get_input_movie(), params=cnmf_obj.params
         )
 
         cnmf_obj_path = self.get_output_path()

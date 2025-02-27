@@ -131,6 +131,9 @@ dmypy.json
 # pycharm
 .idea/
 
+# vscode
+.vscode/
+
 # test files
 tests/tmp
 tests/videos

@@ -8,6 +8,7 @@ from .arrays import LazyTiff
 
 try:
     import pims
+
     HAS_PIMS = True
 except (ModuleNotFoundError, ImportError):
     HAS_PIMS = False
@@ -27,9 +28,7 @@ def default_reader(path: str, **kwargs):
         return caiman_memmap_reader(path, **kwargs)
 
     else:
-        raise ValueError(
-            f"No default movie reader for given file extension: '{ext}'"
-        )
+        raise ValueError(f"No default movie reader for given file extension: '{ext}'")
 
 
 def tiff_memmap_reader(path: str, **kwargs) -> np.memmap:
@@ -50,7 +49,5 @@ def caiman_memmap_reader(path: str, **kwargs) -> np.memmap:
 
 def pims_reader(path: str, **kwargs):
     if not HAS_PIMS:
-        raise ModuleNotFoundError(
-            "you must install `pims` to use the pims reader"
-        )
+        raise ModuleNotFoundError("you must install `pims` to use the pims reader")
     return pims.open(path, **kwargs)

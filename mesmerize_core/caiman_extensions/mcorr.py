@@ -112,8 +112,12 @@ class MCorrExtensions:
         shifts = np.load(str(path))
 
         if pw_rigid:
-            shifts_by_dim = list(shifts)  # dims-length list of n_frames x n_patches matrices
+            shifts_by_dim = list(
+                shifts
+            )  # dims-length list of n_frames x n_patches matrices
         else:
-            shifts_by_dim = list(shifts.T)  # dims-length list of n_frames-length vectors
+            shifts_by_dim = list(
+                shifts.T
+            )  # dims-length list of n_frames-length vectors
 
         return shifts_by_dim

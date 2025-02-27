@@ -200,6 +200,7 @@ class Cache:
             invalidate after the decorated function has been fun
 
         """
+
         def _invalidate(func):
             @wraps(func)
             def __invalidate(instance, *args, **kwargs):
@@ -207,19 +208,18 @@ class Cache:
 
                 if pre:
                     self.cache.drop(
-                        self.cache.loc[self.cache["uuid"] == u].index,
-                        inplace=True
+                        self.cache.loc[self.cache["uuid"] == u].index, inplace=True
                     )
 
                 rval = func(instance, *args, **kwargs)
 
                 if post:
                     self.cache.drop(
-                        self.cache.loc[self.cache["uuid"] == u].index,
-                        inplace=True
+                        self.cache.loc[self.cache["uuid"] == u].index, inplace=True
                     )
 
                 return rval
 
             return __invalidate
+
         return _invalidate
