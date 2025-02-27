@@ -51,7 +51,7 @@ def warning_experimental(more_info: str = ""):
 
 
 def validate_path(path: Union[str, Path]):
-    if not regex.match("^[A-Za-z0-9@\/\\\:._-]*$", str(path)):
+    if not regex.match(r"^[A-Za-z0-9@/\\:._-]*$", str(path)):
         raise ValueError(
             "Paths must only contain alphanumeric characters, "
             "hyphens ( - ), underscores ( _ ) or periods ( . )"
@@ -140,7 +140,7 @@ def make_runfile(
     else:
         with open(sh_file, "w") as f:
             for k, v in os.environ.items():  # copy the current environment
-                if regex.match("^.*[\(\)]", str(k)) or regex.match("^.*[\(\)]", str(v)):
+                if regex.match(r"^.*[()]", str(k)) or regex.match(r"^.*[()]", str(v)):
                     continue
                 with NamedTemporaryFile(suffix=".ps1", delete=False) as tmp:
                     try:  # windows powershell is stupid so make sure all the env var names work
