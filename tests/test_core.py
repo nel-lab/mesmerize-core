@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 from caiman.utils.utils import load_dict_from_hdf5
-from caiman.source_extraction.cnmf import cnmf
+from caiman.source_extraction.cnmf.cnmf import CNMF
 import numpy.testing
 import pandas as pd
 from mesmerize_core import (
@@ -530,7 +530,7 @@ def test_cnmf():
     )
 
     # test to check cnmf get_output()
-    assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
+    assert isinstance(df.iloc[-1].cnmf.get_output(), CNMF)
     # this doesn't work because some keys in the hdf5 file are
     # not always identical, like the path to the mmap file
     # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
@@ -840,7 +840,7 @@ def test_cnmfe():
     )
 
     # test to check cnmf get_output()
-    assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
+    assert isinstance(df.iloc[-1].cnmf.get_output(), CNMF)
     # this doesn't work because some keys in the hdf5 file are
     # not always identical, like the path to the mmap file
     # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
