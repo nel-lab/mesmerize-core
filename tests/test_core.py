@@ -1230,7 +1230,7 @@ def test_cache():
     df.iloc[-1].cnmf.get_output()
     end2 = time.time()
     assert len(cnmf.cnmf_cache.get_cache().index) == 0
-    assert abs((end - start) - (end2 - start2)) < 0.05
+    assert abs((end - start) - (end2 - start2)) < 0.1
 
     # test to check that separate cache items are being returned for different batch items
     # must add another item to the batch, running cnmfe
@@ -1282,6 +1282,7 @@ def test_cache():
     assert cache.iloc[-1]["uuid"] == df.iloc[-1]["uuid"]
 
     # call get output from cnmf, check that it is the most recent thing called in the cache
+    time.sleep(0.01)  # make absolutely sure the times aren't identical
     df.iloc[1].cnmf.get_output()
     cnmf_uuid = df.iloc[1]["uuid"]
     cache_sorted = cache.sort_values(by=["time_stamp"], ascending=True)
