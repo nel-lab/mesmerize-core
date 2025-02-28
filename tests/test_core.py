@@ -1284,7 +1284,15 @@ def test_cache():
     # call get output from cnmf, check that it is the most recent thing called in the cache
     df.iloc[1].cnmf.get_output()
     cnmf_uuid = df.iloc[1]["uuid"]
-    most_recently_called = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    cache_sorted = cache.sort_values(by=["time_stamp"], ascending=True)
+    print("Cache sorted from oldest to newest call:")
+    print(cache_sorted)
+    print("Call times:")
+    for _, row in cache_sorted.iterrows():
+        print(f"{row['time_stamp']:.0f}", end=", ")
+    print("")
+
+    most_recently_called = cache_sorted.iloc[-1]
     cache_uuid = most_recently_called["uuid"]
     assert cnmf_uuid == cache_uuid
 
