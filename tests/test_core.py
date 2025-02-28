@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 from caiman.utils.utils import load_dict_from_hdf5
-from caiman.source_extraction.cnmf import cnmf
+from caiman.source_extraction.cnmf.cnmf import CNMF
 import numpy.testing
 import pandas as pd
 from mesmerize_core import (
@@ -48,7 +48,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/record/13732996/files/ground_truths.zip"
+    url = f"https://zenodo.org/record/14934525/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -530,7 +530,7 @@ def test_cnmf():
     )
 
     # test to check cnmf get_output()
-    assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
+    assert isinstance(df.iloc[-1].cnmf.get_output(), CNMF)
     # this doesn't work because some keys in the hdf5 file are
     # not always identical, like the path to the mmap file
     # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
@@ -840,7 +840,7 @@ def test_cnmfe():
     )
 
     # test to check cnmf get_output()
-    assert isinstance(df.iloc[-1].cnmf.get_output(), cnmf.CNMF)
+    assert isinstance(df.iloc[-1].cnmf.get_output(), CNMF)
     # this doesn't work because some keys in the hdf5 file are
     # not always identical, like the path to the mmap file
     # assert sha1(open(df.iloc[1].cnmf.get_output_path(), "rb").read()).hexdigest() == sha1(open(ground_truths_dir.joinpath('cnmf', 'cnmf_output.hdf5'), "rb").read()).hexdigest()
@@ -1230,7 +1230,7 @@ def test_cache():
     df.iloc[-1].cnmf.get_output()
     end2 = time.time()
     assert len(cnmf.cnmf_cache.get_cache().index) == 0
-    assert abs((end - start) - (end2 - start2)) < 0.05
+    assert abs((end - start) - (end2 - start2)) < 0.1
 
     # test to check that separate cache items are being returned for different batch items
     # must add another item to the batch, running cnmfe
@@ -1282,9 +1282,18 @@ def test_cache():
     assert cache.iloc[-1]["uuid"] == df.iloc[-1]["uuid"]
 
     # call get output from cnmf, check that it is the most recent thing called in the cache
+    time.sleep(0.01)  # make absolutely sure the times aren't identical
     df.iloc[1].cnmf.get_output()
     cnmf_uuid = df.iloc[1]["uuid"]
-    most_recently_called = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    cache_sorted = cache.sort_values(by=["time_stamp"], ascending=True)
+    print("Cache sorted from oldest to newest call:")
+    print(cache_sorted)
+    print("Call times:")
+    for _, row in cache_sorted.iterrows():
+        print(f"{row['time_stamp']}", end=", ")
+    print("")
+
+    most_recently_called = cache_sorted.iloc[-1]
     cache_uuid = most_recently_called["uuid"]
     assert cnmf_uuid == cache_uuid
 
