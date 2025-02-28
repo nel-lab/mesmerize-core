@@ -16,22 +16,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: conda-incubator/setup-miniconda@v3
+    - uses: mamba-org/setup-micromamba@v2
       with:
-        architecture: 'x64'
-        python-version: '3.10'
-        channels: conda-forge,defaults
-        channel-priority: true
-        activate-environment: mescore
+        condarc: "channel_priority: flexible"
+        environment-name: mescore
         environment-file: environment.yml
-        miniforge-version: latest
+        create-args: -c conda-forge -c defaults python=3.10 pytest
         
     - name: Test mesmerize-core with pytest
       shell: bash -el {0}
       run: |
-        conda activate mescore
-        mamba install pytest
         caimanmanager install
         pip install .
-        DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
+        CONDA_EXE="$MAMBA_EXE" DOWNLOAD_GROUND_TRUTHS=1 pytest -s .
 

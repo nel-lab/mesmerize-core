@@ -81,9 +81,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
         params_dict = {**cnmfe_params_dict, **params["main"]}
 
         cnmfe_params_dict = CNMFParams(params_dict=params_dict)
-        cnm = cnmf.CNMF(
-            n_processes=n_processes, dview=dview, params=cnmfe_params_dict
-        )
+        cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, params=cnmfe_params_dict)
         print("Performing CNMFE")
         cnm = cnm.fit(images)
         print("evaluating components")
@@ -106,7 +104,9 @@ def run_algo(batch_path, uuid, data_path: str = None):
         move_file(fname_new, cnmf_memmap_path)
 
         # save path as relative path strings with forward slashes
-        cnmfe_memmap_path = str(PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent)))
+        cnmfe_memmap_path = str(
+            PurePosixPath(cnmf_memmap_path.relative_to(output_dir.parent))
+        )
 
         d.update(
             {

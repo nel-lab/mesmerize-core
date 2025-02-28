@@ -102,16 +102,15 @@ def run_algo(batch_path, uuid, data_path: str = None):
         Cn[np.isnan(Cn)] = 0
         cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
         np.save(str(cn_path), Cn, allow_pickle=False)
-        
-        print("finished computing correlation image")
 
+        print("finished computing correlation image")
 
         # Compute shifts
         if opts.motion["pw_rigid"] == True:
             x_shifts = mc.x_shifts_els
             y_shifts = mc.y_shifts_els
             shifts = [x_shifts, y_shifts]
-            if hasattr(mc, 'z_shifts_els'):
+            if hasattr(mc, "z_shifts_els"):
                 shifts.append(mc.z_shifts_els)
             shift_path = output_dir.joinpath(f"{uuid}_shifts.npy")
             np.save(str(shift_path), shifts)
@@ -125,12 +124,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
         # save paths as relative path strings with forward slashes
         cn_path = str(PurePosixPath(cn_path.relative_to(output_dir.parent)))
-        mcorr_memmap_path = str(PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent)))
+        mcorr_memmap_path = str(
+            PurePosixPath(mcorr_memmap_path.relative_to(output_dir.parent))
+        )
         shift_path = str(PurePosixPath(shift_path.relative_to(output_dir.parent)))
         for proj_type in proj_paths.keys():
-            d[f"{proj_type}-projection-path"] = str(PurePosixPath(proj_paths[proj_type].relative_to(
-                output_dir.parent
-            )))
+            d[f"{proj_type}-projection-path"] = str(
+                PurePosixPath(proj_paths[proj_type].relative_to(output_dir.parent))
+            )
 
         d.update(
             {

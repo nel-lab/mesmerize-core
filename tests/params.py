@@ -53,5 +53,5 @@ test_params = {
             "update_background_components": True,
             "del_duplicates": True,
         },
-    }
+    },
 }

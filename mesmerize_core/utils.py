@@ -4,7 +4,6 @@ Useful functions adapted from old mesmerize
 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007
 """
 
-
 import numpy as np
 from functools import wraps
 import os
@@ -34,6 +33,7 @@ def warning_experimental(more_info: str = ""):
     """
     decorator to warn the user that the function is experimental
     """
+
     def catcher(func):
         @wraps(func)
         def fn(self, *args, **kwargs):
@@ -43,15 +43,17 @@ def warning_experimental(more_info: str = ""):
                 f"{func.__qualname__}\n"
                 f"{more_info}\n",
                 FutureWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             return func(self, *args, **kwargs)
+
         return fn
+
     return catcher
 
 
 def validate_path(path: Union[str, Path]):
-    if not regex.match("^[A-Za-z0-9@\/\\\:._-]*$", str(path)):
+    if not regex.match(r"^[A-Za-z0-9@/\\:._-]*$", str(path)):
         raise ValueError(
             "Paths must only contain alphanumeric characters, "
             "hyphens ( - ), underscores ( _ ) or periods ( . )"
@@ -125,22 +127,21 @@ def make_runfile(
                     f'export MESMERIZE_N_PROCESSES={os.environ["MESMERIZE_N_PROCESSES"]}\n'
                 )
 
-            f.write(
-                f"export OPENBLAS_NUM_THREADS=1\n"
-                f"export MKL_NUM_THREADS=1\n"
-            )
+            f.write(f"export OPENBLAS_NUM_THREADS=1\n" f"export MKL_NUM_THREADS=1\n")
 
             if "CONDA_PREFIX" in os.environ.keys():
                 # add command to run the python script in the conda environment
                 # that was active at the time that this shell script was generated
-                f.write(f'{os.environ["CONDA_EXE"]} run -p {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}')
+                f.write(
+                    f'{os.environ["CONDA_EXE"]} run -p {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}'
+                )
             else:
                 f.write(f"python {module_path} {args_str}")  # call the script to run
 
     else:
         with open(sh_file, "w") as f:
             for k, v in os.environ.items():  # copy the current environment
-                if regex.match("^.*[\(\)]", str(k)) or regex.match("^.*[\(\)]", str(v)):
+                if regex.match(r"^.*[()]", str(k)) or regex.match(r"^.*[()]", str(v)):
                     continue
                 with NamedTemporaryFile(suffix=".ps1", delete=False) as tmp:
                     try:  # windows powershell is stupid so make sure all the env var names work
@@ -150,7 +151,9 @@ def make_runfile(
                         os.unlink(tmp.name)
                     except:
                         continue
-                f.write(f'$env:{k}="{v}";\n')  # write only env vars that powershell likes
+                f.write(
+                    f'$env:{k}="{v}";\n'
+                )  # write only env vars that powershell likes
             f.write(f"{sys.executable} {module_path} {args_str}")
 
     st = os.stat(sh_file)

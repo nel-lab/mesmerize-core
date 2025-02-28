@@ -15,7 +15,8 @@ class DependencyError(Exception):
 
 
 class PreventOverwriteError(IndexError):
-    """  
-    Error thrown when trying to write to an existing batch file with a potential risk of removing existing rows.  
-    """  
+    """
+    Error thrown when trying to write to an existing batch file with a potential risk of removing existing rows.
+    """
+
     pass
