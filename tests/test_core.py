@@ -1289,7 +1289,7 @@ def test_cache():
     print(cache_sorted)
     print("Call times:")
     for _, row in cache_sorted.iterrows():
-        print(f"{row['time_stamp']:.0f}", end=", ")
+        print(f"{row['time_stamp']}", end=", ")
     print("")
 
     most_recently_called = cache_sorted.iloc[-1]
