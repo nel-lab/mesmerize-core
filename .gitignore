@@ -138,3 +138,6 @@ dmypy.json
 tests/tmp
 tests/videos
 tests/ground_truths*
+
+# VSCode
+.vscode/
