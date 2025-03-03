@@ -29,7 +29,7 @@ from ..batch_utils import (
     get_parent_raw_data_path,
     load_batch,
 )
-from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
+from ..utils import IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
 from .. import algorithms
 from ..movie_readers import default_reader
@@ -113,7 +113,6 @@ class CaimanDataFrameExtensions:
 
         # make sure path is within batch dir or parent raw data path
         input_movie_path = self._df.paths.resolve(input_movie_path)
-        validate_path(input_movie_path)
 
         # get relative path
         input_movie_path = self._df.paths.split(input_movie_path)[1]

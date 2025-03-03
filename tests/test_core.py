@@ -33,6 +33,7 @@ from mesmerize_core.caiman_extensions import cnmf
 import time
 import tifffile
 from copy import deepcopy
+import re
 
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
 vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
@@ -133,6 +134,8 @@ def teardown_module():
 
 def _create_tmp_batch() -> Tuple[pd.DataFrame, str]:
     fname = get_tmp_filename()
+    # add space to test support of paths with spaces
+    fname = re.sub(r'\.pickle$', ' batch.pickle', fname)
     df = create_batch(fname)
 
     return df, fname

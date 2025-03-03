@@ -5,8 +5,6 @@ from typing import Union
 
 import pandas as pd
 
-from .utils import validate_path
-
 CURRENT_BATCH_PATH: Path = None  # only one batch at a time
 PARENT_DATA_PATH: Path = None
 
@@ -44,7 +42,7 @@ def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
         Full parent data path
     """
     global PARENT_DATA_PATH
-    path = Path(validate_path(path))
+    path = Path(path)
     if not path.is_dir():
         raise NotADirectoryError(
             "The directory passed to `set_parent_raw_data_path()` does not exist.\n"
@@ -191,8 +189,6 @@ def load_batch(path: Union[str, Path]) -> pd.DataFrame:
 
     """
 
-    path = validate_path(path)
-
     df = pd.read_pickle(Path(path))
 
     df.paths.set_batch_path(path)
@@ -234,8 +230,6 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
         df = create_batch("/path/to/new_batch.pickle")
 
     """
-    path = validate_path(path)
-
     if Path(path).is_file():
         if remove_existing:
             os.remove(path)

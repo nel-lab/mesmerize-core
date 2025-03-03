@@ -52,15 +52,6 @@ def warning_experimental(more_info: str = ""):
     return catcher
 
 
-def validate_path(path: Union[str, Path]):
-    if not regex.match(r"^[A-Za-z0-9@/\\:._-]*$", str(path)):
-        raise ValueError(
-            "Paths must only contain alphanumeric characters, "
-            "hyphens ( - ), underscores ( _ ) or periods ( . )"
-        )
-    return path
-
-
 def make_runfile(
     module_path: str, args_str: Optional[str] = None, filename: Optional[str] = None
 ) -> str:
