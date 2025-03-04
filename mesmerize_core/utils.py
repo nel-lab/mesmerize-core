@@ -129,10 +129,12 @@ def make_runfile(
                 # that was active at the time that this shell script was generated
                 f.write(
                     f'{lex.quote(os.environ["CONDA_EXE"])} run -p {lex.quote(os.environ["CONDA_PREFIX"])} '
-                    f'python {lex.quote(module_path)} {args_str}'
+                    f"python {lex.quote(module_path)} {args_str}"
                 )
             else:
-                f.write(f"python {lex.quote(module_path)} {args_str}")  # call the script to run
+                f.write(
+                    f"python {lex.quote(module_path)} {args_str}"
+                )  # call the script to run
 
     else:
         with open(sh_file, "w") as f:
@@ -147,10 +149,8 @@ def make_runfile(
                 #         os.unlink(tmp.name)
                 #     except:
                 #         continue
-                f.write(
-                    f'SET {k}={lex.quote(v)};\n'
-                )
-            f.write(f'{lex.quote(sys.executable)} {lex.quote(module_path)} {args_str}')
+                f.write(f"SET {k}={lex.quote(v)};\n")
+            f.write(f"{lex.quote(sys.executable)} {lex.quote(module_path)} {args_str}")
 
     st = os.stat(sh_file)
     os.chmod(sh_file, st.st_mode | S_IEXEC)

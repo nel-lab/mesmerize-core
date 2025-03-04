@@ -35,6 +35,7 @@ from ..movie_readers import default_reader
 
 import shlex
 import mslex
+
 lex = mslex if IS_WINDOWS else shlex
 
 
@@ -653,7 +654,9 @@ class CaimanSeriesExtensions:
             batch_path.parent.joinpath(self._series["uuid"] + runfile_ext)
         )
 
-        args_str = f"--batch-path {lex.quote(str(batch_path))} --uuid {self._series.uuid}"
+        args_str = (
+            f"--batch-path {lex.quote(str(batch_path))} --uuid {self._series.uuid}"
+        )
         if get_parent_raw_data_path() is not None:
             args_str += f" --data-path {lex.quote(str(get_parent_raw_data_path()))}"
 
@@ -666,7 +669,9 @@ class CaimanSeriesExtensions:
             args_str=args_str,
         )
 
-        self.process = getattr(self, f"_run_{backend}")(runfile_path, wait=wait, **kwargs)
+        self.process = getattr(self, f"_run_{backend}")(
+            runfile_path, wait=wait, **kwargs
+        )
         return self.process
 
     def get_input_movie_path(self) -> Path:

@@ -35,8 +35,10 @@ from copy import deepcopy
 
 # don't call "resolve" on these - want to make sure we can handle non-canonical paths correctly
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "tmp")
-vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data",  "videos")
-ground_truths_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths")
+vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "videos")
+ground_truths_dir = Path(
+    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths"
+)
 ground_truths_file = Path(
     os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths.zip"
 )
