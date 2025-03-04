@@ -135,9 +135,7 @@ dmypy.json
 .vscode/
 
 # test files
-tests/tmp
-tests/videos
-tests/ground_truths*
+tests/test data
 
 # VSCode
 .vscode/

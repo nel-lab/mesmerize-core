@@ -9,7 +9,6 @@ from shutil import rmtree
 from datetime import datetime
 import time
 from copy import deepcopy
-import shlex
 
 import numpy as np
 import pandas as pd
@@ -29,10 +28,15 @@ from ..batch_utils import (
     get_parent_raw_data_path,
     load_batch,
 )
-from ..utils import validate_path, IS_WINDOWS, make_runfile, warning_experimental
+from ..utils import IS_WINDOWS, make_runfile, warning_experimental
 from .cnmf import cnmf_cache
 from .. import algorithms
 from ..movie_readers import default_reader
+
+import shlex
+import mslex
+
+lex = mslex if IS_WINDOWS else shlex
 
 
 ALGO_MODULES = {
@@ -113,7 +117,6 @@ class CaimanDataFrameExtensions:
 
         # make sure path is within batch dir or parent raw data path
         input_movie_path = self._df.paths.resolve(input_movie_path)
-        validate_path(input_movie_path)
 
         # get relative path
         input_movie_path = self._df.paths.split(input_movie_path)[1]
@@ -545,10 +548,7 @@ class CaimanSeriesExtensions:
 
         # Get the dir that contains the input movie
         parent_path = self._series.paths.resolve(self._series.input_movie_path).parent
-        if not IS_WINDOWS:
-            self.process = Popen(runfile_path, cwd=parent_path)
-        else:
-            self.process = Popen(f"powershell {runfile_path}", cwd=parent_path)
+        self.process = Popen([runfile_path], cwd=parent_path)
 
         if wait:
             self.process.wait()
@@ -647,16 +647,18 @@ class CaimanSeriesExtensions:
 
         # Create the runfile in the batch dir using this Series' UUID as the filename
         if IS_WINDOWS:
-            runfile_ext = ".ps1"
+            runfile_ext = ".bat"
         else:
             runfile_ext = ".runfile"
         runfile_path = str(
             batch_path.parent.joinpath(self._series["uuid"] + runfile_ext)
         )
 
-        args_str = f"--batch-path {batch_path} --uuid {self._series.uuid}"
+        args_str = (
+            f"--batch-path {lex.quote(str(batch_path))} --uuid {self._series.uuid}"
+        )
         if get_parent_raw_data_path() is not None:
-            args_str += f" --data-path {get_parent_raw_data_path()}"
+            args_str += f" --data-path {lex.quote(str(get_parent_raw_data_path()))}"
 
         # make the runfile
         runfile_path = make_runfile(
@@ -666,14 +668,10 @@ class CaimanSeriesExtensions:
             filename=runfile_path,  # path to create runfile
             args_str=args_str,
         )
-        try:
-            self.process = getattr(self, f"_run_{backend}")(
-                runfile_path, wait=wait, **kwargs
-            )
-        except:
-            with open(runfile_path, "r") as f:
-                raise ValueError(f.read())
 
+        self.process = getattr(self, f"_run_{backend}")(
+            runfile_path, wait=wait, **kwargs
+        )
         return self.process
 
     def get_input_movie_path(self) -> Path:

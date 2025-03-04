@@ -34,11 +34,13 @@ import tifffile
 from copy import deepcopy
 
 # don't call "resolve" on these - want to make sure we can handle non-canonical paths correctly
-tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
-vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
-ground_truths_dir = Path(os.path.dirname(os.path.abspath(__file__)), "ground_truths")
+tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "tmp")
+vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "videos")
+ground_truths_dir = Path(
+    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths"
+)
 ground_truths_file = Path(
-    os.path.dirname(os.path.abspath(__file__)), "ground_truths.zip"
+    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths.zip"
 )
 
 os.makedirs(tmp_dir, exist_ok=True)
@@ -74,7 +76,8 @@ elif "DOWNLOAD_GROUND_TRUTHS" in os.environ.keys():
 
 
 def get_tmp_filename():
-    return os.path.join(tmp_dir, f"{uuid4()}.pickle")
+    # add a $ (legal on both UNIX and Windows) to ensure we are escaping it correctly
+    return os.path.join(tmp_dir, f"{uuid4()}$test.pickle")
 
 
 def clear_tmp():
