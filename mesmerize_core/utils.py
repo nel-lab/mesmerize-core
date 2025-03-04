@@ -15,13 +15,17 @@ from warnings import warn
 import sys
 from tempfile import NamedTemporaryFile
 from subprocess import check_call
+import shlex
+import mslex
 
 if os.name == "nt":
     IS_WINDOWS = True
     HOME = "USERPROFILE"
+    lex = mslex
 else:
     IS_WINDOWS = False
     HOME = "HOME"
+    lex = shlex
 
 if "MESMERIZE_LRU_CACHE" in os.environ.keys():
     MESMERIZE_LRU_CACHE = os.environ["MESMERIZE_LRU_CACHE"]
@@ -78,13 +82,13 @@ def make_runfile(
 
     if filename is None:
         if IS_WINDOWS:
-            sh_file = os.path.join(os.environ[HOME], "run.ps1")
+            filename = os.path.join(os.environ[HOME], "run.bat")
         else:
-            sh_file = os.path.join(os.environ[HOME], "run.sh")
+            filename = os.path.join(os.environ[HOME], "run.sh")
     else:
         if IS_WINDOWS:
-            if not filename.endswith(".ps1"):
-                filename = filename + ".ps1"
+            if not filename.endswith(".bat"):
+                filename = filename + ".bat"
 
     sh_file = filename
 
@@ -98,13 +102,13 @@ def make_runfile(
 
             if "VIRTUAL_ENV" in os.environ.keys():
                 f.write(
-                    f'export PATH={os.environ["PATH"]}\n'
-                    f'export VIRTUAL_ENV={os.environ["VIRTUAL_ENV"]}\n'
-                    f'export LD_LIBRARY_PATH={os.environ["LD_LIBRARY_PATH"]}\n'
+                    f'export PATH={lex.quote(os.environ["PATH"])}\n'
+                    f'export VIRTUAL_ENV={lex.quote(os.environ["VIRTUAL_ENV"])}\n'
+                    f'export LD_LIBRARY_PATH={lex.quote(os.environ["LD_LIBRARY_PATH"])}\n'
                 )
 
             if "PYTHONPATH" in os.environ.keys():
-                f.write(f'export PYTHONPATH={os.environ["PYTHONPATH"]}\n')
+                f.write(f'export PYTHONPATH={lex.quote(os.environ["PYTHONPATH"])}\n')
 
             # for k, v in os.environ.items():  # copy the current environment
             #     if '\n' in v:
@@ -124,28 +128,29 @@ def make_runfile(
                 # add command to run the python script in the conda environment
                 # that was active at the time that this shell script was generated
                 f.write(
-                    f'{os.environ["CONDA_EXE"]} run -p {os.environ["CONDA_PREFIX"]} python {module_path} {args_str}'
+                    f'{lex.quote(os.environ["CONDA_EXE"])} run -p {lex.quote(os.environ["CONDA_PREFIX"])} '
+                    f'python {lex.quote(module_path)} {args_str}'
                 )
             else:
-                f.write(f"python {module_path} {args_str}")  # call the script to run
+                f.write(f"python {lex.quote(module_path)} {args_str}")  # call the script to run
 
     else:
         with open(sh_file, "w") as f:
             for k, v in os.environ.items():  # copy the current environment
                 if regex.match(r"^.*[()]", str(k)) or regex.match(r"^.*[()]", str(v)):
                     continue
-                with NamedTemporaryFile(suffix=".ps1", delete=False) as tmp:
-                    try:  # windows powershell is stupid so make sure all the env var names work
-                        tmp.write(f'$env:{k}="{v}";\n')
-                        tmp.close()
-                        check_call(f"powershell {tmp.name}")
-                        os.unlink(tmp.name)
-                    except:
-                        continue
+                # with NamedTemporaryFile(suffix=".bat", delete=False, mode="w") as tmp:
+                #     try:  # windows powershell is stupid so make sure all the env var names work
+                #         tmp.write(f'$env:{k}="{v}";\n')
+                #         tmp.close()
+                #         check_call(f"powershell {tmp.name}")
+                #         os.unlink(tmp.name)
+                #     except:
+                #         continue
                 f.write(
-                    f'$env:{k}="{v}";\n'
-                )  # write only env vars that powershell likes
-            f.write(f"{sys.executable} {module_path} {args_str}")
+                    f'SET {k}={lex.quote(v)};\n'
+                )
+            f.write(f'{lex.quote(sys.executable)} {lex.quote(module_path)} {args_str}')
 
     st = os.stat(sh_file)
     os.chmod(sh_file, st.st_mode | S_IEXEC)

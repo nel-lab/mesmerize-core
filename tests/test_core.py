@@ -33,13 +33,12 @@ from mesmerize_core.caiman_extensions import cnmf
 import time
 import tifffile
 from copy import deepcopy
-import re
 
-tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "tmp")
-vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "videos")
-ground_truths_dir = Path(os.path.dirname(os.path.abspath(__file__)), "ground_truths")
+tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "tmp")
+vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data",  "videos")
+ground_truths_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths")
 ground_truths_file = Path(
-    os.path.dirname(os.path.abspath(__file__)), "ground_truths.zip"
+    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths.zip"
 )
 
 os.makedirs(tmp_dir, exist_ok=True)
@@ -75,7 +74,8 @@ elif "DOWNLOAD_GROUND_TRUTHS" in os.environ.keys():
 
 
 def get_tmp_filename():
-    return os.path.join(tmp_dir, f"{uuid4()}.pickle")
+    # add a $ (legal on both UNIX and Windows) to ensure we are escaping it correctly
+    return os.path.join(tmp_dir, f"{uuid4()}$test.pickle")
 
 
 def clear_tmp():
@@ -134,8 +134,6 @@ def teardown_module():
 
 def _create_tmp_batch() -> Tuple[pd.DataFrame, str]:
     fname = get_tmp_filename()
-    # add space to test support of paths with spaces
-    fname = re.sub(r'\.pickle$', ' batch.pickle', fname)
     df = create_batch(fname)
 
     return df, fname
