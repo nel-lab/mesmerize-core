@@ -32,6 +32,9 @@ jobs:
           
       - shell: bash -l {0}
         run: |
+          # make a drive letter alias so we can test canonical path resolution
+          subst Z: .
+          cd /z
           conda activate mescore
           mamba install pytest
           caimanmanager install

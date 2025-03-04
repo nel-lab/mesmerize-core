@@ -47,7 +47,7 @@ def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
         raise NotADirectoryError(
             "The directory passed to `set_parent_raw_data_path()` does not exist.\n"
         )
-    PARENT_DATA_PATH = path
+    PARENT_DATA_PATH = path.resolve()
 
     return PARENT_DATA_PATH
 
@@ -63,7 +63,7 @@ def get_parent_raw_data_path() -> Path:
 
     """
     global PARENT_DATA_PATH
-    return PARENT_DATA_PATH
+    return PARENT_DATA_PATH.resolve()
 
 
 class _BasePathExtensions:
@@ -71,7 +71,7 @@ class _BasePathExtensions:
         self._data = data
 
     def set_batch_path(self, path: Union[str, Path]):
-        self._data.attrs["batch_path"] = Path(path)
+        self._data.attrs["batch_path"] = Path(path).resolve()
 
     def get_batch_path(self) -> Path:
         """
@@ -82,9 +82,11 @@ class _BasePathExtensions:
         Path
             full path to the batch dataframe file as a Path object
         """
-        if "batch_path" in self._data.attrs.keys():
-            if self._data.attrs["batch_path"] is not None:
-                return self._data.attrs["batch_path"]
+        if (
+            "batch_path" in self._data.attrs.keys()
+            and self._data.attrs["batch_path"] is not None
+        ):
+            return Path(self._data.attrs["batch_path"]).resolve()
         else:
             raise ValueError("Batch path is not set")
 
@@ -131,24 +133,23 @@ class _BasePathExtensions:
             (<batch_dir> or <raw_data_dir>, <relative_path>)
 
         """
-        path = Path(path)
+        path = Path(path).resolve()
         # check if input movie is within batch dir
-        if self.get_batch_path().parent in path.parents:
-            return self.get_batch_path().parent, path.relative_to(
-                self.get_batch_path().parent
-            )
+        batch_parent = self.get_batch_path().parent
+        if batch_parent in path.parents:
+            return batch_parent, path.relative_to(batch_parent)
 
         # else check if in parent raw data dir
-        elif get_parent_raw_data_path() is not None:
-            if get_parent_raw_data_path() in path.parents:
-                return get_parent_raw_data_path(), path.relative_to(
-                    get_parent_raw_data_path()
-                )
+        else:
+            raw_data_path = get_parent_raw_data_path()
+            if raw_data_path is not None:
+                if raw_data_path in path.parents:
+                    return raw_data_path, path.relative_to(raw_data_path)
 
         raise NotADirectoryError(
             f"Could not split `path`:\n{path}"
-            f"\nnot relative to either batch path:\n{self.get_batch_path()}"
-            f"\nor parent raw data path:\n{get_parent_raw_data_path()}"
+            f"\nnot relative to either batch path:\n{batch_parent}"
+            f"\nor parent raw data path:\n{raw_data_path if raw_data_path is not None else '(not set)'}"
         )
 
 
@@ -252,6 +253,6 @@ def create_batch(path: Union[str, Path], remove_existing: bool = False) -> pd.Da
 def get_full_raw_data_path(path: Union[Path, str]) -> Path:
     path = Path(path)
     if PARENT_DATA_PATH is not None:
-        return PARENT_DATA_PATH.joinpath(path)
+        path = PARENT_DATA_PATH.joinpath(path)
 
-    return path
+    return path.resolve()  # needed in case path is absolute but not canonical
