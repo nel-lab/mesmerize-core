@@ -1,4 +1,6 @@
 from contextlib import contextmanager
+import logging
+import math
 import os
 from pathlib import Path
 import psutil
@@ -7,6 +9,7 @@ from typing import (Optional, Union, Generator, Protocol,
 
 import caiman as cm
 from caiman.cluster import setup_cluster
+from caiman.summary_images import local_correlations_movie_offline
 from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 import numpy as np
@@ -79,13 +82,16 @@ def ensure_server(dview: Optional[Cluster]) -> Generator[tuple[Cluster, int], No
             cm.stop_server(dview=dview)
 
 
+def avail_bytes_per_process(n_processes: int):
+    return psutil.virtual_memory()[1] / n_processes
+
+
 def estimate_n_pixels_per_process(n_processes: int, T: int, dims: tuple[int, ...]) -> int:
     """
     Estimate a safe number of pixels to allocate to each parallel process at a time
     Taken from CNMF.fit (TODO factor this out in caiman and just import it)
     """
-    avail_memory_per_process = psutil.virtual_memory()[
-        1] / 2.**30 / n_processes
+    avail_memory_per_process = avail_bytes_per_process(n_processes) / 2.0**30
     mem_per_pix = 3.6977678498329843e-09
     npx_per_proc = int(avail_memory_per_process / 8. / mem_per_pix / T)
     npx_per_proc = int(np.minimum(npx_per_proc, np.prod(dims) // n_processes))
@@ -150,3 +156,24 @@ def save_projections_parallel(uuid, movie_path: Union[str, Path], output_dir: Pa
         )
         np.save(str(proj_paths[proj_type]), p_img)
     return proj_paths
+
+
+def save_correlation_parallel(uuid, movie_path: Union[str, Path], output_dir: Path,
+        dims: tuple[int, ...], dview: Optional[Cluster], max_window=1000) -> Path:
+    """Compute and save local correlations in chunks that are small enough to fit in memory"""
+    n_processes = get_n_processes(dview)
+    safe_window = min(max_window, math.floor(avail_bytes_per_process(n_processes) / (8 * np.prod(dims)) * 0.8))
+    Cns = local_correlations_movie_offline(
+        str(movie_path),
+        remove_baseline=True,
+        window=safe_window,
+        stride=safe_window,
+        winSize_baseline=100,
+        quantil_min_baseline=10,
+        dview=dview,
+    )
+    Cn = Cns.max(axis=0)
+    Cn[np.isnan(Cn)] = 0
+    corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy")
+    np.save(str(corr_img_path), Cn, allow_pickle=False)
+    return corr_img_path
