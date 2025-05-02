@@ -8,6 +8,7 @@ from typing import (Optional, Union, Generator, Protocol,
                     Callable, TypeVar, Sequence, Iterable, runtime_checkable)
 
 import caiman as cm
+from caiman.base.movies import get_file_size
 from caiman.cluster import setup_cluster
 from caiman.summary_images import local_correlations
 from ipyparallel import DirectView
@@ -113,27 +114,47 @@ def make_chunk_projection(Yr_chunk: np.ndarray, proj_type: str, ignore_nan=False
     raise NotImplementedError(f"Projection type '{proj_type}' not implemented")
 
 
-def make_chunk_projection_helper(args: tuple[str, slice, str, bool]):
-    movie_path, chunk_slice, proj_type, ignore_nan = args
-    Yr, _, _ = cm.load_memmap(movie_path)
-    return make_chunk_projection(Yr[chunk_slice], proj_type, ignore_nan=ignore_nan)
+def make_chunk_projection_helper(args: tuple[str, slice, Optional[int], str, bool]):
+    movie_path, chunk_slice, page, proj_type, ignore_nan = args
+    subindices = (slice(None), slice(None), chunk_slice)
+    if page is not None:
+        subindices += (page,)
+
+    mov: cm.movie = cm.load(movie_path, subindices=subindices)
+    # flatten to pixels x time
+    Yr = mov.reshape((mov.shape[0], -1), order='F').T
+    return make_chunk_projection(Yr, proj_type, ignore_nan=ignore_nan)
 
 
 def make_projection_parallel(movie_path: str, proj_type: str, dview: Optional[Cluster], ignore_nan=False) -> np.ndarray:
-    Yr, dims, T = cm.load_memmap(movie_path)
+    """
+    Compute projection in chunks that are small enough to fit in memory
+    movie_path: path to movie that can be memory-mapped using caiman.load
+    """
+    dims, T = get_file_size(movie_path)
 
     # use n_pixels_per_process from CNMF to avoid running out of memory
-    n_pix = Yr.shape[0]
     chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
+    chunk_columns = max(chunk_size // dims[0], 1)
 
-    chunk_starts = range(0, n_pix, chunk_size)
+    # divide movie into chunks of columns
+    chunk_starts = range(0, dims[1], chunk_columns)
     chunk_slices = [
-        slice(start, min(start + chunk_size, n_pix)) for start in chunk_starts
+        slice(start, min(start + chunk_columns, dims[1])) for start in chunk_starts
     ]
-    args = [
-        (movie_path, chunk_slice, proj_type, ignore_nan)
-        for chunk_slice in chunk_slices
-    ]
+
+    if len(dims) > 2 and dims[2] > 1:
+        args = []
+        for page in range(dims[2]):
+            args.extend([
+                (movie_path, chunk_slice, page, proj_type, ignore_nan)
+                for chunk_slice in chunk_slices
+            ])
+    else:
+        args = [
+            (movie_path, chunk_slice, None, proj_type, ignore_nan)
+            for chunk_slice in chunk_slices
+        ]
 
     if dview is None:
         map_fn = map
@@ -163,8 +184,11 @@ ChunkDims = tuple[slice, slice]
 ChunkSpec = tuple[ChunkDims, ChunkDims, ChunkDims]  # input, output, patch subinds
 
 def make_correlation_parallel(movie_path: Union[str, Path], dview: Optional[Cluster]) -> np.ndarray:
-    """Compute local correlations in chunks that are small enough to fit in memory"""
-    Yr, dims, T = cm.load_memmap(str(movie_path))
+    """
+    Compute local correlations in chunks that are small enough to fit in memory
+    movie_path: path to movie that can be memory-mapped using caiman.load
+    """
+    dims, T = get_file_size(movie_path)
 
     # use n_pixels_per_process from CNMF to avoid running out of memory
     chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
@@ -180,7 +204,7 @@ def make_correlation_parallel(movie_path: Union[str, Path], dview: Optional[Clus
         map_fn = dview.map_sync
     
     patch_corrs = map_fn(chunk_correlation_helper, args)
-    output_img = np.empty(dims, dtype=Yr.dtype)
+    output_img = np.empty(dims, dtype=np.float32)
     for (_, output_coords, subinds), patch_corr in zip(patches, patch_corrs):
         output_img[output_coords] = patch_corr[subinds]
     
@@ -197,9 +221,8 @@ def save_correlation_parallel(uuid, movie_path: Union[str, Path], output_dir: Pa
 
 def chunk_correlation_helper(args: tuple[str, ChunkDims]) -> np.ndarray:
     movie_path, dims_input = args
-    Yr, dims, T = cm.load_memmap(movie_path)
-    Yr_3d = np.reshape(Yr, dims + (T,), order="F")
-    return local_correlations(Yr_3d[dims_input])
+    mov = cm.load(movie_path, subindices=(slice(None),) + dims_input)
+    return local_correlations(mov, swap_dim=False)
 
 
 def make_correlation_patches(dims: tuple[int, ...], chunk_size: int) -> list[ChunkSpec]:
