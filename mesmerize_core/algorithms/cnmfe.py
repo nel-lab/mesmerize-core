@@ -47,13 +47,30 @@ def run_algo(batch_path, uuid, data_path: str = None):
     c, dview, n_processes = cm.cluster.setup_cluster(
         backend="local", n_processes=n_processes, single_thread=False
     )
-
+    
     try:
-        fname_new = cm.save_memmap(
-            [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
-        )
+        # force the CNMFE params
+        cnmfe_params_dict = {
+            "method_init": "corr_pnr",
+            "n_processes": n_processes,
+            "only_init": True,  # for 1p
+            "center_psf": True,  # for 1p
+            "normalize_init": False,  # for 1p
+        }
+
+        params_dict = {**cnmfe_params_dict, **params["main"]}
+
+        cnmfe_params_dict = CNMFParams(params_dict=params_dict)
 
         print("making memmap")
+        fname_new = cm.save_memmap(
+            [input_movie_path],
+            base_name=f"{uuid}_cnmf-memmap_",
+            order="C",
+            dview=dview,
+            var_name_hdf5=cnmfe_params_dict.data['var_name_hdf5']
+        )
+
         Yr, dims, T = cm.load_memmap(fname_new)
         images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
@@ -69,19 +86,20 @@ def run_algo(batch_path, uuid, data_path: str = None):
 
         d = dict()  # for output
 
-        # force the CNMFE params
-        cnmfe_params_dict = {
-            "method_init": "corr_pnr",
-            "n_processes": n_processes,
-            "only_init": True,  # for 1p
-            "center_psf": True,  # for 1p
-            "normalize_init": False,  # for 1p
-        }
+        # load Ain if given
+        if "Ain_path" in params and params["Ain_path"] is not None:
+            Ain_path_abs = (
+                output_dir / params["Ain_path"]
+            )  # resolve relative to output dir
+            Ain = np.load(Ain_path_abs, allow_pickle=True)
+            if Ain.size == 1:  # sparse array loaded as object
+                Ain = Ain.item()
+        else:
+            Ain = None
 
-        params_dict = {**cnmfe_params_dict, **params["main"]}
-
-        cnmfe_params_dict = CNMFParams(params_dict=params_dict)
-        cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, params=cnmfe_params_dict)
+        cnm = cnmf.CNMF(
+            n_processes=n_processes, dview=dview, params=cnmfe_params_dict, Ain=Ain
+        )
         print("Performing CNMFE")
         cnm.fit(images)
         print("evaluating components")
