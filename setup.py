@@ -12,7 +12,7 @@ install_requires = [
     "psutil",
     "jupyterlab",
     "filelock",
-    "mslex"
+    "mslex",
 ]
 
 
