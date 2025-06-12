@@ -16,7 +16,7 @@ except (ModuleNotFoundError, ImportError):
     HAS_PIMS = False
 
 
-def default_reader(path: str, **kwargs):
+def default_reader(path: str, var_name_hdf5='mov', **kwargs):
     ext = Path(path).suffixes[-1]
     if ext in [".tiff", ".tif", ".btf"]:
         try:
@@ -31,7 +31,7 @@ def default_reader(path: str, **kwargs):
 
     
     if ext in ['.hdf5', '.h5', '.nwb', '.mat', '.n5', '.zarr']:
-        return hdf5_reader(path, **kwargs)
+        return hdf5_reader(path, var_name_hdf5=var_name_hdf5, **kwargs)
 
     raise ValueError(f"No default movie reader for given file extension: '{ext}'")
 
