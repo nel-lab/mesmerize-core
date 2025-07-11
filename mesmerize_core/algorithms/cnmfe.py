@@ -11,11 +11,15 @@ import time
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
     from mesmerize_core.utils import IS_WINDOWS
-    from mesmerize_core.algorithms._utils import ensure_server, save_projections_parallel
+    from mesmerize_core.algorithms._utils import (
+        ensure_server,
+        save_projections_parallel,
+        save_c_order_mmap_parallel,
+    )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
     from ..utils import IS_WINDOWS
-    from ._utils import ensure_server, save_projections_parallel
+    from ._utils import ensure_server, save_projections_parallel, save_c_order_mmap_parallel
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None):
@@ -37,8 +41,24 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
     with ensure_server(dview) as (dview, n_processes):
         try:
-            fname_new = cm.save_memmap(
-                [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
+            # force the CNMFE params
+            cnmfe_params_dict = {
+                "method_init": "corr_pnr",
+                "n_processes": n_processes,
+                "only_init": True,  # for 1p
+                "center_psf": True,  # for 1p
+                "normalize_init": False,  # for 1p
+            }
+
+            params_dict = {**cnmfe_params_dict, **params["main"]}
+
+            cnmfe_params_dict = CNMFParams(params_dict=params_dict)
+
+            fname_new = save_c_order_mmap_parallel(
+                input_movie_path,
+                base_name=f"{uuid}_cnmf-memmap_",
+                dview=dview,
+                var_name_hdf5=cnmfe_params_dict.data['var_name_hdf5']
             )
 
             print("making memmap")
@@ -53,18 +73,6 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
             d = dict()  # for output
 
-            # force the CNMFE params
-            cnmfe_params_dict = {
-                "method_init": "corr_pnr",
-                "n_processes": n_processes,
-                "only_init": True,  # for 1p
-                "center_psf": True,  # for 1p
-                "normalize_init": False,  # for 1p
-            }
-
-            params_dict = {**cnmfe_params_dict, **params["main"]}
-
-            cnmfe_params_dict = CNMFParams(params_dict=params_dict)
             cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, params=cnmfe_params_dict)
             print("Performing CNMFE")
             cnm.fit(images)

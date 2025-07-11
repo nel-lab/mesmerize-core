@@ -19,11 +19,17 @@ if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
         ensure_server,
         save_projections_parallel,
         save_correlation_parallel,
+        save_c_order_mmap_parallel,
     )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
     from ..utils import IS_WINDOWS
-    from ._utils import ensure_server, save_projections_parallel, save_correlation_parallel
+    from ._utils import (
+        ensure_server,
+        save_projections_parallel,
+        save_correlation_parallel,
+        save_c_order_mmap_parallel,
+    )
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None):
@@ -61,8 +67,11 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
             if save_new_mmap:
                 print("making memmap")
-                fname_new = cm.save_memmap(
-                    [input_movie_path], base_name=f"{uuid}_cnmf-memmap_", order="C", dview=dview
+                fname_new = save_c_order_mmap_parallel(
+                    input_movie_path,
+                    base_name=f"{uuid}_cnmf-memmap_",
+                    dview=dview,
+                    var_name_hdf5=cnmf_params.data['var_name_hdf5']
                 )
                 cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
                 move_file(fname_new, cnmf_memmap_path)
