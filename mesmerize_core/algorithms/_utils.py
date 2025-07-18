@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from itertools import pairwise
 import logging
 import math
 import os
@@ -123,12 +124,16 @@ class ColumnMappingFunction(Generic[R]):
     def _helper(self, args: tuple) -> R:
         movie_path: str = args[0]
         var_name_hdf5: str = args[1]
-        col_slice: slice = args[2]
-        page: Optional[int] = args[3]
+        row_slice: slice = args[2]
+        col_slice: slice = args[3]
+        page: Optional[int] = args[4]
 
-        subindices = (slice(None), slice(None), col_slice)
+        subindices = (slice(None), row_slice, col_slice)
         if page is not None:
             subindices += (page,)
+            logging.debug(f'In column mapping kernel, page = {page}, cols = {col_slice.start} to {col_slice.stop}')
+        else:
+            logging.debug(f'In column mapping kernel, cols = {col_slice.start} to {col_slice.stop}')
 
         mov: cm.movie = cm.load(movie_path, subindices=subindices, var_name_hdf5=var_name_hdf5)
         T, *dims = mov.shape
@@ -138,10 +143,11 @@ class ColumnMappingFunction(Generic[R]):
 
         # get slice of flattened pixels
         page_offset = page * dims[0] * dims[1] if page else 0
-        pixel_slice = slice(page_offset + col_slice.start * dims[0], page_offset + col_slice.stop * dims[0])
+        pixel_slice = slice(page_offset + col_slice.start * dims[0] + row_slice.start,
+                            page_offset + (col_slice.stop-1) * dims[0] + row_slice.stop)
 
         # apply the kernel
-        return self.kernel(Yr, pixel_slice, *args[4:])
+        return self.kernel(Yr, pixel_slice, *args[5:])
 
     def __call__(self, movie_path: str, dview: Optional[Cluster], var_name_hdf5='mov', *args) -> Iterable[R]:
         """Perform an operation on non-overlapping chunks of columns that fit into memory"""   
@@ -150,26 +156,29 @@ class ColumnMappingFunction(Generic[R]):
 
         # use n_pixels_per_process from CNMF to avoid running out of memory
         chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
-        chunk_columns = max(chunk_size // dims[0], 1)
+        n_chunks = math.ceil(dims[0] * dims[1] / chunk_size)
+        n_column_chunks = min(math.ceil(dims[0] * dims[1] / chunk_size), dims[1])
 
         # divide movie into chunks of columns
-        chunk_starts = range(0, dims[1], chunk_columns)
-        chunk_slices = [
-            slice(start, min(start + chunk_columns, dims[1])) for start in chunk_starts
-        ]
+        chunk_col_edges = np.linspace(0, dims[1], n_column_chunks+1).astype(int)
+        chunk_col_slices = [slice(start, end) for start, end in pairwise(chunk_col_edges)]
+
+        if (n_row_chunks := math.ceil(n_chunks / n_column_chunks)) > 1:
+            # subdivide rows as well
+            chunk_row_edges = np.linspace(0, dims[0], n_row_chunks+1).astype(int)
+            chunk_row_slices = [slice(start, end) for start, end in pairwise(chunk_row_edges)]
+        else:
+            chunk_row_slices = [slice(0, dims[0])]
 
         if len(dims) > 2 and dims[2] > 1:
-            map_args = []
-            for page in range(dims[2]):
-                map_args.extend([
-                    (movie_path, var_name_hdf5, chunk_slice, page) + tuple(args)
-                    for chunk_slice in chunk_slices
-                ])
+            pages = range(dims[2])
         else:
-            map_args = [
-                (movie_path, var_name_hdf5, chunk_slice, None) + tuple(args)
-                for chunk_slice in chunk_slices
-            ]
+            pages = [None]
+        
+        map_args = [
+            (movie_path, var_name_hdf5, row_slice, col_slice, page) + args
+            for page in pages for col_slice in chunk_col_slices for row_slice in chunk_row_slices
+        ]
 
         if dview is None:
             map_fn = map
