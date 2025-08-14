@@ -11,7 +11,6 @@ from typing import (
     Generator,
     Protocol,
     Callable,
-    Concatenate,
     Generic,
     TypeVar,
     Sequence,
@@ -118,7 +117,7 @@ class ColumnMappingFunction(Generic[R]):
     Object to map an operation over columns of a movie to avoid running out of memory
     Construct with the kernel function which takes pixels x time matrices and returns anything.
     """
-    def __init__(self, kernel: Callable[Concatenate[np.ndarray, slice, ...], R]):
+    def __init__(self, kernel: Callable[..., R]):
         self.kernel = kernel
     
     def _helper(self, args: tuple) -> R:
