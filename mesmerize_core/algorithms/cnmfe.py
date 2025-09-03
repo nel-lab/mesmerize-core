@@ -83,7 +83,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
         cnmfe_params_dict = CNMFParams(params_dict=params_dict)
         cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, params=cnmfe_params_dict)
         print("Performing CNMFE")
-        cnm = cnm.fit(images)
+        cnm.fit(images)
         print("evaluating components")
         cnm.estimates.evaluate_components(images, cnm.params, dview=dview)
 
