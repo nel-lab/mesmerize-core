@@ -50,7 +50,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
     
     try:
         # force the CNMFE params
-        cnmfe_params_dict = {
+        cnmfe_params = {
             "method_init": "corr_pnr",
             "n_processes": n_processes,
             "only_init": True,  # for 1p
@@ -58,9 +58,9 @@ def run_algo(batch_path, uuid, data_path: str = None):
             "normalize_init": False,  # for 1p
         }
 
-        params_dict = {**cnmfe_params_dict, **params["main"]}
+        params_dict = {**cnmfe_params, **params["main"]}
 
-        cnmfe_params_dict = CNMFParams(params_dict=params_dict)
+        cnmfe_params = CNMFParams(params_dict=params_dict)
 
         print("making memmap")
         fname_new = cm.save_memmap(
@@ -68,7 +68,7 @@ def run_algo(batch_path, uuid, data_path: str = None):
             base_name=f"{uuid}_cnmf-memmap_",
             order="C",
             dview=dview,
-            var_name_hdf5=cnmfe_params_dict.data['var_name_hdf5']
+            var_name_hdf5=cnmfe_params.data['var_name_hdf5']
         )
 
         Yr, dims, T = cm.load_memmap(fname_new)
@@ -94,11 +94,14 @@ def run_algo(batch_path, uuid, data_path: str = None):
             Ain = np.load(Ain_path_abs, allow_pickle=True)
             if Ain.size == 1:  # sparse array loaded as object
                 Ain = Ain.item()
+
+            # force params needed for seeded CNMFE
+            cnmfe_params.change_params({'patch': {'rf': None, 'only_init': False}})
         else:
             Ain = None
 
         cnm = cnmf.CNMF(
-            n_processes=n_processes, dview=dview, params=cnmfe_params_dict, Ain=Ain
+            n_processes=n_processes, dview=dview, params=cnmfe_params, Ain=Ain
         )
         print("Performing CNMFE")
         cnm.fit(images)

@@ -3,6 +3,7 @@ import os
 import numpy as np
 from caiman.utils.utils import load_dict_from_hdf5
 from caiman.source_extraction.cnmf.cnmf import CNMF
+from caiman.base.rois import extract_binary_masks_from_structural_channel
 import numpy.testing
 import pandas as pd
 from mesmerize_core import (
@@ -34,23 +35,22 @@ import tifffile
 from copy import deepcopy
 
 # don't call "resolve" on these - want to make sure we can handle non-canonical paths correctly
-tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "tmp")
-vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "videos")
-ground_truths_dir = Path(
-    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths"
-)
-ground_truths_file = Path(
-    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths.zip"
-)
+testdata_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data")
+tmp_dir = testdata_dir / "tmp"
+vid_dir = testdata_dir / "videos"
+seed_dir = testdata_dir / "seeds"
+ground_truths_dir = testdata_dir / "ground_truths"
+ground_truths_file = testdata_dir / "ground_truths.zip"
 
 os.makedirs(tmp_dir, exist_ok=True)
 os.makedirs(vid_dir, exist_ok=True)
+os.makedirs(seed_dir, exist_ok=True)
 os.makedirs(ground_truths_dir, exist_ok=True)
 
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/record/14934525/files/ground_truths.zip"
+    url = f"https://zenodo.org/records/17059175/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -139,6 +139,12 @@ def _create_tmp_batch() -> tuple[pd.DataFrame, str]:
     df = create_batch(fname)
 
     return df, fname
+
+
+def make_test_seed(input_data: np.ndarray):
+    """Function call used to create Ain for testing"""
+    mean_proj = np.mean(input_data, axis=0)
+    return extract_binary_masks_from_structural_channel(mean_proj, gSig=3)[0]
 
 
 def test_create_batch():
@@ -1335,4 +1341,184 @@ def test_cache():
     assert hex(id(output)) == hex(id(output2))
     assert hex(id(cnmf.cnmf_cache.get_cache().iloc[-1]["return_val"])) == hex(
         id(output)
+    )
+
+
+def test_seeded_cnmf():
+    """Test seeded CNNF (Ain)"""
+    set_parent_raw_data_path(vid_dir)
+    algo = "mcorr"
+
+    df, batch_path = _create_tmp_batch()
+
+    batch_path = Path(batch_path)
+    batch_dir = batch_path.parent
+    batch_dir_canon = batch_dir.resolve()
+
+    input_movie_path = get_datafile(algo)
+    print(input_movie_path)
+
+    df.caiman.add_item(
+        algo=algo,
+        item_name=f"test-{algo}",
+        input_movie_path=input_movie_path,
+        params=test_params[algo],
+    )
+
+    df.iloc[-1].caiman.run()
+    df = load_batch(batch_path)
+
+    assert df.iloc[-1]["outputs"]["success"] is True
+    assert df.iloc[-1]["outputs"]["traceback"] is None
+
+    # make seed
+    mcorr_output = df.iloc[-1].mcorr.get_output()
+    seed = make_test_seed(mcorr_output)
+    seed_path = seed_dir / "Ain_cnmf.npy"
+    np.save(seed_path, seed)
+
+    algo = "cnmf"
+    print("Testing seeded cnmf")
+    input_movie_path = df.iloc[-1].mcorr.get_output_path()
+    seeded_params = {
+        **test_params[algo],
+        "Ain_path": seed_path,
+        "refit": False
+    }
+
+    df.caiman.add_item(
+        algo=algo,
+        item_name=f"test-seeded-{algo}",
+        input_movie_path=input_movie_path,
+        params=seeded_params
+    )
+
+    assert df.iloc[-1]["algo"] == algo
+    assert df.iloc[-1]["item_name"] == f"test-seeded-{algo}"
+    assert df.iloc[-1]["params"] == seeded_params
+    assert df.iloc[-1]["outputs"] is None
+    try:
+        UUID(df.iloc[-1]["uuid"])
+    except:
+        pytest.fail("Something wrong with setting UUID for batch items")
+    print("cnmf input_movie_path:", df.iloc[-1]["input_movie_path"])
+    assert batch_dir_canon.joinpath(df.iloc[-1]["input_movie_path"]) == input_movie_path
+
+    df.iloc[-1].caiman.run()
+
+    df = load_batch(batch_path)
+
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+        print(df)
+
+    pprint(df.iloc[-1]["outputs"], width=-1)
+    print(df.iloc[-1]["outputs"]["traceback"])
+
+    assert df.iloc[-1]["outputs"]["success"] is True
+    assert df.iloc[-1]["outputs"]["traceback"] is None
+
+    # test to check cnmf get_masks()
+    cnmf_spatial_masks = df.iloc[-1].cnmf.get_masks("good")
+    cnmf_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf_seeded", "spatial_masks.npy")
+    )
+    numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
+
+    # test to check get_temporal()
+    cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal("good")
+    cnmf_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf_seeded", "temporal_components.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10
+    )
+
+
+def test_seeded_cnmfe():
+    set_parent_raw_data_path(vid_dir)
+
+    df, batch_path = _create_tmp_batch()
+
+    batch_path = Path(batch_path)
+    batch_dir = batch_path.parent
+    batch_dir_canon = batch_dir.resolve()
+
+    input_movie_path = get_datafile("cnmfe")
+    print(input_movie_path)
+    df.caiman.add_item(
+        algo="mcorr",
+        item_name="test-cnmfe-mcorr",
+        input_movie_path=input_movie_path,
+        params=test_params["mcorr"],
+    )
+    df.iloc[-1].caiman.run()
+
+    df = load_batch(batch_path)
+
+    # Test if running seeded cnmfe works
+    # this seed is actually trash for CNMFE but just see if it's consistent
+    mcorr_output = df.iloc[-1].mcorr.get_output()
+    seed = make_test_seed(mcorr_output)
+    seed_path = seed_dir / "Ain_cnmfe.npy"
+    np.save(seed_path, seed)
+
+    print("testing seeded cnmfe")
+    algo = "cnmfe"
+    param_name = "cnmfe_full"
+    input_movie_path = df.iloc[0].mcorr.get_output_path()
+    print(input_movie_path)
+    seeded_params = {
+        **test_params[param_name],
+        "Ain_path": seed_path,
+        "refit": False
+    }
+
+    df.caiman.add_item(
+        algo=algo,
+        item_name=f"test-seeded-{algo}",
+        input_movie_path=input_movie_path,
+        params=seeded_params,
+    )
+
+    assert df.iloc[-1]["algo"] == algo
+    assert df.iloc[-1]["item_name"] == f"test-seeded-{algo}"
+    assert df.iloc[-1]["params"] == seeded_params
+    assert df.iloc[-1]["outputs"] is None
+    try:
+        UUID(df.iloc[-1]["uuid"])
+    except:
+        pytest.fail("Something wrong with setting UUID for batch items")
+
+    assert (
+        batch_dir_canon.joinpath(df.iloc[-1]["input_movie_path"])
+        == batch_dir_canon.joinpath(df.iloc[0].mcorr.get_output_path())
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
+    )
+
+    df.iloc[-1].caiman.run()
+    df = load_batch(batch_path)
+
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+        print(df)
+
+    pprint(df.iloc[-1]["outputs"], width=-1)
+    print(df.iloc[-1]["outputs"]["traceback"])
+
+    assert df.iloc[-1]["outputs"]["success"] is True
+    assert df.iloc[-1]["outputs"]["traceback"] is None
+
+    # test to check cnmf get_masks()
+    cnmf_spatial_masks = df.iloc[-1].cnmf.get_masks("good")
+    cnmf_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_seeded", "spatial_masks.npy")
+    )
+    numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
+
+    # test to check get_temporal()
+    cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal("good")
+    cnmf_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_seeded", "temporal_components.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10
     )
