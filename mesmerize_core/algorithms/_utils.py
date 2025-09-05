@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 import os
 import psutil
-from typing import Optional, Union, Generator
+from typing import (Optional, Union, Generator, Protocol,
+                    Callable, TypeVar, Sequence, Iterable, runtime_checkable)
 
 import caiman as cm
 from caiman.cluster import setup_cluster
@@ -9,13 +10,24 @@ from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 
 
-Cluster = Union[Pool, DirectView]
+@runtime_checkable
+class CustomCluster(Protocol):
+    """Protocol for a cluster that is not a multiprocessing pool"""
+    RetVal = TypeVar('RetVal')
+    def map_sync(self, fn: Callable[..., RetVal], args: Iterable) -> Sequence[RetVal]:
+        ...
+    
+    def __len__(self) -> int:
+        """return number of workers"""
+        ...
+
+Cluster = Union[Pool, DirectView, CustomCluster]
 
 def get_n_processes(dview: Optional[Cluster]) -> int:
     """Infer number of processes in a multiprocessing or ipyparallel cluster"""
     if isinstance(dview, Pool) and hasattr(dview, '_processes'):
         return dview._processes  # type: ignore
-    elif isinstance(dview, DirectView):
+    elif isinstance(dview, CustomCluster):
         return len(dview)
     else:
         return 1
@@ -33,13 +45,17 @@ def ensure_server(dview: Optional[Cluster]) -> Generator[tuple[Cluster, int], No
         yield dview, get_n_processes(dview)
     else:
         # no cluster passed in, so open one
+        procs_available = psutil.cpu_count()
+        if procs_available is None:
+            raise RuntimeError('Cannot determine number of processes')
+
         if "MESMERIZE_N_PROCESSES" in os.environ.keys():
             try:
                 n_processes = int(os.environ["MESMERIZE_N_PROCESSES"])
             except:
-                n_processes = psutil.cpu_count() - 1
+                n_processes = procs_available - 1
         else:
-            n_processes = psutil.cpu_count() - 1
+            n_processes = procs_available - 1
 
         # Start cluster for parallel processing
         _, dview, n_processes = setup_cluster(
