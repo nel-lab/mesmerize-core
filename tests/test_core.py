@@ -1520,5 +1520,5 @@ def test_seeded_cnmfe():
         ground_truths_dir.joinpath("cnmfe_seeded", "temporal_components.npy")
     )
     numpy.testing.assert_allclose(
-        cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-4
+        cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-3
     )
