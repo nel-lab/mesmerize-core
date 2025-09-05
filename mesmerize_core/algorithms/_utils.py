@@ -6,28 +6,35 @@ from typing import (Optional, Union, Generator, Protocol,
 
 import caiman as cm
 from caiman.cluster import setup_cluster
-from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 
 
+RetVal = TypeVar("RetVal")
 @runtime_checkable
 class CustomCluster(Protocol):
-    """Protocol for a cluster that is not a multiprocessing pool"""
-    RetVal = TypeVar('RetVal')
-    def map_sync(self, fn: Callable[..., RetVal], args: Iterable) -> Sequence[RetVal]:
-        ...
-    
+    """
+    Protocol for a cluster that is not a multiprocessing pool
+    (including ipyparallel.DirectView)
+    """
+
+    def map_sync(
+        self, fn: Callable[..., RetVal], args: Iterable
+    ) -> Sequence[RetVal]: ...
+
     def __len__(self) -> int:
         """return number of workers"""
         ...
 
-Cluster = Union[Pool, DirectView, CustomCluster]
+
+Cluster = Union[Pool, CustomCluster]
+
 
 def get_n_processes(dview: Optional[Cluster]) -> int:
     """Infer number of processes in a multiprocessing or ipyparallel cluster"""
-    if isinstance(dview, Pool) and hasattr(dview, '_processes'):
+    if isinstance(dview, Pool):
+        assert hasattr(dview, '_processes'), "Pool not keeping track of # of processes?"
         return dview._processes  # type: ignore
-    elif isinstance(dview, CustomCluster):
+    elif dview is not None:
         return len(dview)
     else:
         return 1
