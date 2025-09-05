@@ -2,13 +2,14 @@ import os
 import shutil
 from pathlib import Path
 import psutil
-from subprocess import Popen
+from subprocess import Popen, CalledProcessError
 from typing import *
 from uuid import UUID, uuid4
 from shutil import rmtree
 from datetime import datetime
 import time
 from copy import deepcopy
+from concurrent.futures import ThreadPoolExecutor, Future
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,7 @@ from ..batch_utils import (
     COMPUTE_BACKENDS,
     COMPUTE_BACKEND_SUBPROCESS,
     COMPUTE_BACKEND_LOCAL,
+    COMPUTE_BACKEND_ASYNC,
     get_parent_raw_data_path,
     load_batch,
 )
@@ -513,11 +515,35 @@ class CaimanDataFrameExtensions:
                 return r["uuid"]
 
 
-class DummyProcess:
-    """Dummy process for local backend"""
+class Waitable(Protocol):
+    """An object that we can call "wait" on"""
+    def wait(self) -> None: ...
 
-    def wait(self):
+
+class DummyProcess(Waitable):
+    """Dummy process for local backend"""
+    def wait(self) -> None:
         pass
+
+
+class WaitableFuture(Waitable):
+    """Adaptor for future returned from Executor.submit"""
+    def __init__(self, future: Future[None]):
+        self.future = future
+    
+    def wait(self) -> None:
+        return self.future.result()
+    
+
+class CheckedSubprocess(Waitable):
+    """Adaptor for Popen that just raises an exception if the return code is nonzero"""
+    def __init__(self, popen: Popen):
+        self.popen = popen
+    
+    def wait(self) -> None:
+        rc = self.popen.wait()
+        if rc != 0:
+            raise CalledProcessError(rc, self.popen.args)
 
 
 @pd.api.extensions.register_series_accessor("caiman")
@@ -528,36 +554,54 @@ class CaimanSeriesExtensions:
 
     def __init__(self, s: pd.Series):
         self._series = s
-        self.process: Popen = None
+        self.process: Optional[Waitable] = None
 
     def _run_local(
-        self,
-        algo: str,
-        batch_path: Path,
-        uuid: UUID,
-        data_path: Union[Path, None],
-    ):
+            self,
+            algo: str,
+            batch_path: Path,
+            uuid: UUID,
+            data_path: Union[Path, None],
+            dview=None
+    ) -> DummyProcess:
         algo_module = getattr(algorithms, algo)
         algo_module.run_algo(
-            batch_path=str(batch_path), uuid=str(uuid), data_path=str(data_path)
+            batch_path=str(batch_path),
+            uuid=str(uuid),
+            data_path=str(data_path),
+            dview=dview
         )
-
         return DummyProcess()
 
-    def _run_subprocess(self, runfile_path: str, wait: bool, **kwargs):
+    def _run_local_async(
+            self,
+            algo: str,
+            batch_path: Path,
+            uuid: UUID,
+            data_path: Union[Path, None],
+            dview=None
+    ) -> WaitableFuture:
+        algo_module = getattr(algorithms, algo)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                algo_module.run_algo,
+                batch_path=str(batch_path),
+                uuid=str(uuid),
+                data_path=str(data_path),
+                dview=dview
+                )
+            return WaitableFuture(future)
+
+    def _run_subprocess(self, runfile_path: str, **kwargs) -> CheckedSubprocess:
 
         # Get the dir that contains the input movie
         parent_path = self._series.paths.resolve(self._series.input_movie_path).parent
-        self.process = Popen([runfile_path], cwd=parent_path)
+        popen = Popen([runfile_path], cwd=parent_path)
+        return CheckedSubprocess(popen)  # so that it throws an exception on failure
 
-        if wait:
-            self.process.wait()
-
-        return self.process
 
     def _run_slurm(
-        self, runfile_path: str, wait: bool, sbatch_opts: str = "", **kwargs
-    ):
+        self, runfile_path: str, wait: bool, sbatch_opts: str = "", **kwargs) -> CheckedSubprocess:
         """
         Run on a cluster using SLURM. Configurable options (to pass to run):
         - sbatch_opts: A single string containing additional options for sbatch.
@@ -589,15 +633,12 @@ class CaimanSeriesExtensions:
             f"--output={output_path}",
             "--wait",
         ] + shlex.split(sbatch_opts)
+        
+        return CheckedSubprocess(Popen(["sbatch", *submission_opts, runfile_path]))
 
-        self.process = Popen(["sbatch", *submission_opts, runfile_path])
-        if wait:
-            self.process.wait()
-
-        return self.process
 
     @cnmf_cache.invalidate()
-    def run(self, backend: Optional[str] = None, wait: bool = True, **kwargs):
+    def run(self, backend: Optional[str] = None, wait: bool = True, **kwargs) -> Waitable:
         """
         Run a CaImAn algorithm in an external process using the chosen backend
 
@@ -636,42 +677,47 @@ class CaimanSeriesExtensions:
 
         batch_path = self._series.paths.get_batch_path()
 
-        if backend == COMPUTE_BACKEND_LOCAL:
-            print(f"Running {self._series.uuid} with local backend")
-            return self._run_local(
+        if backend in [COMPUTE_BACKEND_LOCAL, COMPUTE_BACKEND_ASYNC]:
+            print(f"Running {self._series.uuid} with {backend} backend")
+            self.process = getattr(self, f"_run_{backend}")(
                 algo=self._series["algo"],
                 batch_path=batch_path,
                 uuid=self._series["uuid"],
                 data_path=get_parent_raw_data_path(),
+                dview=kwargs.get("dview")
+            )
+        else:
+            # Create the runfile in the batch dir using this Series' UUID as the filename
+            if IS_WINDOWS:
+                runfile_ext = ".bat"
+            else:
+                runfile_ext = ".runfile"
+            runfile_path = str(
+                batch_path.parent.joinpath(self._series["uuid"] + runfile_ext)
             )
 
-        # Create the runfile in the batch dir using this Series' UUID as the filename
-        if IS_WINDOWS:
-            runfile_ext = ".bat"
-        else:
-            runfile_ext = ".runfile"
-        runfile_path = str(
-            batch_path.parent.joinpath(self._series["uuid"] + runfile_ext)
-        )
+            args_str = (
+                f"--batch-path {lex.quote(str(batch_path))} --uuid {self._series.uuid}"
+            )
+            if get_parent_raw_data_path() is not None:
+                args_str += f" --data-path {lex.quote(str(get_parent_raw_data_path()))}"
 
-        args_str = (
-            f"--batch-path {lex.quote(str(batch_path))} --uuid {self._series.uuid}"
-        )
-        if get_parent_raw_data_path() is not None:
-            args_str += f" --data-path {lex.quote(str(get_parent_raw_data_path()))}"
+            # make the runfile
+            runfile_path = make_runfile(
+                module_path=os.path.abspath(
+                    ALGO_MODULES[self._series["algo"]].__file__
+                ),  # caiman algorithm
+                filename=runfile_path,  # path to create runfile
+                args_str=args_str,
+            )
 
-        # make the runfile
-        runfile_path = make_runfile(
-            module_path=os.path.abspath(
-                ALGO_MODULES[self._series["algo"]].__file__
-            ),  # caiman algorithm
-            filename=runfile_path,  # path to create runfile
-            args_str=args_str,
-        )
-
-        self.process = getattr(self, f"_run_{backend}")(
-            runfile_path, wait=wait, **kwargs
-        )
+            self.process = getattr(self, f"_run_{backend}")(
+                runfile_path, wait=wait, **kwargs
+            )
+        
+        assert self.process is not None, 'Process should have been created'
+        if wait:
+            self.process.wait()
         return self.process
 
     def get_input_movie_path(self) -> Path:
