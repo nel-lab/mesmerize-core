@@ -9,6 +9,7 @@ from shutil import rmtree
 from datetime import datetime
 import time
 from copy import deepcopy
+import logging
 
 import numpy as np
 import pandas as pd
@@ -536,10 +537,14 @@ class CaimanSeriesExtensions:
         batch_path: Path,
         uuid: UUID,
         data_path: Union[Path, None],
+        log_level=None,
     ):
         algo_module = getattr(algorithms, algo)
         algo_module.run_algo(
-            batch_path=str(batch_path), uuid=str(uuid), data_path=str(data_path)
+            batch_path=str(batch_path),
+            uuid=str(uuid),
+            data_path=str(data_path),
+            log_level=log_level
         )
 
         return DummyProcess()
@@ -643,6 +648,7 @@ class CaimanSeriesExtensions:
                 batch_path=batch_path,
                 uuid=self._series["uuid"],
                 data_path=get_parent_raw_data_path(),
+                log_level=kwargs.get("log_level")
             )
 
         # Create the runfile in the batch dir using this Series' UUID as the filename
@@ -659,6 +665,15 @@ class CaimanSeriesExtensions:
         )
         if get_parent_raw_data_path() is not None:
             args_str += f" --data-path {lex.quote(str(get_parent_raw_data_path()))}"
+
+        # set log level
+        if 'log_level' in kwargs:
+            level = kwargs['log_level']
+            if isinstance(level, str):
+                level = getattr(logging, level)
+        else:
+            level = logging.getLogger().getEffectiveLevel()
+        args_str += f" --log-level {level}"
 
         # make the runfile
         runfile_path = make_runfile(

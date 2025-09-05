@@ -14,11 +14,15 @@ import time
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
+    from mesmerize_core.algorithms._utils import setup_logging
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
+    from ._utils import setup_logging
 
 
-def run_algo(batch_path, uuid, data_path: str = None):
+def run_algo(batch_path, uuid, data_path: str = None, log_level=None):
+    if log_level is not None:
+        setup_logging(log_level)
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
@@ -156,9 +160,10 @@ def run_algo(batch_path, uuid, data_path: str = None):
 @click.command()
 @click.option("--batch-path", type=str)
 @click.option("--uuid", type=str)
-@click.option("--data-path", type=str)
-def main(batch_path, uuid, data_path: str = None):
-    run_algo(batch_path, uuid, data_path)
+@click.option("--data-path", default=None)
+@click.option("--log-level", type=int, default=None)
+def main(batch_path, uuid, data_path, log_level):
+    run_algo(batch_path, uuid, data_path, log_level=log_level)
 
 
 if __name__ == "__main__":
