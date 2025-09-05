@@ -6,6 +6,7 @@ from typing import (Optional, Union, Generator, Protocol,
 
 import caiman as cm
 from caiman.cluster import setup_cluster
+from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 
 
@@ -26,7 +27,7 @@ class CustomCluster(Protocol):
         ...
 
 
-Cluster = Union[Pool, CustomCluster]
+Cluster = Union[Pool,  CustomCluster, DirectView]
 
 
 def get_n_processes(dview: Optional[Cluster]) -> int:
