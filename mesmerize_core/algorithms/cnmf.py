@@ -72,6 +72,9 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
                 Ain = np.load(Ain_path_abs, allow_pickle=True)
                 if Ain.size == 1:  # sparse array loaded as object
                     Ain = Ain.item()
+    
+                # force params needed for seeded CNMF
+                cnmf_params.change_params({'patch': {'rf': None, 'only_init': False}})
             else:
                 Ain = None
 
@@ -80,7 +83,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
             print("fitting images")
             cnm.fit(images)
-            #
+    
             if "refit" in params.keys():
                 if params["refit"] is True:
                     print("refitting")
