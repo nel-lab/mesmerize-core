@@ -85,9 +85,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
                 uuid=uuid,
                 movie_path=cnmf_memmap_path,
                 output_dir=output_dir,
-                dims=dims,
                 dview=dview,
-                max_window=1000
             )
 
             print("performing CNMF")

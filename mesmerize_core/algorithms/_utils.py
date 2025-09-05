@@ -9,7 +9,7 @@ from typing import (Optional, Union, Generator, Protocol,
 
 import caiman as cm
 from caiman.cluster import setup_cluster
-from caiman.summary_images import local_correlations_movie_offline
+from caiman.summary_images import local_correlations
 from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 import numpy as np
@@ -113,37 +113,38 @@ def make_chunk_projection(Yr_chunk: np.ndarray, proj_type: str, ignore_nan=False
     raise NotImplementedError(f"Projection type '{proj_type}' not implemented")
 
 
-def make_chunk_projection_helper(args: tuple[Union[str, np.ndarray], slice, str, bool]):
-    Yr, chunk_slice, proj_type, ignore_nan = args
-    if isinstance(Yr, str):
-        Yr, _, _ = cm.load_memmap(Yr)
+def make_chunk_projection_helper(args: tuple[str, slice, str, bool]):
+    movie_path, chunk_slice, proj_type, ignore_nan = args
+    Yr, _, _ = cm.load_memmap(movie_path)
     return make_chunk_projection(Yr[chunk_slice], proj_type, ignore_nan=ignore_nan)
 
 
-def make_projection_parallel(movie_or_path: Union[cm.movie, str], proj_type: str, dview: Optional[Cluster],
-                             ignore_nan=False) -> np.ndarray:
-    if isinstance(movie_or_path, str):
-        movie_path = movie_or_path
-        Yr, dims, T = cm.load_memmap(movie_path)
-    else:
-        dview = None  # avoid doing in parallel if we already know it fits into memory
-        T = movie_or_path.shape[0]
-        dims = movie_or_path.shape[1:]
-        Yr = movie_or_path.reshape((T, -1), order='F').T
+def make_projection_parallel(movie_path: str, proj_type: str, dview: Optional[Cluster], ignore_nan=False) -> np.ndarray:
+    Yr, dims, T = cm.load_memmap(movie_path)
+
+    # use n_pixels_per_process from CNMF to avoid running out of memory
+    n_pix = Yr.shape[0]
+    chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
+
+    chunk_starts = range(0, n_pix, chunk_size)
+    chunk_slices = [
+        slice(start, min(start + chunk_size, n_pix)) for start in chunk_starts
+    ]
+    args = [
+        (movie_path, chunk_slice, proj_type, ignore_nan)
+        for chunk_slice in chunk_slices
+    ]
 
     if dview is None:
-        p_img_flat = make_chunk_projection(Yr, proj_type, ignore_nan=ignore_nan)
+        map_fn = map
+    elif isinstance(dview, Pool):
+        map_fn = dview.map
     else:
-        # use n_pixels_per_process from CNMF to avoid running out of memory
-        n_pix = Yr.shape[0]
-        chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
-        chunk_starts = range(0, n_pix, chunk_size)
-        chunk_slices = [slice(start, min(start + chunk_size, n_pix)) for start in chunk_starts]
-        args = [(movie_path, chunk_slice, proj_type, ignore_nan) for chunk_slice in chunk_slices]
-        map_fn = dview.map if isinstance(dview, Pool) else dview.map_sync
-        chunk_projs = map_fn(make_chunk_projection_helper, args)
-        p_img_flat = np.concatenate(chunk_projs, axis=0)
-    return np.reshape(p_img_flat, dims, order='F')
+        map_fn = dview.map_sync
+
+    chunk_projs = map_fn(make_chunk_projection_helper, args)
+    p_img_flat = np.concatenate(list(chunk_projs), axis=0)
+    return np.reshape(p_img_flat, dims, order="F")
 
 
 def save_projections_parallel(uuid, movie_path: Union[str, Path], output_dir: Path, dview: Optional[Cluster]
@@ -158,22 +159,84 @@ def save_projections_parallel(uuid, movie_path: Union[str, Path], output_dir: Pa
     return proj_paths
 
 
-def save_correlation_parallel(uuid, movie_path: Union[str, Path], output_dir: Path,
-        dims: tuple[int, ...], dview: Optional[Cluster], max_window=1000) -> Path:
+ChunkDims = tuple[slice, slice]
+ChunkSpec = tuple[ChunkDims, ChunkDims, ChunkDims]  # input, output, patch subinds
+
+def save_correlation_parallel(uuid, movie_path: Union[str, Path], output_dir: Path, dview: Optional[Cluster]) -> Path:
     """Compute and save local correlations in chunks that are small enough to fit in memory"""
-    n_processes = get_n_processes(dview)
-    safe_window = min(max_window, math.floor(avail_bytes_per_process(n_processes) / (8 * np.prod(dims)) * 0.8))
-    Cns = local_correlations_movie_offline(
-        str(movie_path),
-        remove_baseline=True,
-        window=safe_window,
-        stride=safe_window,
-        winSize_baseline=100,
-        quantil_min_baseline=10,
-        dview=dview,
-    )
-    Cn = Cns.max(axis=0)
-    Cn[np.isnan(Cn)] = 0
+    Yr, dims, T = cm.load_memmap(str(movie_path))
+
+    # use n_pixels_per_process from CNMF to avoid running out of memory
+    chunk_size = estimate_n_pixels_per_process(get_n_processes(dview), T, dims)
+    patches = make_correlation_patches(dims, chunk_size)
+    
+    # do correlation calculation in parallel
+    args = [(str(movie_path), p[0]) for p in patches]
+    if dview is None:
+        map_fn = map
+    elif isinstance(dview, Pool):
+        map_fn = dview.map
+    else:
+        map_fn = dview.map_sync
+    
+    patch_corrs = map_fn(chunk_correlation_helper, args)
+    output_img = np.empty(dims, dtype=Yr.dtype)
+    for (_, output_coords, subinds), patch_corr in zip(patches, patch_corrs):
+        output_img[output_coords] = patch_corr[subinds]
+    
+    # save to file and return path
     corr_img_path = output_dir.joinpath(f"{uuid}_cn.npy")
-    np.save(str(corr_img_path), Cn, allow_pickle=False)
+    np.save(str(corr_img_path), output_img, allow_pickle=False)
     return corr_img_path
+
+
+def chunk_correlation_helper(args: tuple[str, ChunkDims]) -> np.ndarray:
+    movie_path, dims_input = args
+    Yr, dims, T = cm.load_memmap(movie_path)
+    Yr_3d = np.reshape(Yr, dims + (T,), order="F")
+    return local_correlations(Yr_3d[dims_input])
+
+
+def make_correlation_patches(dims: tuple[int, ...], chunk_size: int) -> list[ChunkSpec]:
+    """
+    Compute dimensions for dividing movie (ideally C-order) into patches for correlation calculation.
+    Overlap = 2 to avoid edge effects except on the edge.
+    Each entry of the returned list contains 3 (Y, X) tuples of slices:
+    - input coordinates (for getting sub-movie to compute correlation on)
+    - output coordinates (for assigning result to full correlation image, excludes inner borders)
+    - patch sub-indices (to index result for assignment to output)
+    """
+    window_size = math.floor(math.sqrt(chunk_size))
+
+    # first get patch starts and sizes for each dimension
+    patch_coords_y = make_correlation_patches_for_dim(dims[0], window_size)
+    patch_coords_x = make_correlation_patches_for_dim(dims[1], window_size)
+    return [
+        ((input_y, input_x), (output_y, output_x), (subind_y, subind_x))
+        for input_y, output_y, subind_y in patch_coords_y
+        for input_x, output_x, subind_x in patch_coords_x
+    ]
+
+
+def make_correlation_patches_for_dim(dim: int, window_size: int) -> list[tuple[slice, slice, slice]]:
+    """
+    Like make_correlation_patches but for just one dimension
+    """
+    overlap = 2  # so that edge pixel in one patch is a non-edge pixel in the next
+    window_size = max(window_size, overlap + 1)
+    stride = window_size - overlap
+
+    patch_starts = range(0, dim - overlap, stride)  # last <overlap> pixels are covered by last window
+    patch_ends = [start + window_size for start in patch_starts[:-1]] + [dim]
+    patch_coords: list[tuple[slice, slice, slice]] = []
+
+    for start, end in zip(patch_starts, patch_ends):
+        is_first = start == patch_starts[0]
+        is_last = start == patch_starts[-1]
+        patch_coords.append((
+            slice(start, end),
+            slice(start if is_first else start + 1, end if is_last else end-1),
+            slice(0 if is_first else 1, None if is_last else -1)
+        ))
+    
+    return patch_coords

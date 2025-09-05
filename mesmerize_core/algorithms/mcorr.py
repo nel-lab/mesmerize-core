@@ -3,7 +3,6 @@ import click
 import caiman as cm
 from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
-from caiman.summary_images import local_correlations_movie_offline
 import os
 from pathlib import Path, PurePosixPath
 import numpy as np
@@ -85,9 +84,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
                 uuid=uuid,
                 movie_path=mcorr_memmap_path,
                 output_dir=output_dir,
-                dims=dims,
                 dview=dview,
-                max_window=1000
             )
 
             print("finished computing correlation image")
