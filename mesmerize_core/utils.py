@@ -141,15 +141,7 @@ def make_runfile(
             for k, v in os.environ.items():  # copy the current environment
                 if regex.match(r"^.*[()]", str(k)) or regex.match(r"^.*[()]", str(v)):
                     continue
-                # with NamedTemporaryFile(suffix=".bat", delete=False, mode="w") as tmp:
-                #     try:  # windows powershell is stupid so make sure all the env var names work
-                #         tmp.write(f'$env:{k}="{v}";\n')
-                #         tmp.close()
-                #         check_call(f"powershell {tmp.name}")
-                #         os.unlink(tmp.name)
-                #     except:
-                #         continue
-                f.write(f"SET {k}={lex.quote(v)};\n")
+                f.write(f"SET {k}={lex.quote(v)}\n")
             f.write(f"{lex.quote(sys.executable)} {lex.quote(module_path)} {args_str}")
 
     st = os.stat(sh_file)
