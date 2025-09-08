@@ -150,10 +150,21 @@ class Cache:
 
             @wrapsmethod(func)
             def _use_cache_wrapper(instance: S, *args: P.args, **kwargs: P.kwargs) -> R:
-                # if we are not storing anything in the cache, just do the function call, no copy needed
+                # extract return_copy; return_copy is keyword only, so only have to look in kwargs
+                copy_bool = return_copy  # change name to avoid assigning to parameter
+                if copy_bool is None:
+                    copy_bool = kwargs.get("return_copy", return_copy_default)
+                    if copy_bool is None:  # no default case
+                        raise TypeError("Must provide a value for return_copy")
+                
+                if not isinstance(copy_bool, bool):
+                    raise TypeError("return_copy must be a bool")
+
+                # if we are not storing anything in the cache, just do the function call, no need to search
+                # still make a copy if copy_bool to make absolutely sure it's not aliasing another object
                 if self.size == 0: 
                     self.clear_cache()
-                    return func(instance, *args, **kwargs)
+                    return _return_wrapper(func(instance, *args, **kwargs), copy_bool=copy_bool)
 
                 # iterate through signature and make dict containing arguments to compare, including defaults
                 args_dict = {}
@@ -167,16 +178,6 @@ class Cache:
                     else: 
                         assert param.default != inspect.Parameter.empty, "must have a default argument or there would be a TypeError"
                         args_dict[param_name] = param.default
-
-                # extract return_copy; return_copy is keyword only, so only have to look in kwargs
-                copy_bool = return_copy  # change name to avoid assigning to parameter
-                if copy_bool is None:
-                    copy_bool = kwargs.get("return_copy", return_copy_default)
-                    if copy_bool is None:  # no default case
-                        raise TypeError("Must provide a value for return_copy")
-
-                if not isinstance(copy_bool, bool):
-                    raise TypeError("return_copy must be a bool")
             
                 # checking to see if there is a cache hit
                 for ind, row in self.cache.iterrows():
