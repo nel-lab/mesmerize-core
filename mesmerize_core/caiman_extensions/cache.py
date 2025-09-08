@@ -194,6 +194,9 @@ class Cache:
                 # if memory type is 'ITEMS': drop the least recently used and then add new item
                 return_val = func(instance, *args, **kwargs)
                 curr_val_size = _get_item_size(return_val)
+                if self.storage_type == "RAM" and curr_val_size > self.size:
+                    # too big to fit in the cache, and no point in evicting other items, so just return
+                    return _return_wrapper(return_val, copy_bool=copy_bool)
 
                 if self.storage_type == "ITEMS" and len(self.cache) >= self.size:
                     self.cache.drop(
