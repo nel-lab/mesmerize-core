@@ -1,5 +1,5 @@
 import inspect
-from typing import Union, Optional, TypeVar, Callable, cast
+from typing import Union, Optional, TypeVar
 
 import pandas as pd
 import time
@@ -100,7 +100,7 @@ class Cache:
     def _get_cache_size_bytes(self):
         return self.cache.loc[:, "bytes"].sum()
 
-    def use_cache(self, _func: Optional[Callable[..., R]] = None, *, return_copy: Optional[bool] = None):
+    def use_cache(self, func):
         """
         Caching decorator.
         
@@ -111,89 +111,82 @@ class Cache:
             def my_costly_method(self, *, return_copy=True):
                 ...
         
-        Or:
-
-        .. code-block:: python
-            @cache.use_cache(return_copy=False):
-            def my_method_no_copying(self):
-                ...
-        
         return_copy determines whether an entry that is found in the cache is copied before it is returned.
-          - When there is no return_copy argument to the decorator (or when set to None), the decorated function
-            *must* take return_copy as a keyword-only paramter, and this will be read by the decorator.
-          - When return_copy is provided to the decorator, this value is always used for return_copy.
-            The wrapped function *must not* have an argument named return_copy. 
+        The decorated function *must* take return_copy as a keyword-only paramter, and this will be read by the decorator.
         """
-        def _use_cache_inner(func: Callable[..., R]):
-            # get default value of return_copy from function signature
-            params = inspect.signature(func).parameters
-            return_copy_arg = params.get("return_copy")
-            if return_copy is not None:
-                if return_copy_arg is not None:
-                    raise TypeError("return_copy cannot be in wrapped function signature when provided to decorator")
-                return_copy_default = return_copy
-            else:
-                if return_copy_arg is None:
-                    raise TypeError("return_copy must be in wrapped function signature when not provided to decorator")
-                elif return_copy_arg.kind != inspect.Parameter.KEYWORD_ONLY:
-                    raise TypeError("return_copy must be a keyword-only argument")
-                elif return_copy_arg.default == inspect.Parameter.empty:
-                    return_copy_default = None  # unlikely but in this case return_copy would be required
-                else:
-                    return_copy_default = return_copy_arg.default
-                    assert isinstance(return_copy_default, bool), "return_copy default should be bool"
+        # get default value of return_copy from function signature
+        params = inspect.signature(func).parameters
+        return_copy_arg = params.get("return_copy")
+        if return_copy_arg is None:
+            raise TypeError("return_copy must be in wrapped function signature when not provided to decorator")
+        elif return_copy_arg.kind != inspect.Parameter.KEYWORD_ONLY:
+            raise TypeError("return_copy must be a keyword-only argument")
+        elif return_copy_arg.default == inspect.Parameter.empty:
+            return_copy_default = None  # unlikely but in this case return_copy would be required
+        else:
+            return_copy_default = return_copy_arg.default
+            assert isinstance(return_copy_default, bool), "return_copy default should be bool"
 
-            @wrapsmethod(func)
-            def _use_cache_wrapper(instance: SeriesExtensions, *args, **kwargs) -> R:
-                # extract return_copy; return_copy is keyword only, so only have to look in kwargs
-                copy_bool = return_copy  # change name to avoid assigning to parameter
-                if copy_bool is None:
-                    copy_bool = kwargs.get("return_copy", return_copy_default)
-                    if copy_bool is None:  # no default case
-                        raise TypeError("Must provide a value for return_copy")
-                
-                if not isinstance(copy_bool, bool):
-                    raise TypeError("return_copy must be a bool")
+        @wrapsmethod(func)
+        def _use_cache_wrapper(instance: SeriesExtensions, *args, **kwargs):
+            # extract return_copy; return_copy is keyword only, so only have to look in kwargs
+            return_copy = kwargs.get("return_copy", return_copy_default)
+            if return_copy is None:  # no default case
+                raise TypeError("Must provide a value for return_copy")
 
-                # if we are not storing anything in the cache, just do the function call, no need to search
-                # still make a copy if copy_bool to make absolutely sure it's not aliasing another object
-                if self.size == 0: 
-                    self.clear_cache()
-                    return _return_wrapper(func(instance, *args, **kwargs), copy_bool=copy_bool)
+            if not isinstance(return_copy, bool):
+                raise TypeError("return_copy must be a bool")
 
-                # iterate through signature and make dict containing arguments to compare, including defaults
-                args_dict = {}
-                for i, (param_name, param) in enumerate(params.items()):
-                    if i == 0 or param_name == "return_copy":
-                        continue  # skip self/instance and return_copy
-                    elif i-1 < len(args):
-                        args_dict[param_name] = args[i-1]
-                    elif param_name in kwargs:
-                        args_dict[param_name] = kwargs[param_name]
-                    else: 
-                        assert param.default != inspect.Parameter.empty, "must have a default argument or there would be a TypeError"
-                        args_dict[param_name] = param.default
-            
-                # checking to see if there is a cache hit
-                for ind, row in self.cache.iterrows():
-                    if (
-                        row.at["uuid"] == instance._series["uuid"]
-                        and row.at["function"] == func.__name__
-                        and _check_args_equality(args_dict, row.at["kwargs"])
-                    ):
-                        self.cache.at[ind, "time_stamp"] = time.time()  # not supposed to modify row from iterrows
-                        return_val = cast(R, row.at["return_val"])
-                        return _return_wrapper(return_val, copy_bool=copy_bool)
+            # if we are not storing anything in the cache, just do the function call, no need to search
+            # still make a copy if copy_bool to make absolutely sure it's not aliasing another object
+            if self.size == 0: 
+                self.clear_cache()
+                return _return_wrapper(func(instance, *args, **kwargs), copy_bool=return_copy)
 
-                # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
-                # if memory type is 'ITEMS': drop the least recently used and then add new item
-                return_val = func(instance, *args, **kwargs)
-                curr_val_size = _get_item_size(return_val)
-                if self.storage_type == "RAM" and curr_val_size > self.size:
-                    # too big to fit in the cache, and no point in evicting other items, so just return
-                    return _return_wrapper(return_val, copy_bool=copy_bool)
+            # iterate through signature and make dict containing arguments to compare, including defaults
+            args_dict = {}
+            for i, (param_name, param) in enumerate(params.items()):
+                if i == 0 or param_name == "return_copy":
+                    continue  # skip self/instance and return_copy
+                elif i-1 < len(args):
+                    args_dict[param_name] = args[i-1]
+                elif param_name in kwargs:
+                    args_dict[param_name] = kwargs[param_name]
+                else: 
+                    assert param.default != inspect.Parameter.empty, "must have a default argument or there would be a TypeError"
+                    args_dict[param_name] = param.default
+        
+            # checking to see if there is a cache hit
+            for ind, row in self.cache.iterrows():
+                if (
+                    row.at["uuid"] == instance._series["uuid"]
+                    and row.at["function"] == func.__name__
+                    and _check_args_equality(args_dict, row.at["kwargs"])
+                ):
+                    self.cache.at[ind, "time_stamp"] = time.time()  # not supposed to modify row from iterrows
+                    return _return_wrapper(row.at["return_val"], copy_bool=return_copy)
 
-                if self.storage_type == "ITEMS" and len(self.cache) >= self.size:
+            # no cache hit, must check cache limit, and if limit is going to be exceeded...remove least recently used and add new entry
+            # if memory type is 'ITEMS': drop the least recently used and then add new item
+            return_val = func(instance, *args, **kwargs)
+            curr_val_size = _get_item_size(return_val)
+            if self.storage_type == "RAM" and curr_val_size > self.size:
+                # too big to fit in the cache, and no point in evicting other items, so just return
+                return _return_wrapper(return_val, copy_bool=return_copy)
+
+            if self.storage_type == "ITEMS" and len(self.cache) >= self.size:
+                self.cache.drop(
+                    index=self.cache.sort_values(
+                        by=["time_stamp"], ascending=False
+                    ).index[-1],
+                    axis=0,
+                    inplace=True,
+                )
+                self.cache.reset_index(drop=True, inplace=True)
+
+            # if memory type is 'RAM': add new item and then remove least recently used items until cache is under correct size again
+            elif self.storage_type == "RAM":
+                while len(self.cache) > 1 and self._get_cache_size_bytes() + curr_val_size > self.size:  # can't do anything if it's empty
                     self.cache.drop(
                         index=self.cache.sort_values(
                             by=["time_stamp"], ascending=False
@@ -203,37 +196,21 @@ class Cache:
                     )
                     self.cache.reset_index(drop=True, inplace=True)
 
-                # if memory type is 'RAM': add new item and then remove least recently used items until cache is under correct size again
-                elif self.storage_type == "RAM":
-                    while len(self.cache) > 1 and self._get_cache_size_bytes() + curr_val_size > self.size:  # can't do anything if it's empty
-                        self.cache.drop(
-                            index=self.cache.sort_values(
-                                by=["time_stamp"], ascending=False
-                            ).index[-1],
-                            axis=0,
-                            inplace=True,
-                        )
-                        self.cache.reset_index(drop=True, inplace=True)
+            # now ready to add to cache
+            add_time = time.time()
+            self.cache.loc[len(self.cache)] = [
+                instance._series["uuid"],
+                func.__name__,
+                args_dict,
+                return_val,
+                add_time,
+                add_time,
+                curr_val_size,
+            ]
+            return _return_wrapper(return_val, copy_bool=return_copy)
 
-                # now ready to add to cache
-                add_time = time.time()
-                self.cache.loc[len(self.cache)] = [
-                    instance._series["uuid"],
-                    func.__name__,
-                    args_dict,
-                    return_val,
-                    add_time,
-                    add_time,
-                    curr_val_size,
-                ]
-                return _return_wrapper(return_val, copy_bool=copy_bool)
+        return _use_cache_wrapper
 
-            return _use_cache_wrapper
-        
-        if _func is not None:  # used as decorator directly without being called 
-            return _use_cache_inner(_func)
-        else:
-            return _use_cache_inner
 
     def invalidate(self, pre: bool = True, post: bool = True):
         """
