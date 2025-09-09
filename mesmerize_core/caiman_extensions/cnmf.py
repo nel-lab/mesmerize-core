@@ -28,22 +28,18 @@ def _component_indices_parser(func):
         if isinstance(component_indices, np.ndarray):
             return func(instance, component_indices, *args, **kwargs)
 
-        cnmf_obj = instance.get_output()
-
         if component_indices is None:
-            assert cnmf_obj.estimates.A is not None, 'A should be present in CNMF results'
-            component_indices = np.arange(int(cnmf_obj.estimates.A.shape[1]))
+            component_indices = "all"
 
-        elif isinstance(component_indices, str):
+        if isinstance(component_indices, str):
             if component_indices == "all":
-                assert cnmf_obj.estimates.A is not None, 'A should be present in CNMF results'
-                component_indices = np.arange(int(cnmf_obj.estimates.A.shape[1]))
+                component_indices = np.arange(instance.get_n_components())
 
             elif component_indices == "good":
-                component_indices = np.asarray(cnmf_obj.estimates.idx_components)
+                component_indices = np.asarray(instance.get_good_components())
 
             elif component_indices == "bad":
-                component_indices = np.asarray(cnmf_obj.estimates.idx_components_bad)
+                component_indices = np.asarray(instance.get_bad_components())
             
             else:
                 raise ValueError(
@@ -737,9 +733,17 @@ class CNMFExtensions:
         self._series["params"]["eval"] = deepcopy(params)
 
     @validate("cnmf")
-    def get_good_components(self) -> np.ndarray:
+    @cnmf_cache.use_cache
+    def get_good_components(self, *, return_copy=True) -> np.ndarray:
         """
         get the good component indices, ``Estimates.idx_components``
+
+        Parameters
+        ----------
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
+            | In general you want a copy of the cached value.
 
         Returns
         -------
@@ -752,9 +756,17 @@ class CNMFExtensions:
         return cnmf_obj.estimates.idx_components
 
     @validate("cnmf")
-    def get_bad_components(self) -> np.ndarray:
+    @cnmf_cache.use_cache
+    def get_bad_components(self, *, return_copy=True) -> np.ndarray:
         """
         get the bad component indices, ``Estimates.idx_components_bad``
+
+        Parameters
+        ----------
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
+            | In general you want a copy of the cached value.
 
         Returns
         -------
@@ -765,3 +777,24 @@ class CNMFExtensions:
 
         cnmf_obj = self.get_output()
         return cnmf_obj.estimates.idx_components_bad
+    
+    @validate("cnmf")
+    @cnmf_cache.use_cache
+    def get_n_components(self, *, return_copy=True) -> int:
+        """
+        get total number of components (good + bad)
+
+        Parameters
+        ----------
+        return_copy: bool
+            | if ``True`` returns a copy of the cached value in memory.
+            | if ``False`` returns the same object as the cached value in memory, not recommend this could result in strange unexpected behavior.
+            | In general you want a copy of the cached value.
+        
+        Returns
+        -------
+        int
+            number of components
+        """
+        cnmf_obj = self.get_output()
+        return cnmf_obj.estimates.A.shape[1]

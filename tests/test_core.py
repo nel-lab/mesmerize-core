@@ -1179,23 +1179,23 @@ def test_cache():
 
     # testing that cache size limits work
     cnmf.cnmf_cache.set_maxsize("1M")
-    df.iloc[-1].cnmf.get_output()  # cache entry 0
+    df.iloc[-1].cnmf.get_output()  # cache entry 0 (get_output)
     cache = cnmf.cnmf_cache.get_cache()
     hex1 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
 
     time_stamp1 = cache[cache["function"] == "get_output"]["time_stamp"].item()
-    df.iloc[-1].cnmf.get_temporal("good")  # cache entry 1
-    df.iloc[-1].cnmf.get_contours("good")  # cache entry 2
-    df.iloc[-1].cnmf.get_masks("good")  # cache entry 3
-    df.iloc[-1].cnmf.get_temporal(np.arange(7))  # cache entry 4
-    df.iloc[-1].cnmf.get_temporal(np.arange(8))  # cache entry 5, 1 gets evicted
+    df.iloc[-1].cnmf.get_temporal("good")  # cache entry 1 (get_good_components) + 2 (get_temporal)
+    df.iloc[-1].cnmf.get_contours("good")  # cache entry 3 (get_contours)
+    df.iloc[-1].cnmf.get_masks("good")  # cache entry 4 (get_masks)
+    df.iloc[-1].cnmf.get_temporal(np.arange(7))  # cache entry 5 (get_temporal)
+    df.iloc[-1].cnmf.get_temporal(np.arange(8))  # cache entry 6, 2 gets evicted
     
     assert hex(id(cache)) == hex(id(cnmf.cnmf_cache.get_cache())), \
         "cache object should still be the same after evicting cache items"
 
     # after adding enough items for cache to exceed max size, cache should remove least recently used items until
     # size is back under max
-    assert len(cache) == 5
+    assert len(cache) == 6
 
     output_items = cache[cache["function"] == "get_output"]
     assert len(output_items) > 0, "output should not be evicted since it's accessed for every other function"
@@ -1281,7 +1281,7 @@ def test_cache():
 
     df = load_batch(batch_path)
 
-    cnmf.cnmf_cache.set_maxsize("1M")
+    cnmf.cnmf_cache.set_maxsize("2M")
 
     df.iloc[1].cnmf.get_output()  # cnmf output
     df.iloc[-1].cnmf.get_output()  # cnmfe output
