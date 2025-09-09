@@ -1,5 +1,5 @@
 import inspect
-from typing import Union, Optional, TypeVar, Callable, ParamSpec, Concatenate, cast
+from typing import Union, Optional, TypeVar, Callable, cast
 
 import pandas as pd
 import time
@@ -12,9 +12,7 @@ from ..utils import wrapsmethod
 from ._utils import SeriesExtensions
 
 
-# type vars for decorated methods
-S = TypeVar("S", bound=SeriesExtensions)
-P = ParamSpec("P")
+# return type of decorated method
 R = TypeVar("R")
 
 
@@ -102,7 +100,7 @@ class Cache:
     def _get_cache_size_bytes(self):
         return self.cache.loc[:, "bytes"].sum()
 
-    def use_cache(self, _func: Optional[Callable[Concatenate[S,P], R]] = None, *, return_copy: Optional[bool] = None):
+    def use_cache(self, _func: Optional[Callable[..., R]] = None, *, return_copy: Optional[bool] = None):
         """
         Caching decorator.
         
@@ -126,10 +124,7 @@ class Cache:
           - When return_copy is provided to the decorator, this value is always used for return_copy.
             The wrapped function *must not* have an argument named return_copy. 
         """
-        if _func is not None:  # used as decorator directly without being called 
-            return self.use_cache(return_copy=return_copy)(_func)
-
-        def _use_cache_inner(func: Callable[Concatenate[S, P], R]):
+        def _use_cache_inner(func: Callable[..., R]):
             # get default value of return_copy from function signature
             params = inspect.signature(func).parameters
             return_copy_arg = params.get("return_copy")
@@ -149,7 +144,7 @@ class Cache:
                     assert isinstance(return_copy_default, bool), "return_copy default should be bool"
 
             @wrapsmethod(func)
-            def _use_cache_wrapper(instance: S, *args: P.args, **kwargs: P.kwargs) -> R:
+            def _use_cache_wrapper(instance: SeriesExtensions, *args, **kwargs) -> R:
                 # extract return_copy; return_copy is keyword only, so only have to look in kwargs
                 copy_bool = return_copy  # change name to avoid assigning to parameter
                 if copy_bool is None:
@@ -234,7 +229,11 @@ class Cache:
                 return _return_wrapper(return_val, copy_bool=copy_bool)
 
             return _use_cache_wrapper
-        return _use_cache_inner
+        
+        if _func is not None:  # used as decorator directly without being called 
+            return _use_cache_inner(_func)
+        else:
+            return _use_cache_inner
 
     def invalidate(self, pre: bool = True, post: bool = True):
         """
