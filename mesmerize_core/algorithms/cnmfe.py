@@ -4,7 +4,6 @@ import caiman as cm
 from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.paths import decode_mmap_filename_dict
-from caiman.base.movies import get_file_size
 import traceback
 from pathlib import Path, PurePosixPath
 from shutil import move as move_file
@@ -17,12 +16,11 @@ if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
         ensure_server,
         save_projections_parallel,
         save_c_order_mmap_parallel,
-        estimate_n_pixels_per_process
     )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
     from ..utils import IS_WINDOWS
-    from ._utils import ensure_server, save_projections_parallel, save_c_order_mmap_parallel, estimate_n_pixels_per_process
+    from ._utils import ensure_server, save_projections_parallel, save_c_order_mmap_parallel
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None):
@@ -65,14 +63,6 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
             if save_new_mmap:
                 print("making memmap")
-                dims, T = get_file_size(input_movie_path, var_name_hdf5=cnmfe_params_dict.data['var_name_hdf5'])
-                assert isinstance(T, int)
-                print('Movie dims:', dims)
-                print('N frames:', T)
-                print('N processes:', n_processes)
-                print('N pixels per process:', chunk_size := estimate_n_pixels_per_process(n_processes, T, dims))
-                print('Columns per chunk:', max(chunk_size // dims[0], 1))
-                breakpoint()
                 fname_new = save_c_order_mmap_parallel(
                     input_movie_path,
                     base_name=f"{uuid}_cnmf-memmap_",
