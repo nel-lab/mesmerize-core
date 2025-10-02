@@ -189,12 +189,12 @@ class ColumnMappingFunction(Generic[R]):
         return map_fn(self._helper, map_args)
 
 
-def _save_c_order_mmap_in_chunks_kernel(Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str):
+def _save_c_order_mmap_in_chunks_kernel(Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str, add_to_movie: float):
     """
     Alternative to cm.save_memmap that can load from non-mmap files and uses chunks
     Based on caiman.mmapping.save_portion 
     """
-    c_order_copy = np.ascontiguousarray(Yr_chunk, dtype=np.float32)  # pixels x time
+    c_order_copy = np.ascontiguousarray(Yr_chunk, dtype=np.float32) + np.float32(add_to_movie) # pixels x time
     tot_frames = c_order_copy.shape[1]
 
     with open(mmap_fname, 'r+b') as f:
@@ -212,8 +212,12 @@ def _save_c_order_mmap_in_chunks_kernel(Yr_chunk: np.ndarray, pixel_slice: slice
             raise Exception('Internal error in mmapping: Actual position does not match computed position')
 save_c_order_mmap_in_chunks = ColumnMappingFunction(_save_c_order_mmap_in_chunks_kernel)
 
-def save_c_order_mmap_parallel(movie_path: str, base_name: str, dview: Optional[Cluster], var_name_hdf5='mov') -> str:
-    """Alternative to cm.save_memmap that hopefully does better with memory"""
+def save_c_order_mmap_parallel(movie_path: str, base_name: str, dview: Optional[Cluster], 
+                               var_name_hdf5='mov', add_to_movie=0.0001) -> str:
+    """
+    Alternative to cm.save_memmap that hopefully does better with memory
+    add_to_movie=0.0001 emulates default behavior of save_memmap
+    """
     # get name of mmap file and create it
     dims, tot_frames = get_file_size(movie_path, var_name_hdf5=var_name_hdf5)
     assert isinstance(tot_frames, int)  # non-type-stable interface...
@@ -229,7 +233,7 @@ def save_c_order_mmap_parallel(movie_path: str, base_name: str, dview: Optional[
     big_mov = np.memmap(mmap_fname, mode='w+', dtype=np.float32, shape=(d, tot_frames), order='C')
 
     # parallel load/save call
-    save_c_order_mmap_in_chunks(movie_path, dview, var_name_hdf5, mmap_fname)
+    save_c_order_mmap_in_chunks(movie_path, dview, var_name_hdf5, mmap_fname, add_to_movie)
 
     # clean up
     del big_mov
