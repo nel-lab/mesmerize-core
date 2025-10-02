@@ -110,6 +110,20 @@ def estimate_n_pixels_per_process(n_processes: int, T: int, dims: tuple[int, ...
     return npx_per_proc
 
 
+def fix_multid_subindices(movie_path: str, subindices: Union[list, tuple]) -> Union[list, tuple]:
+    """
+    Make multidimensional subindices that work for the given file type for caiman.load, given that
+    some file types expect subindices as a list and others don't explicitly support multi-D subindices
+    and therefore they must be passed as a tuple to work correctly.
+    """
+    _, ext = os.path.splitext(movie_path)
+    if ext in ['.tif', '.tiff', '.btf', '.avi', '.mkv']:
+        # formats that expect multi-D subindices as a list
+        return list(subindices)
+    else:
+        return tuple(subindices)
+
+
 R = TypeVar('R')
 class ColumnMappingFunction(Generic[R]):
     """
@@ -133,7 +147,7 @@ class ColumnMappingFunction(Generic[R]):
         else:
             logging.debug(f'In column mapping kernel, cols = {col_slice.start} to {col_slice.stop}')
 
-        mov: cm.movie = cm.load(movie_path, subindices=subindices, var_name_hdf5=var_name_hdf5)
+        mov: cm.movie = cm.load(movie_path, subindices=fix_multid_subindices(movie_path, subindices), var_name_hdf5=var_name_hdf5)
         T, *dims = mov.shape
 
         # flatten to pixels x time
@@ -324,7 +338,7 @@ def save_correlation_parallel(uuid, movie_path: Union[str, Path], output_dir: Pa
 
 def chunk_correlation_helper(args: tuple[str, ChunkDims]) -> np.ndarray:
     movie_path, dims_input = args
-    mov = cm.load(movie_path, subindices=(slice(None),) + dims_input)
+    mov = cm.load(movie_path, subindices=fix_multid_subindices(movie_path, (slice(None),) + dims_input))
     return local_correlations(mov, swap_dim=False)
 
 
