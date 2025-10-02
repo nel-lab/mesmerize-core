@@ -1,5 +1,4 @@
 from contextlib import contextmanager
-from itertools import pairwise
 import logging
 import math
 import os
@@ -160,12 +159,12 @@ class ColumnMappingFunction(Generic[R]):
 
         # divide movie into chunks of columns
         chunk_col_edges = np.linspace(0, dims[1], n_column_chunks+1).astype(int)
-        chunk_col_slices = [slice(start, end) for start, end in pairwise(chunk_col_edges)]
+        chunk_col_slices = [slice(start, end) for start, end in zip(chunk_col_edges[:-1], chunk_col_edges[1:])]
 
         if (n_row_chunks := math.ceil(n_chunks / n_column_chunks)) > 1:
             # subdivide rows as well
             chunk_row_edges = np.linspace(0, dims[0], n_row_chunks+1).astype(int)
-            chunk_row_slices = [slice(start, end) for start, end in pairwise(chunk_row_edges)]
+            chunk_row_slices = [slice(start, end) for start, end in zip(chunk_row_edges[:-1], chunk_row_edges[1:])]
         else:
             chunk_row_slices = [slice(0, dims[0])]
 
