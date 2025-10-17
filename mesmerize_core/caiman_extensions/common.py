@@ -109,6 +109,19 @@ class CaimanDataFrameExtensions:
                 "parent raw data path is not set, you must set it using:\n"
                 "`set_parent_raw_data_path()`"
             )
+        
+        # set border_to_0 pixels automatically from mcorr result if set to None
+        if ("preprocessing" in params and
+            "border_to_0_pixels" in params["preprocessing"] and
+            params["preprocessing"]["border_to_0_pixels"] is None):
+
+            if not isinstance(input_movie_path, pd.Series):
+                raise ValueError(
+                    "border_to_0_pixels value of None only supported when the input movie path "
+                    "is an mcorr batch item.")
+
+            params["preprocessing"]["border_to_0_pixels"] = input_movie_path.mcorr.get_border_to_0()
+
 
         if isinstance(input_movie_path, pd.Series):
             if not input_movie_path["algo"] == "mcorr":
@@ -116,7 +129,9 @@ class CaimanDataFrameExtensions:
                     "`input_movie_path` argument must be an input movie path "
                     "as a `str` or `Path` object, or a mcorr batch item."
                 )
+            
             input_movie_path = input_movie_path.mcorr.get_output_path()
+
 
         # make sure path is within batch dir or parent raw data path
         input_movie_path = self._df.paths.resolve(input_movie_path)

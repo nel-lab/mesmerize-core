@@ -25,8 +25,8 @@ from caiman.summary_images import local_correlations
 from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 import numpy as np
+import scipy.signal
 import scipy.stats
-
 
 def setup_logging(log_level: Union[int, str] = logging.INFO):
     if isinstance(log_level, str):
@@ -251,31 +251,49 @@ class ColumnMappingFunction(Generic[R]):
 
 
 def _save_c_order_mmap_in_chunks_kernel(
-    Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str, add_to_movie: float
+    Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str,
+    valid_pixel_mask: np.ndarray, add_to_movie: float, filter_sos: Optional[np.ndarray] = None
 ):
     """
     Alternative to cm.save_memmap that can load from non-mmap files and uses chunks
     Based on caiman.mmapping.save_portion
+
+    Saves the pixels x time block Yr_chunk, where the pixels in this block are given by pixel_slice.
+    Other inputs:
+        - mmap_fname: The memmap filename being saved to
+        - valid_pixel_mask: Boolean vector of which pixels in the whole movie should be nonzero
+            (index using pixel_slice to get mask for this block)
+        - add_to_movie: Constant to add to all valid pixels
+        - filter_sos: If non-None, use this filter in second-order-sections format to filter
+            across time (typically for high-pass filtering)
     """
-    c_order_copy = np.ascontiguousarray(Yr_chunk, dtype=np.float32) + np.float32(
-        add_to_movie
-    )  # pixels x time
-    tot_frames = c_order_copy.shape[1]
+    valid_pixels = valid_pixel_mask[pixel_slice]
+    c_order_chunk = np.zeros_like(Yr_chunk, dtype=np.float32, order="C")  # pixels x time
+    
+    # do the transpose by assigning from F-order to C-order
+    c_order_chunk[valid_pixels] = Yr_chunk[valid_pixels] + np.float32(add_to_movie)
+
+    # filter now that it's in C order
+    if filter_sos is not None:
+        c_order_chunk[valid_pixels] = scipy.signal.sosfiltfilt(
+            filter_sos, c_order_chunk[valid_pixels], axis=1).astype(np.float32)
+    
+    tot_frames = c_order_chunk.shape[1]
 
     with open(mmap_fname, "r+b") as f:
         # seek to the start of the chunk
         # guard against accidental fixed-size integers
         idx_start, idx_end = int(pixel_slice.start), int(pixel_slice.stop)
-        itemsize = int(c_order_copy.dtype.itemsize)  # 4 for float32
+        itemsize = int(c_order_chunk.dtype.itemsize)  # 4 for float32
 
         f.seek(idx_start * itemsize * tot_frames)
-        f.write(c_order_copy.data)
+        f.write(c_order_chunk.data)
 
         computed_position = idx_end * itemsize * tot_frames
         if f.tell() != computed_position:
             logging.critical(f"Error in mmap portion write: at position {f.tell()}")
             logging.critical(
-                f"But should be at position {idx_end} * {c_order_copy.dtype.itemsize} * {tot_frames} = {computed_position}"
+                f"But should be at position {idx_end} * {c_order_chunk.dtype.itemsize} * {tot_frames} = {computed_position}"
             )
             f.close()
             raise Exception(
@@ -292,10 +310,17 @@ def save_c_order_mmap_parallel(
     dview: Optional[Cluster],
     var_name_hdf5="mov",
     add_to_movie=0.0001,
+    border_to_0_pixels=0,
+    highpass_cutoff_nyq: float = 0,
+    highpass_order=4
 ) -> str:
     """
     Alternative to cm.save_memmap that hopefully does better with memory
     add_to_movie=0.0001 emulates default behavior of save_memmap
+    border_to_0: set this number of pixels along the border to 0 while transposing
+    highpass_cutoff_nyq: if nonzero, use a zero-phase Butterworth highpass filter
+        across time with this frequency cutoff (in fraction of Nyquist frequncy) while transposing
+    highpass_order: order of the highpass filter, if using.
     """
     # get name of mmap file and create it
     dims, tot_frames = get_file_size(movie_path, var_name_hdf5=var_name_hdf5)
@@ -313,9 +338,24 @@ def save_c_order_mmap_parallel(
         mmap_fname, mode="w+", dtype=np.float32, shape=(d, tot_frames), order="C"
     )
 
+    # make valid pixel mask
+    valid_mask_2d = np.zeros(dims, dtype=bool)
+    valid_mask_2d[border_to_0_pixels:dims[0]-border_to_0_pixels,
+                  border_to_0_pixels:dims[1]-border_to_0_pixels] = True
+    valid_mask = valid_mask_2d.ravel(order="F")
+
+    # make filter, if needed
+    if highpass_cutoff_nyq > 0:
+        filter_sos = scipy.signal.butter(highpass_order, highpass_cutoff_nyq, btype="highpass", output="sos")
+    elif highpass_cutoff_nyq == 0:
+        filter_sos = None
+    else:
+        raise ValueError("Negative or invalid value for highpass_cutoff is not allowed")
+
     # parallel load/save call
     save_c_order_mmap_in_chunks(
-        movie_path, dview, var_name_hdf5, mmap_fname, add_to_movie
+        movie_path, dview, var_name_hdf5,
+        mmap_fname, valid_mask, add_to_movie, filter_sos
     )
 
     # clean up

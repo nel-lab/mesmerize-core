@@ -4,10 +4,11 @@ import caiman as cm
 from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.paths import decode_mmap_filename_dict
-import traceback
 from pathlib import Path, PurePosixPath
 from shutil import move as move_file
 import time
+import traceback
+from typing import Optional
 
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
@@ -29,11 +30,14 @@ else:  # when running with local backend
     )
 
 
-def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None):
+def run_algo(batch_path, uuid, data_path: Optional[str] = None, dview=None, log_level=None):
+    algo_start = time.time()
+
     if log_level is not None:
         setup_logging(log_level)
-    algo_start = time.time()
-    set_parent_raw_data_path(data_path)
+
+    if data_path is not None:
+        set_parent_raw_data_path(data_path)
 
     df = load_batch(batch_path)
     item = df.caiman.uloc(uuid)
@@ -45,7 +49,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
     output_dir = Path(batch_path).parent.joinpath(str(uuid)).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    params = item["params"]
+    params: dict = item["params"]
     print("cnmfe params:", params)
 
     with ensure_server(dview) as (dview, n_processes):
@@ -63,9 +67,17 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
 
             cnmfe_params = CNMFParams(params_dict=params_dict)
 
-            # only re-save memmap if necessary
+            preprocessing_params = params.get("preprocessing", {})
+            if "highpass_cutoff_hz" in preprocessing_params:
+                # convert to fraction of Nyquist frequency
+                cutoff_hz = preprocessing_params.pop("highpass_cutoff_hz")
+                nyq = cnmfe_params.data['fr'] / 2
+                preprocessing_params["highpass_cutoff_nyq"] = cutoff_hz / nyq
+
+            # only re-save memmap if the input file is not a C-order mmap 
+            # or preprocessing parameters were passed
             save_new_mmap = True
-            if Path(input_movie_path).suffix == ".mmap":
+            if not preprocessing_params and Path(input_movie_path).suffix == ".mmap":
                 mmap_info = decode_mmap_filename_dict(input_movie_path)
                 save_new_mmap = "order" not in mmap_info or mmap_info["order"] != "C"
 
@@ -76,6 +88,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
                     base_name=f"{uuid}_cnmf-memmap_",
                     dview=dview,
                     var_name_hdf5=cnmfe_params.data["var_name_hdf5"],
+                    **preprocessing_params
                 )
                 cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
                 move_file(fname_new, cnmf_memmap_path)
