@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     Sequence,
     Iterable,
+    Mapping,
     runtime_checkable,
 )
 
@@ -27,6 +28,9 @@ from multiprocessing.pool import Pool
 import numpy as np
 import scipy.signal
 import scipy.stats
+
+from mesmerize_core.utils import Border
+
 
 def setup_logging(log_level: Union[int, str] = logging.INFO):
     if isinstance(log_level, str):
@@ -310,14 +314,14 @@ def save_c_order_mmap_parallel(
     dview: Optional[Cluster],
     var_name_hdf5="mov",
     add_to_movie=0.0001,
-    border_to_0_pixels=0,
+    border_pixels: Union[int, Border] = 0,
     highpass_cutoff_nyq: float = 0,
     highpass_order=4
 ) -> str:
     """
     Alternative to cm.save_memmap that hopefully does better with memory
     add_to_movie=0.0001 emulates default behavior of save_memmap
-    border_to_0: set this number of pixels along the border to 0 while transposing
+    border_pixels: set this number of pixels along the border to 0 while transposing
     highpass_cutoff_nyq: if nonzero, use a zero-phase Butterworth highpass filter
         across time with this frequency cutoff (in fraction of Nyquist frequncy) while transposing
     highpass_order: order of the highpass filter, if using.
@@ -340,8 +344,19 @@ def save_c_order_mmap_parallel(
 
     # make valid pixel mask
     valid_mask_2d = np.zeros(dims, dtype=bool)
-    valid_mask_2d[border_to_0_pixels:dims[0]-border_to_0_pixels,
-                  border_to_0_pixels:dims[1]-border_to_0_pixels] = True
+    if isinstance(border_pixels, Mapping):
+        center_slices = (
+            slice(border_pixels['top'], dims[0]-border_pixels['bottom']),
+            slice(border_pixels['left'], dims[1]-border_pixels['right'])
+        )
+        if len(dims) > 2:
+            center_slices = center_slices + (
+                slice(border_pixels.get('z_top', 0), dims[2]-border_pixels.get('z_bottom', 0)),
+            )
+    else:
+        center_slices = tuple(slice(border_pixels, dim-border_pixels) for dim in dims)
+
+    valid_mask_2d[center_slices] = True
     valid_mask = valid_mask_2d.ravel(order="F")
 
     # make filter, if needed

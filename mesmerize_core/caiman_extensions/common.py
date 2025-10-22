@@ -111,16 +111,15 @@ class CaimanDataFrameExtensions:
             )
         
         # set border_to_0 pixels automatically from mcorr result if set to None
-        if ("preprocessing" in params and
-            "border_to_0_pixels" in params["preprocessing"] and
-            params["preprocessing"]["border_to_0_pixels"] is None):
+        if ("preprocessing" in params and "border_pixels" in params["preprocessing"] and
+            params["preprocessing"]["border_pixels"] is None):
 
             if not isinstance(input_movie_path, pd.Series):
                 raise ValueError(
-                    "border_to_0_pixels value of None only supported when the input movie path "
+                    "border_pixels value of None only supported when the input movie path "
                     "is an mcorr batch item.")
 
-            params["preprocessing"]["border_to_0_pixels"] = input_movie_path.mcorr.get_border_to_0()
+            params["preprocessing"]["border_pixels"] = input_movie_path.mcorr.get_border_each_side()
 
 
         if isinstance(input_movie_path, pd.Series):

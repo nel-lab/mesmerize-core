@@ -7,6 +7,7 @@ import pandas as pd
 from caiman import load_memmap
 
 from ._utils import validate
+from ..utils import Border
 
 
 @pd.api.extensions.register_series_accessor("mcorr")
@@ -132,7 +133,7 @@ class MCorrExtensions:
 
 
     @validate("mcorr")
-    def get_border_to_0(self) -> int:
+    def get_border(self) -> int:
         """Get the max shift in either direction (what is called border_to_0 in caiman)"""
         outputs = self._series["outputs"]
         try:
@@ -140,4 +141,20 @@ class MCorrExtensions:
         except KeyError:
             # border_to_0 not saved - infer from shifts the same way caiman does
             shifts_by_dim = self.get_shifts()
-            return np.ceil(np.max(np.abs(np.stack(shifts_by_dim))))
+            return int(np.ceil(np.max(np.abs(np.stack(shifts_by_dim)))))
+        
+    @validate("mcorr")
+    def get_border_each_side(self) -> Border:
+        """Get a dict of the individual shift away from each side, rounded up to the nearest integer"""
+        shifts_by_dim = self.get_shifts()
+        max_top = max(0, int(np.ceil(np.max(shifts_by_dim[0]))))
+        max_bottom = max(0, -int(np.ceil(np.max(-shifts_by_dim[0]))))
+        max_left = max(0, int(np.ceil(np.max(shifts_by_dim[1]))))
+        max_right = max(0, -int(np.ceil(np.max(-shifts_by_dim[1]))))
+        border = Border(top=max_top, bottom=max_bottom, left=max_left, right=max_right)
+
+        if len(shifts_by_dim) > 2:  # 3D
+            border['z_top'] = max(0, int(np.ceil(np.max(shifts_by_dim[2]))))
+            border['z_bottom'] = max(0, -int(np.ceil(np.max(-shifts_by_dim[2]))))
+        
+        return border
