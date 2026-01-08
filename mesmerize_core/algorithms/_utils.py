@@ -314,14 +314,19 @@ def save_c_order_mmap_parallel(
     dview: Optional[Cluster],
     var_name_hdf5="mov",
     add_to_movie=0.0001,
-    border_pixels: Union[int, Border] = 0,
+    border_pixels: Union[int, Border, np.ndarray] = 0,
     highpass_cutoff_nyq: float = 0,
     highpass_order=4
 ) -> str:
     """
     Alternative to cm.save_memmap that hopefully does better with memory
-    add_to_movie=0.0001 emulates default behavior of save_memmap
-    border_pixels: set this number of pixels along the border to 0 while transposing
+    add_to_movie: constant to add to each pixel; 0.0001 emulates default behavior of save_memmap
+    border_pixels: specifies which pixels should be used vs. set to 0. One of the following types:
+        - if an int, exclude this many pixels on the border in each dimension
+        - if a mapping conforming to "Border" (with at least "left", "right", "top", "bottom" keys),
+          set pixels within this border to 0.
+        - if a boolean ndarray, it should be the same size as the number of pixels, and true values
+          correspond to *valid* pixels; false values will be set to 0.
     highpass_cutoff_nyq: if nonzero, use a zero-phase Butterworth highpass filter
         across time with this frequency cutoff (in fraction of Nyquist frequncy) while transposing
     highpass_order: order of the highpass filter, if using.
@@ -343,21 +348,30 @@ def save_c_order_mmap_parallel(
     )
 
     # make valid pixel mask
-    valid_mask_2d = np.zeros(dims, dtype=bool)
-    if isinstance(border_pixels, Mapping):
-        center_slices = (
-            slice(border_pixels['top'], dims[0]-border_pixels['bottom']),
-            slice(border_pixels['left'], dims[1]-border_pixels['right'])
-        )
-        if len(dims) > 2:
-            center_slices = center_slices + (
-                slice(border_pixels.get('z_top', 0), dims[2]-border_pixels.get('z_bottom', 0)),
-            )
+    if isinstance(border_pixels, np.ndarray):
+        if border_pixels.dtype.kind != 'b':
+            raise TypeError('border_pixels, if passed as an ndarray, must be a boolean mask')
+        if border_pixels.size != np.prod(dims):
+            raise TypeError('border_pixels mask must have the same number of elements as pixels in movie')
+        
+        valid_mask = border_pixels.ravel(order="F")
+    
     else:
-        center_slices = tuple(slice(border_pixels, dim-border_pixels) for dim in dims)
+        valid_mask_2d = np.zeros(dims, dtype=bool)
+        if isinstance(border_pixels, Mapping):
+            center_slices = (
+                slice(border_pixels['top'], dims[0]-border_pixels['bottom']),
+                slice(border_pixels['left'], dims[1]-border_pixels['right'])
+            )
+            if len(dims) > 2:
+                center_slices = center_slices + (
+                    slice(border_pixels.get('z_top', 0), dims[2]-border_pixels.get('z_bottom', 0)),
+                )
+        else:
+            center_slices = tuple(slice(border_pixels, dim-border_pixels) for dim in dims)
 
-    valid_mask_2d[center_slices] = True
-    valid_mask = valid_mask_2d.ravel(order="F")
+        valid_mask_2d[center_slices] = True
+        valid_mask = valid_mask_2d.ravel(order="F")
 
     # make filter, if needed
     if highpass_cutoff_nyq > 0:
