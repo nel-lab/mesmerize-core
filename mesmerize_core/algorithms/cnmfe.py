@@ -68,11 +68,6 @@ def run_algo(batch_path, uuid, data_path: Optional[str] = None, dview=None, log_
             cnmfe_params = CNMFParams(params_dict=params_dict)
 
             preprocessing_params = params.get("preprocessing", {})
-            if "highpass_cutoff_hz" in preprocessing_params:
-                # convert to fraction of Nyquist frequency
-                cutoff_hz = preprocessing_params.pop("highpass_cutoff_hz")
-                nyq = cnmfe_params.data['fr'] / 2
-                preprocessing_params["highpass_cutoff_nyq"] = cutoff_hz / nyq
 
             # only re-save memmap if the input file is not a C-order mmap 
             # or preprocessing parameters were passed
@@ -88,6 +83,7 @@ def run_algo(batch_path, uuid, data_path: Optional[str] = None, dview=None, log_
                     base_name=f"{uuid}_cnmf-memmap_",
                     dview=dview,
                     var_name_hdf5=cnmfe_params.data["var_name_hdf5"],
+                    fr=cnmfe_params.data['fr'],
                     **preprocessing_params
                 )
                 cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)

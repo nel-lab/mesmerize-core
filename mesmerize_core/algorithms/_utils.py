@@ -255,7 +255,7 @@ class ColumnMappingFunction(Generic[R]):
 
 
 def _save_c_order_mmap_in_chunks_kernel(
-    Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str,
+    Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str, byte_offset: int,
     valid_pixel_mask: np.ndarray, add_to_movie: float, filter_sos: Optional[np.ndarray] = None
 ):
     """
@@ -265,6 +265,7 @@ def _save_c_order_mmap_in_chunks_kernel(
     Saves the pixels x time block Yr_chunk, where the pixels in this block are given by pixel_slice.
     Other inputs:
         - mmap_fname: The memmap filename being saved to
+        - byte_offset: Bytes into the file to start writing the *first* block
         - valid_pixel_mask: Boolean vector of which pixels in the whole movie should be nonzero
             (index using pixel_slice to get mask for this block)
         - add_to_movie: Constant to add to all valid pixels
@@ -290,14 +291,14 @@ def _save_c_order_mmap_in_chunks_kernel(
         idx_start, idx_end = int(pixel_slice.start), int(pixel_slice.stop)
         itemsize = int(c_order_chunk.dtype.itemsize)  # 4 for float32
 
-        f.seek(idx_start * itemsize * tot_frames)
+        f.seek(byte_offset + idx_start * itemsize * tot_frames)
         f.write(c_order_chunk.data)
 
-        computed_position = idx_end * itemsize * tot_frames
+        computed_position = byte_offset + idx_end * itemsize * tot_frames
         if f.tell() != computed_position:
             logging.critical(f"Error in mmap portion write: at position {f.tell()}")
             logging.critical(
-                f"But should be at position {idx_end} * {c_order_chunk.dtype.itemsize} * {tot_frames} = {computed_position}"
+                f"But should be at position {byte_offset} + {idx_end} * {c_order_chunk.dtype.itemsize} * {tot_frames} = {computed_position}"
             )
             f.close()
             raise Exception(
@@ -312,11 +313,14 @@ def save_c_order_mmap_parallel(
     movie_path: str,
     base_name: str,
     dview: Optional[Cluster],
+    fr: float,
     var_name_hdf5="mov",
     add_to_movie=0.0001,
     border_pixels: Union[int, Border, np.ndarray] = 0,
-    highpass_cutoff_nyq: float = 0,
-    highpass_order=4
+    highpass_cutoff: float = 0, # in Hz
+    highpass_order=4,
+    existing_output_path: Optional[str] = None,
+    existing_output_offset=0
 ) -> str:
     """
     Alternative to cm.save_memmap that hopefully does better with memory
@@ -327,25 +331,36 @@ def save_c_order_mmap_parallel(
           set pixels within this border to 0.
         - if a boolean ndarray, it should be the same size as the number of pixels, and true values
           correspond to *valid* pixels; false values will be set to 0.
-    highpass_cutoff_nyq: if nonzero, use a zero-phase Butterworth highpass filter
-        across time with this frequency cutoff (in fraction of Nyquist frequncy) while transposing
+    highpass_cutoff: if nonzero, use a zero-phase Butterworth highpass filter with this cutoff in Hz
+        across time while transposing
     highpass_order: order of the highpass filter, if using.
+    fr: Frame rate of movie (needed to make high-pass filter)
+
+    existing_output_path: If given, the path to an existing file to write to instead of creating a new one
+    existing_output_offset: Bytes offset to start of writing area in existing file
     """
     # get name of mmap file and create it
     dims, tot_frames = get_file_size(movie_path, var_name_hdf5=var_name_hdf5)
     assert isinstance(tot_frames, int)  # non-type-stable interface...
 
-    # use generate_fname_tot to emulate behavior of save_memmap
-    mmap_fname_start = generate_fname_tot(base_name, list(dims), order="C")
-    mmap_fname = f"{mmap_fname_start}_frames_{tot_frames}.mmap"
-    mmap_fname = os.path.join(os.path.split(movie_path)[0], mmap_fname)
-    mmap_fname = fn_relocated(mmap_fname)
-    logging.info(f"Creating mmap file: {mmap_fname}")
+    if existing_output_path is None:
+        # use generate_fname_tot to emulate behavior of save_memmap
+        mmap_fname_start = generate_fname_tot(base_name, list(dims), order="C")
+        mmap_fname = f"{mmap_fname_start}_frames_{tot_frames}.mmap"
+        mmap_fname = os.path.join(os.path.split(movie_path)[0], mmap_fname)
+        mmap_fname = fn_relocated(mmap_fname)
+        logging.info(f"Creating mmap file: {mmap_fname}")
 
-    d = int(np.prod(dims))
-    big_mov = np.memmap(
-        mmap_fname, mode="w+", dtype=np.float32, shape=(d, tot_frames), order="C"
-    )
+        d = int(np.prod(dims))
+        big_mov = np.memmap(
+            mmap_fname, mode="w+", dtype=np.float32, shape=(d, tot_frames), order="C"
+        )
+        output_path = mmap_fname
+        byte_offset = 0
+    else:
+        big_mov = None
+        output_path = existing_output_path
+        byte_offset = existing_output_offset
 
     # make valid pixel mask
     if isinstance(border_pixels, np.ndarray):
@@ -374,9 +389,12 @@ def save_c_order_mmap_parallel(
         valid_mask = valid_mask_2d.ravel(order="F")
 
     # make filter, if needed
-    if highpass_cutoff_nyq > 0:
+    if highpass_cutoff > 0:
+        # compute frequency relative to Nyquist
+        nyq = fr / 2
+        highpass_cutoff_nyq = highpass_cutoff / nyq
         filter_sos = scipy.signal.butter(highpass_order, highpass_cutoff_nyq, btype="highpass", output="sos")
-    elif highpass_cutoff_nyq == 0:
+    elif highpass_cutoff == 0:
         filter_sos = None
     else:
         raise ValueError("Negative or invalid value for highpass_cutoff is not allowed")
@@ -384,12 +402,12 @@ def save_c_order_mmap_parallel(
     # parallel load/save call
     save_c_order_mmap_in_chunks(
         movie_path, dview, var_name_hdf5,
-        mmap_fname, valid_mask, add_to_movie, filter_sos
+        output_path, byte_offset, valid_mask, add_to_movie, filter_sos
     )
 
     # clean up
     del big_mov
-    return mmap_fname
+    return output_path
 
 
 def _make_chunk_projections_kernel(
