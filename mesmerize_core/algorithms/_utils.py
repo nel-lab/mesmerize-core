@@ -172,12 +172,12 @@ class ColumnMappingFunction(Generic[R]):
         n_column_chunks = min(math.ceil(dims[0] * dims[1] / chunk_size), dims[1])
 
         # divide movie into chunks of columns
-        chunk_col_edges = np.linspace(0, dims[1], n_column_chunks+1).astype(int)
+        chunk_col_edges = [int(y) for y in np.linspace(0, dims[1], n_column_chunks+1)]
         chunk_col_slices = [slice(start, end) for start, end in zip(chunk_col_edges[:-1], chunk_col_edges[1:])]
 
         if (n_row_chunks := math.ceil(n_chunks / n_column_chunks)) > 1:
             # subdivide rows as well
-            chunk_row_edges = np.linspace(0, dims[0], n_row_chunks+1).astype(int)
+            chunk_row_edges = [int(x) for x in np.linspace(0, dims[0], n_row_chunks+1)]
             chunk_row_slices = [slice(start, end) for start, end in zip(chunk_row_edges[:-1], chunk_row_edges[1:])]
         else:
             chunk_row_slices = [slice(0, dims[0])]
@@ -212,10 +212,14 @@ def _save_c_order_mmap_in_chunks_kernel(Yr_chunk: np.ndarray, pixel_slice: slice
 
     with open(mmap_fname, 'r+b') as f:
         # seek to the start of the chunk
-        idx_start, idx_end = pixel_slice.start, pixel_slice.stop
-        f.seek(idx_start * c_order_copy.dtype.itemsize * tot_frames)
+        # guard against accidental fixed-size integers
+        idx_start, idx_end = int(pixel_slice.start), int(pixel_slice.stop)
+        itemsize = int(c_order_copy.dtype.itemsize)  # 4 for float32
+
+        f.seek(idx_start * itemsize * tot_frames)
         f.write(c_order_copy.data)
-        computed_position = np.uint64(idx_end * np.uint64(c_order_copy.dtype.itemsize) * tot_frames)
+
+        computed_position = idx_end * itemsize * tot_frames
         if f.tell() != computed_position:
             logging.critical(f"Error in mmap portion write: at position {f.tell()}")
             logging.critical(
