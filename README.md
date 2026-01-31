@@ -1,4 +1,4 @@
-# mesmerize-core
+T# mesmerize-core
 
 [![Linux pip](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-pip.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-pip.yml)
 [![Linux Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-conda.yml)
@@ -6,6 +6,10 @@
 [![Windows Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml)
 [![Documentation Status](https://readthedocs.org/projects/mesmerize-core/badge/?version=latest)](https://mesmerize-core.readthedocs.io/en/latest/?badge=latest)
 [![Conda Version](https://img.shields.io/conda/vn/conda-forge/mesmerize-core.svg)](https://anaconda.org/conda-forge/mesmerize-core)
+
+# New users, new projects
+
+The `caiman` library, its algorithms, and software are old and dated at this point. We **STRONGLY** recommend new users or existing users with new projects to migrate to [masknmf](https://github.com/apasarkar/masknmf-toolbox). `masknmf` is an entirely new library written from the ground-up, using newer algorithms, better software architectures, and follows better practices that are coherent with the scientific python community. `masknmf` also scales to larger datasets since it uses lazy-loading and lazy-compute structures. This means you can use it with very large datsets that are hundreds of gigabytes in size. It is also being developed in conjunction with `fastplotlib` which gives you the latest visualization tools. 
 
 ### Mesmerize core backend
 [**Installation**](https://github.com/nel-lab/mesmerize-core#installation) | [**Examples**](https://github.com/nel-lab/mesmerize-core#examples)
