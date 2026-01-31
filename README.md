@@ -1,3 +1,9 @@
+# Important note for new users and new projects
+
+The `caiman` library, its algorithms, and software are old and dated at this point. We **STRONGLY** recommend new users or existing users with new projects to migrate to [`masknmf`](https://github.com/apasarkar/masknmf-toolbox). `masknmf` is an entirely new library written from the ground-up, using newer algorithms, better software architectures, and follows better practices that are coherent with the scientific python community. `masknmf` also scales to larger datasets since it uses lazy-loading and lazy-compute structures. This means you can use it with very large datsets that are hundreds of gigabytes in size. It is also being developed in conjunction with `fastplotlib` which gives you the latest visualization tools.
+
+`mesmerize-core` and `mesmerize-viz` are still being maintained for existing users who need assistance with ongoing projects, but we strongly encourage new users or new projects to migrate to `masknmf`. You will probably save significant time by using `masknmf` instead of `mesmerize`. You will get better results and a more versatile and robust analysis and visualization experience with `masknmf`.
+
 # mesmerize-core
 
 [![Linux pip](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-pip.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/linux-pip.yml)
@@ -5,11 +11,7 @@
 [![MacOS Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/macos-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/macos-conda.yml)
 [![Windows Conda](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml/badge.svg)](https://github.com/nel-lab/mesmerize-core/actions/workflows/windows-conda.yml)
 [![Documentation Status](https://readthedocs.org/projects/mesmerize-core/badge/?version=latest)](https://mesmerize-core.readthedocs.io/en/latest/?badge=latest)
-[![Conda Version](https://img.shields.io/conda/vn/conda-forge/mesmerize-core.svg)](https://anaconda.org/conda-forge/mesmerize-core)
-
-# New users, new projects
-
-The `caiman` library, its algorithms, and software are old and dated at this point. We **STRONGLY** recommend new users or existing users with new projects to migrate to [`masknmf`](https://github.com/apasarkar/masknmf-toolbox). `masknmf` is an entirely new library written from the ground-up, using newer algorithms, better software architectures, and follows better practices that are coherent with the scientific python community. `masknmf` also scales to larger datasets since it uses lazy-loading and lazy-compute structures. This means you can use it with very large datsets that are hundreds of gigabytes in size. It is also being developed in conjunction with `fastplotlib` which gives you the latest visualization tools. 
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/mesmerize-core.svg)](https://anaconda.org/conda-forge/mesmerize-core) 
 
 ### Mesmerize core backend
 [**Installation**](https://github.com/nel-lab/mesmerize-core#installation) | [**Examples**](https://github.com/nel-lab/mesmerize-core#examples)
@@ -80,7 +82,7 @@ conda clean -a
 
 2. To create a new environment and install `mesmerize-core` into it do this:
 
-```bash
+```bash`
 mamba create -n mescore -c conda-forge mesmerize-core
 ```
 
