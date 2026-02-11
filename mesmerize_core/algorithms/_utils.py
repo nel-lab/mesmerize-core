@@ -78,7 +78,7 @@ def ensure_server(dview: Optional[Cluster]) -> Generator[tuple[Cluster, int], No
         if "MESMERIZE_N_PROCESSES" in os.environ.keys():
             try:
                 n_processes = int(os.environ["MESMERIZE_N_PROCESSES"])
-            except:
+            except ValueError:
                 n_processes = procs_available - 1
         else:
             n_processes = procs_available - 1
@@ -102,6 +102,7 @@ def estimate_n_pixels_per_process(n_processes: int, T: int, dims: tuple[int, ...
     """
     Estimate a safe number of pixels to allocate to each parallel process at a time
     Taken from CNMF.fit (TODO factor this out in caiman and just import it)
+    In the future (after PR #1566) this will be in caiman.source_extraction.cnmf.utilities.
     """
     avail_memory_per_process = avail_bytes_per_process(n_processes) / 2.0**30
     mem_per_pix = 3.6977678498329843e-09
