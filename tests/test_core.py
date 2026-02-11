@@ -1,5 +1,4 @@
 import os
-
 import numpy as np
 from caiman.utils.utils import load_dict_from_hdf5
 from caiman.source_extraction.cnmf.cnmf import CNMF
@@ -15,9 +14,12 @@ from mesmerize_core import (
 from mesmerize_core.batch_utils import (
     DATAFRAME_COLUMNS,
     COMPUTE_BACKEND_SUBPROCESS,
+    COMPUTE_BACKEND_LOCAL,
+    COMPUTE_BACKEND_ASYNC,
     get_full_raw_data_path,
 )
 from mesmerize_core.utils import IS_WINDOWS
+from mesmerize_core.algorithms._utils import ensure_server
 from uuid import uuid4
 import pytest
 import requests
@@ -32,6 +34,7 @@ from mesmerize_core.caiman_extensions import cnmf
 import time
 import tifffile
 from copy import deepcopy
+
 
 # don't call "resolve" on these - want to make sure we can handle non-canonical paths correctly
 tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "tmp")
@@ -1336,3 +1339,48 @@ def test_cache():
     assert hex(id(cnmf.cnmf_cache.get_cache().iloc[-1]["return_val"])) == hex(
         id(output)
     )
+
+
+def test_backends():
+    """test subprocess, local, and async_local backend"""
+    set_parent_raw_data_path(vid_dir)
+    algo = "mcorr"
+    df, batch_path = _create_tmp_batch()
+    input_movie_path = get_datafile(algo)
+
+    # make small version of movie for quick testing
+    movie = tifffile.imread(input_movie_path)
+    small_movie_path = input_movie_path.parent.joinpath("small_movie.tif")
+    tifffile.imwrite(small_movie_path, movie[:1001])
+    print(input_movie_path)
+
+    # put backends that can run in the background first to save time
+    backends = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_ASYNC, COMPUTE_BACKEND_LOCAL]
+    for backend in backends:
+        df.caiman.add_item(
+            algo="mcorr",
+            item_name=f"test-{backend}",
+            input_movie_path=small_movie_path,
+            params=test_params["mcorr"],
+        )
+
+    # run using each backend
+    procs = []
+    with ensure_server(None) as (dview, _):
+        for backend, (_, item) in zip(backends, df.iterrows()):
+            procs.append(item.caiman.run(backend=backend, dview=dview, wait=False))
+    
+    # wait for all to finish
+    for proc in procs:
+        proc.wait()
+
+    # compare results
+    df = load_batch(batch_path)
+    for i, item in df.iterrows():
+        output = item.mcorr.get_output()
+
+        if i == 0:
+            # save to compare to other results
+            first_output = output
+        else:
+            numpy.testing.assert_array_equal(output, first_output)
