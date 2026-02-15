@@ -33,13 +33,26 @@ else:
     MESMERIZE_LRU_CACHE = 10
 
 
+def wrapsmethod(wrapper):
+    """
+    functools.wraps doesn't type its return value properly for use as a method,
+    so use this to disable functools.wraps when type checking (since it only matters at runtime)
+    """
+    def decorator(fn):
+        if TYPE_CHECKING:
+            return fn
+        else:
+            return wraps(wrapper)(fn)
+    return decorator
+
+
 def warning_experimental(more_info: str = ""):
     """
     decorator to warn the user that the function is experimental
     """
 
     def catcher(func):
-        @wraps(func)
+        @wrapsmethod(func)
         def fn(self, *args, **kwargs):
             warn(
                 f"You are trying to use the following experimental feature, "

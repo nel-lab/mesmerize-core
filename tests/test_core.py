@@ -1179,36 +1179,32 @@ def test_cache():
 
     # testing that cache size limits work
     cnmf.cnmf_cache.set_maxsize("1M")
-    cnmf_output = df.iloc[-1].cnmf.get_output()
-    hex_get_output = hex(id(cnmf_output))
+    df.iloc[-1].cnmf.get_output()  # cache entry 0 (get_output)
     cache = cnmf.cnmf_cache.get_cache()
     hex1 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
-    # assert(hex(id(df.iloc[-1].cnmf.get_output(copy=False))) == hex1)
-    # assert(hex_get_output != hex1)
+
     time_stamp1 = cache[cache["function"] == "get_output"]["time_stamp"].item()
-    df.iloc[-1].cnmf.get_temporal("good")
-    df.iloc[-1].cnmf.get_contours("good")
-    df.iloc[-1].cnmf.get_masks("good")
-    df.iloc[-1].cnmf.get_temporal(np.arange(7))
-    df.iloc[-1].cnmf.get_temporal(np.arange(8))
-    df.iloc[-1].cnmf.get_temporal(np.arange(9))
-    df.iloc[-1].cnmf.get_temporal(np.arange(6))
-    df.iloc[-1].cnmf.get_temporal(np.arange(5))
-    df.iloc[-1].cnmf.get_temporal(np.arange(4))
-    df.iloc[-1].cnmf.get_temporal(np.arange(3))
-    df.iloc[-1].cnmf.get_masks(np.arange(8))
-    df.iloc[-1].cnmf.get_masks(np.arange(9))
-    df.iloc[-1].cnmf.get_masks(np.arange(7))
-    df.iloc[-1].cnmf.get_masks(np.arange(6))
-    df.iloc[-1].cnmf.get_masks(np.arange(5))
-    df.iloc[-1].cnmf.get_masks(np.arange(4))
-    df.iloc[-1].cnmf.get_masks(np.arange(3))
-    time_stamp2 = cache[cache["function"] == "get_output"]["time_stamp"].item()
-    hex2 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
-    assert cache[cache["function"] == "get_output"].index.size == 1
+    df.iloc[-1].cnmf.get_temporal("good")  # cache entry 1 (get_good_components) + 2 (get_temporal)
+    df.iloc[-1].cnmf.get_contours("good")  # cache entry 3 (get_contours)
+    df.iloc[-1].cnmf.get_masks("good")  # cache entry 4 (get_masks)
+    df.iloc[-1].cnmf.get_temporal(np.arange(7))  # cache entry 5 (get_temporal)
+    df.iloc[-1].cnmf.get_temporal(np.arange(8))  # cache entry 6, 2 gets evicted
+    
+    assert hex(id(cache)) == hex(id(cnmf.cnmf_cache.get_cache())), \
+        "cache object should still be the same after evicting cache items"
+
     # after adding enough items for cache to exceed max size, cache should remove least recently used items until
     # size is back under max
-    assert len(cnmf.cnmf_cache.get_cache().index) == 17
+    assert len(cache) == 6
+
+    output_items = cache[cache["function"] == "get_output"]
+    assert len(output_items) > 0, "output should not be evicted since it's accessed for every other function"
+    assert len(output_items) == 1, "output shuould not be duplicated in the cache"
+
+    time_stamp2 = output_items["time_stamp"].item()
+    hex2 = hex(id(output_items["return_val"].item()))
+    assert cache[cache["function"] == "get_output"].index.size == 1
+
     # the time stamp to get_output the second time should be greater than the original time
     # stamp because the cached item is being returned and therefore will have been accessed more recently
     assert time_stamp2 > time_stamp1
@@ -1285,7 +1281,7 @@ def test_cache():
 
     df = load_batch(batch_path)
 
-    cnmf.cnmf_cache.set_maxsize("1M")
+    cnmf.cnmf_cache.set_maxsize("2M")
 
     df.iloc[1].cnmf.get_output()  # cnmf output
     df.iloc[-1].cnmf.get_output()  # cnmfe output
@@ -1326,13 +1322,35 @@ def test_cache():
     # test for copy
     # if return_copy=True, then hex id of calls to the same function should be false
     output = df.iloc[1].cnmf.get_output()
-    assert hex(id(output)) != hex(
-        id(cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1])
-    )
-    # if return_copy=False, then hex id of calls to the same function should be true
-    output = df.iloc[1].cnmf.get_output(return_copy=False)
+    output_cache_entry = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    hex_orig = hex(id(output_cache_entry["return_val"]))
+    time_orig = output_cache_entry["added_time"]
+    assert hex(id(output)) != hex_orig
+
+    # return_copy should't be considered when comparing function calls
+    # better to compare added times than hex because 2 different cache entries could refer to the same object
+    # (not for get_output but yes for other functions)
     output2 = df.iloc[1].cnmf.get_output(return_copy=False)
-    assert hex(id(output)) == hex(id(output2))
-    assert hex(id(cnmf.cnmf_cache.get_cache().iloc[-1]["return_val"])) == hex(
-        id(output)
-    )
+    last_cache_entry = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    assert last_cache_entry["added_time"] == time_orig
+
+    # if return_copy=False, then hex id of calls to the same function should be true
+    output3 = df.iloc[1].cnmf.get_output(return_copy=False)
+    assert hex(id(output3)) == hex(id(output2))
+    last_cache_entry = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    assert last_cache_entry["added_time"] == time_orig
+
+    # shouldn't matter for comparison whether arguments are passed positionally, by keyword,
+    # or by default if their args are the same
+    same1 = df.iloc[1].cnmf.get_temporal("good", return_copy=False)  # add_background=False by default
+    same1_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    same2 = df.iloc[1].cnmf.get_temporal("good", False, return_copy=False)
+    same2_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    same3 = df.iloc[1].cnmf.get_temporal("good", add_background=False, return_copy=False)
+    same3_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    different = df.iloc[1].cnmf.get_temporal("good", add_background=True, return_copy=False)
+    different_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+
+    assert hex(id(same1)) == hex(id(same2)) and same1_time == same2_time, "Matching default argument should cause hit"
+    assert hex(id(same2)) == hex(id(same3)) and same2_time == same3_time, "Matching keyword/non-keyword arguments should cause hit"
+    assert hex(id(same3)) != hex(id(different)) and same3_time != different_time, "Non-matching arguments should cause miss"
