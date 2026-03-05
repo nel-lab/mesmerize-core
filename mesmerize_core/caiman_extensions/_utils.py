@@ -1,7 +1,9 @@
-from functools import wraps
-from typing import Union
+from typing import Optional, Union, Protocol
 from uuid import UUID
 
+import pandas as pd
+
+from mesmerize_core.utils import wrapsmethod
 from mesmerize_core.caiman_extensions._batch_exceptions import (
     BatchItemNotRunError,
     BatchItemUnsuccessfulError,
@@ -10,9 +12,14 @@ from mesmerize_core.caiman_extensions._batch_exceptions import (
 )
 
 
-def validate(algo: str = None):
+class SeriesExtensions(Protocol):
+    """Common interface for series accessors to help with type hinting"""
+    _series: pd.Series
+
+
+def validate(algo: Optional[str] = None):
     def dec(func):
-        @wraps(func)
+        @wrapsmethod(func)
         def wrapper(self, *args, **kwargs):
             if self._series["outputs"] is None:
                 raise BatchItemNotRunError("Item has not been run")
@@ -38,7 +45,7 @@ def validate(algo: str = None):
 def _verify_and_lock_batch_file(func):
     """Acquires lock and ensures batch file has the same items as current df before calling wrapped function"""
 
-    @wraps(func)
+    @wrapsmethod(func)
     def wrapper(instance, *args, **kwargs):
         with instance._batch_lock:
             disk_df = instance.reload_from_disk()
@@ -53,7 +60,7 @@ def _verify_and_lock_batch_file(func):
 
 
 def _index_parser(func):
-    @wraps(func)
+    @wrapsmethod(func)
     def _parser(instance, *args, **kwargs):
         if "index" in kwargs.keys():
             index: Union[int, str, UUID] = kwargs["index"]
