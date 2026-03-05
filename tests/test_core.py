@@ -2,6 +2,7 @@ import os
 import numpy as np
 from caiman.utils.utils import load_dict_from_hdf5
 from caiman.source_extraction.cnmf.cnmf import CNMF
+from caiman.base.rois import extract_binary_masks_from_structural_channel
 import numpy.testing
 import pandas as pd
 from mesmerize_core import (
@@ -37,17 +38,16 @@ from copy import deepcopy
 
 
 # don't call "resolve" on these - want to make sure we can handle non-canonical paths correctly
-tmp_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "tmp")
-vid_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data", "videos")
-ground_truths_dir = Path(
-    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths"
-)
-ground_truths_file = Path(
-    os.path.dirname(os.path.abspath(__file__)), "test data", "ground_truths.zip"
-)
+testdata_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data")
+tmp_dir = testdata_dir / "tmp"
+vid_dir = testdata_dir / "videos"
+seed_dir = testdata_dir / "seeds"
+ground_truths_dir = testdata_dir / "ground_truths"
+ground_truths_file = testdata_dir / "ground_truths.zip"
 
 os.makedirs(tmp_dir, exist_ok=True)
 os.makedirs(vid_dir, exist_ok=True)
+os.makedirs(seed_dir, exist_ok=True)
 os.makedirs(ground_truths_dir, exist_ok=True)
 
 
@@ -142,6 +142,12 @@ def _create_tmp_batch() -> tuple[pd.DataFrame, str]:
     df = create_batch(fname)
 
     return df, fname
+
+
+def make_test_seed(input_data: np.ndarray):
+    """Function call used to create Ain for testing"""
+    mean_proj = np.mean(input_data, axis=0)
+    return extract_binary_masks_from_structural_channel(mean_proj, gSig=3)[0]
 
 
 def test_create_batch():
@@ -1182,36 +1188,32 @@ def test_cache():
 
     # testing that cache size limits work
     cnmf.cnmf_cache.set_maxsize("1M")
-    cnmf_output = df.iloc[-1].cnmf.get_output()
-    hex_get_output = hex(id(cnmf_output))
+    df.iloc[-1].cnmf.get_output()  # cache entry 0 (get_output)
     cache = cnmf.cnmf_cache.get_cache()
     hex1 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
-    # assert(hex(id(df.iloc[-1].cnmf.get_output(copy=False))) == hex1)
-    # assert(hex_get_output != hex1)
+
     time_stamp1 = cache[cache["function"] == "get_output"]["time_stamp"].item()
-    df.iloc[-1].cnmf.get_temporal("good")
-    df.iloc[-1].cnmf.get_contours("good")
-    df.iloc[-1].cnmf.get_masks("good")
-    df.iloc[-1].cnmf.get_temporal(np.arange(7))
-    df.iloc[-1].cnmf.get_temporal(np.arange(8))
-    df.iloc[-1].cnmf.get_temporal(np.arange(9))
-    df.iloc[-1].cnmf.get_temporal(np.arange(6))
-    df.iloc[-1].cnmf.get_temporal(np.arange(5))
-    df.iloc[-1].cnmf.get_temporal(np.arange(4))
-    df.iloc[-1].cnmf.get_temporal(np.arange(3))
-    df.iloc[-1].cnmf.get_masks(np.arange(8))
-    df.iloc[-1].cnmf.get_masks(np.arange(9))
-    df.iloc[-1].cnmf.get_masks(np.arange(7))
-    df.iloc[-1].cnmf.get_masks(np.arange(6))
-    df.iloc[-1].cnmf.get_masks(np.arange(5))
-    df.iloc[-1].cnmf.get_masks(np.arange(4))
-    df.iloc[-1].cnmf.get_masks(np.arange(3))
-    time_stamp2 = cache[cache["function"] == "get_output"]["time_stamp"].item()
-    hex2 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
-    assert cache[cache["function"] == "get_output"].index.size == 1
+    df.iloc[-1].cnmf.get_temporal("good")  # cache entry 1 (get_good_components) + 2 (get_temporal)
+    df.iloc[-1].cnmf.get_contours("good")  # cache entry 3 (get_contours)
+    df.iloc[-1].cnmf.get_masks("good")  # cache entry 4 (get_masks)
+    df.iloc[-1].cnmf.get_temporal(np.arange(7))  # cache entry 5 (get_temporal)
+    df.iloc[-1].cnmf.get_temporal(np.arange(8))  # cache entry 6, 2 gets evicted
+    
+    assert hex(id(cache)) == hex(id(cnmf.cnmf_cache.get_cache())), \
+        "cache object should still be the same after evicting cache items"
+
     # after adding enough items for cache to exceed max size, cache should remove least recently used items until
     # size is back under max
-    assert len(cnmf.cnmf_cache.get_cache().index) == 17
+    assert len(cache) == 6
+
+    output_items = cache[cache["function"] == "get_output"]
+    assert len(output_items) > 0, "output should not be evicted since it's accessed for every other function"
+    assert len(output_items) == 1, "output shuould not be duplicated in the cache"
+
+    time_stamp2 = output_items["time_stamp"].item()
+    hex2 = hex(id(output_items["return_val"].item()))
+    assert cache[cache["function"] == "get_output"].index.size == 1
+
     # the time stamp to get_output the second time should be greater than the original time
     # stamp because the cached item is being returned and therefore will have been accessed more recently
     assert time_stamp2 > time_stamp1
@@ -1288,7 +1290,7 @@ def test_cache():
 
     df = load_batch(batch_path)
 
-    cnmf.cnmf_cache.set_maxsize("1M")
+    cnmf.cnmf_cache.set_maxsize("2M")
 
     df.iloc[1].cnmf.get_output()  # cnmf output
     df.iloc[-1].cnmf.get_output()  # cnmfe output
@@ -1329,15 +1331,262 @@ def test_cache():
     # test for copy
     # if return_copy=True, then hex id of calls to the same function should be false
     output = df.iloc[1].cnmf.get_output()
-    assert hex(id(output)) != hex(
-        id(cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1])
-    )
-    # if return_copy=False, then hex id of calls to the same function should be true
-    output = df.iloc[1].cnmf.get_output(return_copy=False)
+    output_cache_entry = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    hex_orig = hex(id(output_cache_entry["return_val"]))
+    time_orig = output_cache_entry["added_time"]
+    assert hex(id(output)) != hex_orig
+
+    # return_copy should't be considered when comparing function calls
+    # better to compare added times than hex because 2 different cache entries could refer to the same object
+    # (not for get_output but yes for other functions)
     output2 = df.iloc[1].cnmf.get_output(return_copy=False)
-    assert hex(id(output)) == hex(id(output2))
-    assert hex(id(cnmf.cnmf_cache.get_cache().iloc[-1]["return_val"])) == hex(
-        id(output)
+    last_cache_entry = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    assert last_cache_entry["added_time"] == time_orig
+
+    # if return_copy=False, then hex id of calls to the same function should be true
+    output3 = df.iloc[1].cnmf.get_output(return_copy=False)
+    assert hex(id(output3)) == hex(id(output2))
+    last_cache_entry = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]
+    assert last_cache_entry["added_time"] == time_orig
+
+    # shouldn't matter for comparison whether arguments are passed positionally, by keyword,
+    # or by default if their args are the same
+    same1 = df.iloc[1].cnmf.get_temporal("good", return_copy=False)  # add_background=False by default
+    same1_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    same2 = df.iloc[1].cnmf.get_temporal("good", False, return_copy=False)
+    same2_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    same3 = df.iloc[1].cnmf.get_temporal("good", add_background=False, return_copy=False)
+    same3_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    different = df.iloc[1].cnmf.get_temporal("good", add_background=True, return_copy=False)
+    different_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+
+    assert hex(id(same1)) == hex(id(same2)) and same1_time == same2_time, "Matching default argument should cause hit"
+    assert hex(id(same2)) == hex(id(same3)) and same2_time == same3_time, "Matching keyword/non-keyword arguments should cause hit"
+    assert hex(id(same3)) != hex(id(different)) and same3_time != different_time, "Non-matching arguments should cause miss"
+
+
+def test_backends():
+    """test subprocess, local, and async_local backend"""
+    set_parent_raw_data_path(vid_dir)
+    algo = "mcorr"
+    df, batch_path = _create_tmp_batch()
+    input_movie_path = get_datafile(algo)
+
+    # make small version of movie for quick testing
+    movie = tifffile.imread(input_movie_path)
+    small_movie_path = input_movie_path.parent.joinpath("small_movie.tif")
+    tifffile.imwrite(small_movie_path, movie[:1001])
+    print(input_movie_path)
+
+    # put backends that can run in the background first to save time
+    backends = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_ASYNC, COMPUTE_BACKEND_LOCAL]
+    for backend in backends:
+        df.caiman.add_item(
+            algo="mcorr",
+            item_name=f"test-{backend}",
+            input_movie_path=small_movie_path,
+            params=test_params["mcorr"],
+        )
+
+    # run using each backend
+    procs = []
+    with ensure_server(None) as (dview, _):
+        for backend, (_, item) in zip(backends, df.iterrows()):
+            procs.append(item.caiman.run(backend=backend, dview=dview, wait=False))
+    
+    # wait for all to finish
+    for proc in procs:
+        proc.wait()
+
+    # compare results
+    df = load_batch(batch_path)
+    for i, item in df.iterrows():
+        output = item.mcorr.get_output()
+
+        if i == 0:
+            # save to compare to other results
+            first_output = output
+        else:
+            numpy.testing.assert_array_equal(output, first_output)
+
+
+def test_seeded_cnmf():
+    """Test seeded CNNF (Ain)"""
+    set_parent_raw_data_path(vid_dir)
+    algo = "mcorr"
+
+    df, batch_path = _create_tmp_batch()
+
+    batch_path = Path(batch_path)
+    batch_dir = batch_path.parent
+    batch_dir_canon = batch_dir.resolve()
+
+    input_movie_path = get_datafile(algo)
+    print(input_movie_path)
+
+    df.caiman.add_item(
+        algo=algo,
+        item_name=f"test-{algo}",
+        input_movie_path=input_movie_path,
+        params=test_params[algo],
+    )
+
+    df.iloc[-1].caiman.run()
+    df = load_batch(batch_path)
+
+    assert df.iloc[-1]["outputs"]["success"] is True
+    assert df.iloc[-1]["outputs"]["traceback"] is None
+
+    # make seed
+    mcorr_output = df.iloc[-1].mcorr.get_output()
+    seed = make_test_seed(mcorr_output)
+    seed_path = seed_dir / "Ain_cnmf.npy"
+    np.save(seed_path, seed)
+
+    algo = "cnmf"
+    print("Testing seeded cnmf")
+    input_movie_path = df.iloc[-1].mcorr.get_output_path()
+    seeded_params = {
+        **test_params[algo],
+        "Ain_path": seed_path,
+        "refit": False
+    }
+
+    df.caiman.add_item(
+        algo=algo,
+        item_name=f"test-seeded-{algo}",
+        input_movie_path=input_movie_path,
+        params=seeded_params
+    )
+
+    assert df.iloc[-1]["algo"] == algo
+    assert df.iloc[-1]["item_name"] == f"test-seeded-{algo}"
+    assert df.iloc[-1]["params"] == seeded_params
+    assert df.iloc[-1]["outputs"] is None
+    try:
+        UUID(df.iloc[-1]["uuid"])
+    except:
+        pytest.fail("Something wrong with setting UUID for batch items")
+    print("cnmf input_movie_path:", df.iloc[-1]["input_movie_path"])
+    assert batch_dir_canon.joinpath(df.iloc[-1]["input_movie_path"]) == input_movie_path
+
+    df.iloc[-1].caiman.run()
+
+    df = load_batch(batch_path)
+
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+        print(df)
+
+    pprint(df.iloc[-1]["outputs"], width=-1)
+    print(df.iloc[-1]["outputs"]["traceback"])
+
+    assert df.iloc[-1]["outputs"]["success"] is True
+    assert df.iloc[-1]["outputs"]["traceback"] is None
+
+    # test to check cnmf get_masks()
+    cnmf_spatial_masks = df.iloc[-1].cnmf.get_masks("good")
+    cnmf_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf_seeded", "spatial_masks.npy")
+    )
+    numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
+
+    # test to check get_temporal()
+    cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal("good")
+    cnmf_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmf_seeded", "temporal_components.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-10
+    )
+
+
+def test_seeded_cnmfe():
+    set_parent_raw_data_path(vid_dir)
+
+    df, batch_path = _create_tmp_batch()
+
+    batch_path = Path(batch_path)
+    batch_dir = batch_path.parent
+    batch_dir_canon = batch_dir.resolve()
+
+    input_movie_path = get_datafile("cnmfe")
+    print(input_movie_path)
+    df.caiman.add_item(
+        algo="mcorr",
+        item_name="test-cnmfe-mcorr",
+        input_movie_path=input_movie_path,
+        params=test_params["mcorr"],
+    )
+    df.iloc[-1].caiman.run()
+
+    df = load_batch(batch_path)
+
+    # Test if running seeded cnmfe works
+    # this seed is actually trash for CNMFE but just see if it's consistent
+    mcorr_output = df.iloc[-1].mcorr.get_output()
+    seed = make_test_seed(mcorr_output)
+    seed_path = seed_dir / "Ain_cnmfe.npy"
+    np.save(seed_path, seed)
+
+    print("testing seeded cnmfe")
+    algo = "cnmfe"
+    param_name = "cnmfe_full"
+    input_movie_path = df.iloc[0].mcorr.get_output_path()
+    print(input_movie_path)
+    seeded_params = {
+        **test_params[param_name],
+        "Ain_path": seed_path,
+        "refit": False
+    }
+
+    df.caiman.add_item(
+        algo=algo,
+        item_name=f"test-seeded-{algo}",
+        input_movie_path=input_movie_path,
+        params=seeded_params,
+    )
+
+    assert df.iloc[-1]["algo"] == algo
+    assert df.iloc[-1]["item_name"] == f"test-seeded-{algo}"
+    assert df.iloc[-1]["params"] == seeded_params
+    assert df.iloc[-1]["outputs"] is None
+    try:
+        UUID(df.iloc[-1]["uuid"])
+    except:
+        pytest.fail("Something wrong with setting UUID for batch items")
+
+    assert (
+        batch_dir_canon.joinpath(df.iloc[-1]["input_movie_path"])
+        == batch_dir_canon.joinpath(df.iloc[0].mcorr.get_output_path())
+        == df.paths.resolve(df.iloc[-1]["input_movie_path"])
+    )
+
+    df.iloc[-1].caiman.run()
+    df = load_batch(batch_path)
+
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+        print(df)
+
+    pprint(df.iloc[-1]["outputs"], width=-1)
+    print(df.iloc[-1]["outputs"]["traceback"])
+
+    assert df.iloc[-1]["outputs"]["success"] is True
+    assert df.iloc[-1]["outputs"]["traceback"] is None
+
+    # test to check cnmf get_masks()
+    cnmf_spatial_masks = df.iloc[-1].cnmf.get_masks("good")
+    cnmf_spatial_masks_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_seeded", "spatial_masks.npy")
+    )
+    numpy.testing.assert_array_equal(cnmf_spatial_masks, cnmf_spatial_masks_actual)
+
+    # test to check get_temporal()
+    cnmf_temporal_components = df.iloc[-1].cnmf.get_temporal("good")
+    cnmf_temporal_components_actual = numpy.load(
+        ground_truths_dir.joinpath("cnmfe_seeded", "temporal_components.npy")
+    )
+    numpy.testing.assert_allclose(
+        cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-3
     )
 
 

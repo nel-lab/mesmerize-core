@@ -10,6 +10,7 @@ from datetime import datetime
 import time
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future
+import logging
 
 import numpy as np
 import pandas as pd
@@ -30,7 +31,7 @@ from ..batch_utils import (
     get_parent_raw_data_path,
     load_batch,
 )
-from ..utils import IS_WINDOWS, make_runfile, warning_experimental
+from ..utils import IS_WINDOWS, make_runfile, warning_experimental, get_params_diffs
 from .cnmf import cnmf_cache
 from .. import algorithms
 from ..movie_readers import default_reader
@@ -351,22 +352,7 @@ class CaimanDataFrameExtensions:
             index of the original DataFrame
 
         """
-
-        def flatten_params(params_dict: dict):
-            """
-            Produce a flat dict with one entry for each parameter in the passed dict.
-            If params_dict['main'] is nested one level (e.g., {'init': {'K': 5}, 'merging': {'merge_thr': 0.85}}...),
-            each key in the output is <outerKey>.<innerKey>, e.g., [(init.K, 5), (merging.merge_thr, 0.85)]
-            """
-            params = {}
-            for key1, val1 in params_dict.items():
-                if isinstance(val1, dict):  # nested
-                    for key2, val2 in val1.items():
-                        params[f"{key1}.{key2}"] = val2
-                else:
-                    params[key1] = val1
-            return params
-
+       
         sub_df = self._df[self._df["item_name"] == item_name]
         sub_df = sub_df[sub_df["algo"] == algo]
 
@@ -375,52 +361,11 @@ class CaimanDataFrameExtensions:
                 f"The given `item_name`: {item_name}, does not exist in the DataFrame"
             )
 
-        # get flattened parameters for each of the filtered items
-        params_flat = sub_df.params.map(lambda p: flatten_params(p["main"]))
-
-        # build list of params that differ between different parameter sets
-        common_params = deepcopy(
-            params_flat.iat[0]
-        )  # holds the common value for parameters found in all sets (so far)
-        varying_params = (
-            set()
-        )  # set of parameter keys that appear in not all sets or with varying values
-
-        for this_params in params_flat.iloc[1:]:
-            # first, anything that's not in both this dict and the common set is considered varying
-            common_paramset = set(common_params.keys())
-            for not_common_key in common_paramset.symmetric_difference(
-                this_params.keys()
-            ):
-                varying_params.add(not_common_key)
-                if not_common_key in common_paramset:
-                    del common_params[not_common_key]
-                    common_paramset.remove(not_common_key)
-
-            # second, look at params in the common set and remove any that differ for this set
-            for (
-                key
-            ) in (
-                common_paramset
-            ):  # iterate over this set rather than dict itself to avoid issues when deleting entries
-                if not np.array_equal(
-                    common_params[key], this_params[key]
-                ):  # (should also work for scalars/arbitrary objects)
-                    varying_params.add(key)
-                    del common_params[key]
-
-        # gives a list where each item is a dict that has the unique params that correspond to a row
-        # the indices of this series correspond to the index of the row in the parent dataframe
-        diffs = params_flat.map(
-            lambda p: {
-                key: p[key] if key in p else "<default>" for key in varying_params
-            }
-        )
+        params_list = sub_df.params.tolist()
+        diffs = get_params_diffs(params_list)
 
         # return as a nicely formatted dataframe
-        diffs_df = pd.DataFrame.from_dict(diffs.tolist(), dtype=object).set_index(
-            diffs.index
-        )
+        diffs_df = pd.DataFrame.from_dict(diffs, dtype=object).set_index(sub_df.index)
 
         return diffs_df
 
@@ -557,19 +502,21 @@ class CaimanSeriesExtensions:
         self.process: Optional[Waitable] = None
 
     def _run_local(
-            self,
-            algo: str,
-            batch_path: Path,
-            uuid: UUID,
-            data_path: Union[Path, None],
-            dview=None
+        self,
+        algo: str,
+        batch_path: Path,
+        uuid: UUID,
+        data_path: Union[Path, None],
+        dview=None,
+        log_level=None
     ) -> DummyProcess:
         algo_module = getattr(algorithms, algo)
         algo_module.run_algo(
             batch_path=str(batch_path),
             uuid=str(uuid),
             data_path=str(data_path),
-            dview=dview
+            dview=dview,
+            log_level=log_level
         )
         return DummyProcess()
 
@@ -579,7 +526,8 @@ class CaimanSeriesExtensions:
             batch_path: Path,
             uuid: UUID,
             data_path: Union[Path, None],
-            dview=None
+            dview=None,
+            log_level=None
     ) -> WaitableFuture:
         algo_module = getattr(algorithms, algo)
         with ThreadPoolExecutor(max_workers=1) as executor:
@@ -588,7 +536,8 @@ class CaimanSeriesExtensions:
                 batch_path=str(batch_path),
                 uuid=str(uuid),
                 data_path=str(data_path),
-                dview=dview
+                dview=dview,
+                log_level=log_level
                 )
             return WaitableFuture(future)
 
@@ -684,7 +633,8 @@ class CaimanSeriesExtensions:
                 batch_path=batch_path,
                 uuid=self._series["uuid"],
                 data_path=get_parent_raw_data_path(),
-                dview=kwargs.get("dview")
+                dview=kwargs.get("dview"),
+                log_level=kwargs.get("log_level")
             )
         else:
             # Create the runfile in the batch dir using this Series' UUID as the filename
@@ -701,6 +651,15 @@ class CaimanSeriesExtensions:
             )
             if get_parent_raw_data_path() is not None:
                 args_str += f" --data-path {lex.quote(str(get_parent_raw_data_path()))}"
+
+            # set log level
+            if 'log_level' in kwargs:
+                level = kwargs['log_level']
+                if isinstance(level, str):
+                    level = getattr(logging, level)
+            else:
+                level = logging.getLogger().getEffectiveLevel()
+            args_str += f" --log-level {level}"
 
             # make the runfile
             runfile_path = make_runfile(

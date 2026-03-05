@@ -16,14 +16,22 @@ if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
         ensure_server,
         save_projections_parallel,
         save_c_order_mmap_parallel,
+        setup_logging
     )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
     from ..utils import IS_WINDOWS
-    from ._utils import ensure_server, save_projections_parallel, save_c_order_mmap_parallel
+    from ._utils import (
+        ensure_server,
+        save_projections_parallel,
+        save_c_order_mmap_parallel,
+        setup_logging
+    )
 
 
-def run_algo(batch_path, uuid, data_path: str = None, dview=None):
+def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None):
+    if log_level is not None:
+        setup_logging(log_level)
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
@@ -53,7 +61,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
             params_dict = {**cnmfe_params_dict, **params["main"]}
 
-            cnmfe_params_dict = CNMFParams(params_dict=params_dict)
+            cnmfe_params = CNMFParams(params_dict=params_dict)
 
             # only re-save memmap if necessary
             save_new_mmap = True
@@ -67,7 +75,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
                     input_movie_path,
                     base_name=f"{uuid}_cnmf-memmap_",
                     dview=dview,
-                    var_name_hdf5=cnmfe_params_dict.data['var_name_hdf5']
+                    var_name_hdf5=cnmfe_params.data['var_name_hdf5']
                 )
                 cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
                 move_file(fname_new, cnmf_memmap_path)
@@ -85,7 +93,23 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 
             d = dict()  # for output
 
-            cnm = cnmf.CNMF(n_processes=n_processes, dview=dview, params=cnmfe_params_dict)
+            # load Ain if given
+            if "Ain_path" in params and params["Ain_path"] is not None:
+                Ain_path_abs = (
+                    output_dir / params["Ain_path"]
+                )  # resolve relative to output dir
+                Ain = np.load(Ain_path_abs, allow_pickle=True)
+                if Ain.size == 1:  # sparse array loaded as object
+                    Ain = Ain.item()
+    
+                # force params needed for seeded CNMFE
+                cnmfe_params.change_params({'patch': {'rf': None, 'only_init': False}})
+            else:
+                Ain = None
+
+            cnm = cnmf.CNMF(
+                n_processes=n_processes, dview=dview, params=cnmfe_params, Ain=Ain
+            )
             print("Performing CNMFE")
             cnm.fit(images)
             print("evaluating components")
@@ -128,9 +152,10 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 @click.command()
 @click.option("--batch-path", type=str)
 @click.option("--uuid", type=str)
-@click.option("--data-path")
-def main(batch_path, uuid, data_path: str = None):
-    run_algo(batch_path, uuid, data_path)
+@click.option("--data-path", default=None)
+@click.option("--log-level", type=int, default=None)
+def main(batch_path, uuid, data_path, log_level):
+    run_algo(batch_path, uuid, data_path, log_level=log_level)
 
 
 if __name__ == "__main__":

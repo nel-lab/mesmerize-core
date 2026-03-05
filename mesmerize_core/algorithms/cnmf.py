@@ -20,6 +20,7 @@ if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
         save_projections_parallel,
         save_correlation_parallel,
         save_c_order_mmap_parallel,
+        setup_logging
     )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
@@ -29,10 +30,13 @@ else:  # when running with local backend
         save_projections_parallel,
         save_correlation_parallel,
         save_c_order_mmap_parallel,
+        setup_logging
     )
 
 
-def run_algo(batch_path, uuid, data_path: str = None, dview=None):
+def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None):
+    if log_level is not None:
+        setup_logging(log_level)
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
@@ -97,12 +101,24 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
                 dview=dview,
             )
 
+            # load Ain if given
+            if 'Ain_path' in params and params['Ain_path'] is not None:
+                Ain_path_abs = output_dir / params['Ain_path']  # resolve relative to output dir
+                Ain = np.load(Ain_path_abs, allow_pickle=True)
+                if Ain.size == 1:  # sparse array loaded as object
+                    Ain = Ain.item()
+    
+                # force params needed for seeded CNMF
+                cnmf_params.change_params({'patch': {'rf': None, 'only_init': False}})
+            else:
+                Ain = None
+
             print("performing CNMF")
-            cnm = cnmf.CNMF(n_processes, params=cnmf_params, dview=dview)
+            cnm = cnmf.CNMF(n_processes, params=cnmf_params, dview=dview, Ain=Ain)
 
             print("fitting images")
             cnm.fit(images)
-            #
+    
             if "refit" in params.keys():
                 if params["refit"] is True:
                     print("refitting")
@@ -150,9 +166,10 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 @click.command()
 @click.option("--batch-path", type=str)
 @click.option("--uuid", type=str)
-@click.option("--data-path")
-def main(batch_path, uuid, data_path: str = None):
-    run_algo(batch_path, uuid, data_path)
+@click.option("--data-path", default=None)
+@click.option("--log-level", type=int, default=None)
+def main(batch_path, uuid, data_path, log_level):
+    run_algo(batch_path, uuid, data_path, log_level=log_level)
 
 
 if __name__ == "__main__":
