@@ -1,9 +1,7 @@
 import traceback
 import click
-import caiman as cm
 from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
-from caiman.summary_images import local_correlations_movie_offline
 import os
 from pathlib import Path, PurePosixPath
 import numpy as np
@@ -13,10 +11,20 @@ import time
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
-    from mesmerize_core.algorithms._utils import ensure_server, setup_logging
+    from mesmerize_core.algorithms._utils import (
+        ensure_server,
+        save_projections_parallel,
+        save_correlation_parallel,
+        setup_logging
+    )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
-    from ._utils import ensure_server, setup_logging
+    from ._utils import (
+        ensure_server,
+        save_projections_parallel,
+        save_correlation_parallel,
+        setup_logging
+    )
 
 
 def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None):
@@ -68,31 +76,21 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
             print("mc finished successfully!")
 
             print("computing projections")
-            Yr, dims, T = cm.load_memmap(str(mcorr_memmap_path))
-            images = np.reshape(Yr.T, [T] + list(dims), order="F")
 
-            proj_paths = dict()
-            for proj_type in ["mean", "std", "max"]:
-                p_img = getattr(np, f"nan{proj_type}")(images, axis=0)
-                proj_paths[proj_type] = output_dir.joinpath(
-                    f"{uuid}_{proj_type}_projection.npy"
-                )
-                np.save(str(proj_paths[proj_type]), p_img)
-
-            print("Computing correlation image")
-            Cns = local_correlations_movie_offline(
-                str(mcorr_memmap_path),
-                remove_baseline=True,
-                window=1000,
-                stride=1000,
-                winSize_baseline=100,
-                quantil_min_baseline=10,
+            proj_paths = save_projections_parallel(
+                uuid=uuid,
+                movie_path=mcorr_memmap_path,
+                output_dir=output_dir,
                 dview=dview,
             )
-            Cn = Cns.max(axis=0)
-            Cn[np.isnan(Cn)] = 0
-            cn_path = output_dir.joinpath(f"{uuid}_cn.npy")
-            np.save(str(cn_path), Cn, allow_pickle=False)
+
+            print("Computing correlation image")
+            cn_path = save_correlation_parallel(
+                uuid=uuid,
+                movie_path=mcorr_memmap_path,
+                output_dir=output_dir,
+                dview=dview,
+            )
 
             print("finished computing correlation image")
 

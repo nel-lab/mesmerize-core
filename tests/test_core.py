@@ -53,7 +53,7 @@ os.makedirs(ground_truths_dir, exist_ok=True)
 
 def _download_ground_truths():
     print(f"Downloading ground truths")
-    url = f"https://zenodo.org/records/17059175/files/ground_truths.zip"
+    url = f"https://zenodo.org/record/17253218/files/ground_truths.zip"
 
     # basically from https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests/37573701
     response = requests.get(url, stream=True)
@@ -1588,3 +1588,48 @@ def test_seeded_cnmfe():
     numpy.testing.assert_allclose(
         cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-3
     )
+
+
+def test_backends():
+    """test subprocess, local, and async_local backend"""
+    set_parent_raw_data_path(vid_dir)
+    algo = "mcorr"
+    df, batch_path = _create_tmp_batch()
+    input_movie_path = get_datafile(algo)
+
+    # make small version of movie for quick testing
+    movie = tifffile.imread(input_movie_path)
+    small_movie_path = input_movie_path.parent.joinpath("small_movie.tif")
+    tifffile.imwrite(small_movie_path, movie[:1001])
+    print(input_movie_path)
+
+    # put backends that can run in the background first to save time
+    backends = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_ASYNC, COMPUTE_BACKEND_LOCAL]
+    for backend in backends:
+        df.caiman.add_item(
+            algo="mcorr",
+            item_name=f"test-{backend}",
+            input_movie_path=small_movie_path,
+            params=test_params["mcorr"],
+        )
+
+    # run using each backend
+    procs = []
+    with ensure_server(None) as (dview, _):
+        for backend, (_, item) in zip(backends, df.iterrows()):
+            procs.append(item.caiman.run(backend=backend, dview=dview, wait=False))
+    
+    # wait for all to finish
+    for proc in procs:
+        proc.wait()
+
+    # compare results
+    df = load_batch(batch_path)
+    for i, item in df.iterrows():
+        output = item.mcorr.get_output()
+
+        if i == 0:
+            # save to compare to other results
+            first_output = output
+        else:
+            numpy.testing.assert_array_equal(output, first_output)
