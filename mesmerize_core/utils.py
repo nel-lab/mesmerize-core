@@ -40,11 +40,13 @@ def wrapsmethod(wrapper):
     functools.wraps doesn't type its return value properly for use as a method,
     so use this to disable functools.wraps when type checking (since it only matters at runtime)
     """
+
     def decorator(fn):
         if TYPE_CHECKING:
             return fn
         else:
             return wraps(wrapper)(fn)
+
     return decorator
 
 
@@ -208,7 +210,7 @@ def flatten_params(params_dict: dict) -> dict:
         else:
             params[key1] = val1
     return params
-        
+
 
 def get_params_diffs(params: Sequence[dict]) -> list[dict]:
     """Compute differences between params used for mesmerize"""
@@ -216,8 +218,12 @@ def get_params_diffs(params: Sequence[dict]) -> list[dict]:
     params_flat = list(map(flatten_params, params))
 
     # build list of params that differ between different parameter sets
-    common_params = deepcopy(params_flat[0])  # holds the common value for parameters found in all sets (so far)
-    varying_params = set()  # set of parameter keys that appear in not all sets or with varying values
+    common_params = deepcopy(
+        params_flat[0]
+    )  # holds the common value for parameters found in all sets (so far)
+    varying_params = (
+        set()
+    )  # set of parameter keys that appear in not all sets or with varying values
 
     for this_params in params_flat[1:]:
         # first, anything that's not in both this dict and the common set is considered varying
@@ -229,10 +235,19 @@ def get_params_diffs(params: Sequence[dict]) -> list[dict]:
                 common_paramset.remove(not_common_key)
 
         # second, look at params in the common set and remove any that differ for this set
-        for key in common_paramset:  # iterate over this set rather than dict itself to avoid issues when deleting entries
-            if not np.array_equal(common_params[key], this_params[key]):  # (should also work for scalars/arbitrary objects)
+        for (
+            key
+        ) in (
+            common_paramset
+        ):  # iterate over this set rather than dict itself to avoid issues when deleting entries
+            if not np.array_equal(
+                common_params[key], this_params[key]
+            ):  # (should also work for scalars/arbitrary objects)
                 varying_params.add(key)
                 del common_params[key]
 
     # gives a list where each item is a dict that has the unique params that correspond to a row
-    return [{key: p[key] if key in p else "<default>" for key in varying_params} for p in params_flat]
+    return [
+        {key: p[key] if key in p else "<default>" for key in varying_params}
+        for p in params_flat
+    ]
