@@ -11,14 +11,16 @@ import time
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
     from mesmerize_core import set_parent_raw_data_path, load_batch
     from mesmerize_core.utils import IS_WINDOWS
-    from mesmerize_core.algorithms._utils import ensure_server
+    from mesmerize_core.algorithms._utils import ensure_server, setup_logging
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
     from ..utils import IS_WINDOWS
-    from ._utils import ensure_server
+    from ._utils import ensure_server, setup_logging
 
 
-def run_algo(batch_path, uuid, data_path: str = None, dview=None):
+def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None):
+    if log_level is not None:
+        setup_logging(log_level)
     algo_start = time.time()
     set_parent_raw_data_path(data_path)
 
@@ -135,9 +137,10 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None):
 @click.command()
 @click.option("--batch-path", type=str)
 @click.option("--uuid", type=str)
-@click.option("--data-path")
-def main(batch_path, uuid, data_path: str = None):
-    run_algo(batch_path, uuid, data_path)
+@click.option("--data-path", default=None)
+@click.option("--log-level", type=int, default=None)
+def main(batch_path, uuid, data_path, log_level):
+    run_algo(batch_path, uuid, data_path, log_level=log_level)
 
 
 if __name__ == "__main__":
