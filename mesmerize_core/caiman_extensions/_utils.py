@@ -14,6 +14,7 @@ from mesmerize_core.caiman_extensions._batch_exceptions import (
 
 class SeriesExtensions(Protocol):
     """Common interface for series accessors to help with type hinting"""
+
     _series: pd.Series
 
 

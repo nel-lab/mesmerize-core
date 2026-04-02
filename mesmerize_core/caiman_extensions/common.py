@@ -352,7 +352,7 @@ class CaimanDataFrameExtensions:
             index of the original DataFrame
 
         """
-       
+
         sub_df = self._df[self._df["item_name"] == item_name]
         sub_df = sub_df[sub_df["algo"] == algo]
 
@@ -462,29 +462,33 @@ class CaimanDataFrameExtensions:
 
 class Waitable(Protocol):
     """An object that we can call "wait" on"""
+
     def wait(self) -> None: ...
 
 
 class DummyProcess(Waitable):
     """Dummy process for local backend"""
+
     def wait(self) -> None:
         pass
 
 
 class WaitableFuture(Waitable):
     """Adaptor for future returned from Executor.submit"""
+
     def __init__(self, future: Future[None]):
         self.future = future
-    
+
     def wait(self) -> None:
         return self.future.result()
-    
+
 
 class CheckedSubprocess(Waitable):
     """Adaptor for Popen that just raises an exception if the return code is nonzero"""
+
     def __init__(self, popen: Popen):
         self.popen = popen
-    
+
     def wait(self) -> None:
         rc = self.popen.wait()
         if rc != 0:
@@ -508,7 +512,7 @@ class CaimanSeriesExtensions:
         uuid: UUID,
         data_path: Union[Path, None],
         dview=None,
-        log_level=None
+        log_level=None,
     ) -> DummyProcess:
         algo_module = getattr(algorithms, algo)
         algo_module.run_algo(
@@ -516,18 +520,18 @@ class CaimanSeriesExtensions:
             uuid=str(uuid),
             data_path=str(data_path),
             dview=dview,
-            log_level=log_level
+            log_level=log_level,
         )
         return DummyProcess()
 
     def _run_local_async(
-            self,
-            algo: str,
-            batch_path: Path,
-            uuid: UUID,
-            data_path: Union[Path, None],
-            dview=None,
-            log_level=None
+        self,
+        algo: str,
+        batch_path: Path,
+        uuid: UUID,
+        data_path: Union[Path, None],
+        dview=None,
+        log_level=None,
     ) -> WaitableFuture:
         algo_module = getattr(algorithms, algo)
         with ThreadPoolExecutor(max_workers=1) as executor:
@@ -537,8 +541,8 @@ class CaimanSeriesExtensions:
                 uuid=str(uuid),
                 data_path=str(data_path),
                 dview=dview,
-                log_level=log_level
-                )
+                log_level=log_level,
+            )
             return WaitableFuture(future)
 
     def _run_subprocess(self, runfile_path: str, **kwargs) -> CheckedSubprocess:
@@ -548,9 +552,9 @@ class CaimanSeriesExtensions:
         popen = Popen([runfile_path], cwd=parent_path)
         return CheckedSubprocess(popen)  # so that it throws an exception on failure
 
-
     def _run_slurm(
-        self, runfile_path: str, sbatch_opts: str = "", **kwargs) -> CheckedSubprocess:
+        self, runfile_path: str, sbatch_opts: str = "", **kwargs
+    ) -> CheckedSubprocess:
         """
         Run on a cluster using SLURM. Configurable options (to pass to run):
         - sbatch_opts: A single string containing additional options for sbatch.
@@ -582,12 +586,13 @@ class CaimanSeriesExtensions:
             f"--output={output_path}",
             "--wait",
         ] + shlex.split(sbatch_opts)
-        
+
         return CheckedSubprocess(Popen(["sbatch", *submission_opts, runfile_path]))
 
-
     @cnmf_cache.invalidate()
-    def run(self, backend: Optional[str] = None, wait: bool = True, **kwargs) -> Waitable:
+    def run(
+        self, backend: Optional[str] = None, wait: bool = True, **kwargs
+    ) -> Waitable:
         """
         Run a CaImAn algorithm in an external process using the chosen backend
 
@@ -634,7 +639,7 @@ class CaimanSeriesExtensions:
                 uuid=self._series["uuid"],
                 data_path=get_parent_raw_data_path(),
                 dview=kwargs.get("dview"),
-                log_level=kwargs.get("log_level")
+                log_level=kwargs.get("log_level"),
             )
         else:
             # Create the runfile in the batch dir using this Series' UUID as the filename
@@ -653,8 +658,8 @@ class CaimanSeriesExtensions:
                 args_str += f" --data-path {lex.quote(str(get_parent_raw_data_path()))}"
 
             # set log level
-            if 'log_level' in kwargs:
-                level = kwargs['log_level']
+            if "log_level" in kwargs:
+                level = kwargs["log_level"]
                 if isinstance(level, str):
                     level = getattr(logging, level)
             else:
@@ -670,11 +675,9 @@ class CaimanSeriesExtensions:
                 args_str=args_str,
             )
 
-            self.process = getattr(self, f"_run_{backend}")(
-                runfile_path, **kwargs
-            )
-        
-        assert self.process is not None, 'Process should have been created'
+            self.process = getattr(self, f"_run_{backend}")(runfile_path, **kwargs)
+
+        assert self.process is not None, "Process should have been created"
         if wait:
             self.process.wait()
         return self.process
@@ -716,14 +719,13 @@ class CaimanSeriesExtensions:
             reader = default_reader
 
         # add hdf5 variable name if provided
-        main_params = self._series.params['main']
-        if 'var_name_hdf5' in main_params:
-            kwargs['var_name_hdf5'] = main_params['var_name_hdf5']
-        elif 'data' in main_params and 'var_name_hdf5' in main_params['data']:
-            kwargs['var_name_hdf5'] = main_params['data']['var_name_hdf5']
+        main_params = self._series.params["main"]
+        if "var_name_hdf5" in main_params:
+            kwargs["var_name_hdf5"] = main_params["var_name_hdf5"]
+        elif "data" in main_params and "var_name_hdf5" in main_params["data"]:
+            kwargs["var_name_hdf5"] = main_params["data"]["var_name_hdf5"]
 
         return reader(path_str, **kwargs)
-
 
     @validate()
     def get_corr_image(self) -> np.ndarray:

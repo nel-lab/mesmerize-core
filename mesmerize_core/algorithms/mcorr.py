@@ -15,7 +15,7 @@ if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
         ensure_server,
         save_projections_parallel,
         save_correlation_parallel,
-        setup_logging
+        setup_logging,
     )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
@@ -23,7 +23,7 @@ else:  # when running with local backend
         ensure_server,
         save_projections_parallel,
         save_correlation_parallel,
-        setup_logging
+        setup_logging,
     )
 
 
