@@ -8,15 +8,11 @@ import numpy as np
 from functools import wraps
 import os
 from stat import S_IEXEC
-from typing import *
+from typing import Sequence, Mapping, Optional, TYPE_CHECKING
 import re as regex
-from pathlib import Path
 from warnings import warn
 import sys
-from tempfile import NamedTemporaryFile
-from subprocess import check_call
 from copy import deepcopy
-import pandas as pd
 import shlex
 import mslex
 
@@ -173,7 +169,7 @@ def make_runfile(
     return sh_file
 
 
-def quick_min_max(data: np.ndarray) -> Tuple[float, float]:
+def quick_min_max(data: np.ndarray) -> tuple[float, float]:
     # from pyqtgraph.ImageView
     # Estimate the min/max values of *data* by subsampling.
     # Returns [(min, max), ...] with one item per channel
@@ -193,7 +189,7 @@ def _organize_coordinates(contour: dict):
     return coors
 
 
-def flatten_params(params_dict: dict) -> dict:
+def flatten_params(params_dict: Mapping) -> dict:
     """
     Produce a flat dict with one entry for each parameter in the passed dict.
     If params_dict['main'] is nested one level (e.g., {'init': {'K': 5}, 'merging': {'merge_thr': 0.85}}...),
@@ -201,12 +197,13 @@ def flatten_params(params_dict: dict) -> dict:
     """
     params = {}
     for key1, val1 in params_dict.items():
-        if key1 == "main":
-            # recursively step into "main" params
-            params.update(flatten_params(val1))
-        elif isinstance(val1, dict):  # nested
-            for key2, val2 in val1.items():
-                params[f"{key1}.{key2}"] = val2
+        if isinstance(val1, Mapping):
+            if key1 == "main":
+                # recursively step into "main" params
+                params.update(flatten_params(val1))
+            else:
+                for key2, val2 in val1.items():
+                    params[f"{key1}.{key2}"] = val2
         else:
             params[key1] = val1
     return params
