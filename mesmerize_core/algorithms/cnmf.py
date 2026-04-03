@@ -20,7 +20,7 @@ if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
         save_projections_parallel,
         save_correlation_parallel,
         save_c_order_mmap_parallel,
-        setup_logging
+        setup_logging,
     )
 else:  # when running with local backend
     from ..batch_utils import set_parent_raw_data_path, load_batch
@@ -30,7 +30,7 @@ else:  # when running with local backend
         save_projections_parallel,
         save_correlation_parallel,
         save_c_order_mmap_parallel,
-        setup_logging
+        setup_logging,
     )
 
 
@@ -75,7 +75,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
                     input_movie_path,
                     base_name=f"{uuid}_cnmf-memmap_",
                     dview=dview,
-                    var_name_hdf5=cnmf_params.data['var_name_hdf5']
+                    var_name_hdf5=cnmf_params.data["var_name_hdf5"],
                 )
                 cnmf_memmap_path = output_dir.joinpath(Path(fname_new).name)
                 move_file(fname_new, cnmf_memmap_path)
@@ -102,14 +102,16 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
             )
 
             # load Ain if given
-            if 'Ain_path' in params and params['Ain_path'] is not None:
-                Ain_path_abs = output_dir / params['Ain_path']  # resolve relative to output dir
+            if "Ain_path" in params and params["Ain_path"] is not None:
+                Ain_path_abs = (
+                    output_dir / params["Ain_path"]
+                )  # resolve relative to output dir
                 Ain = np.load(Ain_path_abs, allow_pickle=True)
                 if Ain.size == 1:  # sparse array loaded as object
                     Ain = Ain.item()
-    
+
                 # force params needed for seeded CNMF
-                cnmf_params.change_params({'patch': {'rf': None, 'only_init': False}})
+                cnmf_params.change_params({"patch": {"rf": None, "only_init": False}})
             else:
                 Ain = None
 
@@ -118,7 +120,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
 
             print("fitting images")
             cnm.fit(images)
-    
+
             if "refit" in params.keys():
                 if params["refit"] is True:
                     print("refitting")
@@ -138,9 +140,15 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
                 Yr._mmap.close()  # accessing private attr but windows is annoying otherwise
 
             # save paths as relative path strings with forward slashes
-            cnmf_hdf5_path = str(PurePosixPath(output_path.relative_to(output_dir.parent)))
-            cnmf_memmap_path = str(PurePosixPath(df.paths.split(cnmf_memmap_path)[1]))  # still work if outside output dir
-            corr_img_path = str(PurePosixPath(corr_img_path.relative_to(output_dir.parent)))
+            cnmf_hdf5_path = str(
+                PurePosixPath(output_path.relative_to(output_dir.parent))
+            )
+            cnmf_memmap_path = str(
+                PurePosixPath(df.paths.split(cnmf_memmap_path)[1])
+            )  # still work if outside output dir
+            corr_img_path = str(
+                PurePosixPath(corr_img_path.relative_to(output_dir.parent))
+            )
             for proj_type in proj_paths.keys():
                 d[f"{proj_type}-projection-path"] = str(
                     PurePosixPath(proj_paths[proj_type].relative_to(output_dir.parent))

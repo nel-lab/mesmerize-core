@@ -1,7 +1,6 @@
 from setuptools import setup, find_packages
 from pathlib import Path
 
-
 install_requires = [
     "pandas>=1.5.0",
     "pytest",

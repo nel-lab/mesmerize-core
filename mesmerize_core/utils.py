@@ -8,15 +8,11 @@ import numpy as np
 from functools import wraps
 import os
 from stat import S_IEXEC
-from typing import *
+from typing import Sequence, Mapping, Optional, TYPE_CHECKING
 import re as regex
-from pathlib import Path
 from warnings import warn
 import sys
-from tempfile import NamedTemporaryFile
-from subprocess import check_call
 from copy import deepcopy
-import pandas as pd
 import shlex
 import mslex
 
@@ -40,11 +36,13 @@ def wrapsmethod(wrapper):
     functools.wraps doesn't type its return value properly for use as a method,
     so use this to disable functools.wraps when type checking (since it only matters at runtime)
     """
+
     def decorator(fn):
         if TYPE_CHECKING:
             return fn
         else:
             return wraps(wrapper)(fn)
+
     return decorator
 
 
@@ -171,7 +169,7 @@ def make_runfile(
     return sh_file
 
 
-def quick_min_max(data: np.ndarray) -> Tuple[float, float]:
+def quick_min_max(data: np.ndarray) -> tuple[float, float]:
     # from pyqtgraph.ImageView
     # Estimate the min/max values of *data* by subsampling.
     # Returns [(min, max), ...] with one item per channel
@@ -191,7 +189,7 @@ def _organize_coordinates(contour: dict):
     return coors
 
 
-def flatten_params(params_dict: dict) -> dict:
+def flatten_params(params_dict: Mapping) -> dict:
     """
     Produce a flat dict with one entry for each parameter in the passed dict.
     If params_dict['main'] is nested one level (e.g., {'init': {'K': 5}, 'merging': {'merge_thr': 0.85}}...),
@@ -199,16 +197,17 @@ def flatten_params(params_dict: dict) -> dict:
     """
     params = {}
     for key1, val1 in params_dict.items():
-        if key1 == "main":
-            # recursively step into "main" params
-            params.update(flatten_params(val1))
-        elif isinstance(val1, dict):  # nested
-            for key2, val2 in val1.items():
-                params[f"{key1}.{key2}"] = val2
+        if isinstance(val1, Mapping):
+            if key1 == "main":
+                # recursively step into "main" params
+                params.update(flatten_params(val1))
+            else:
+                for key2, val2 in val1.items():
+                    params[f"{key1}.{key2}"] = val2
         else:
             params[key1] = val1
     return params
-        
+
 
 def get_params_diffs(params: Sequence[dict]) -> list[dict]:
     """Compute differences between params used for mesmerize"""
@@ -216,8 +215,12 @@ def get_params_diffs(params: Sequence[dict]) -> list[dict]:
     params_flat = list(map(flatten_params, params))
 
     # build list of params that differ between different parameter sets
-    common_params = deepcopy(params_flat[0])  # holds the common value for parameters found in all sets (so far)
-    varying_params = set()  # set of parameter keys that appear in not all sets or with varying values
+    common_params = deepcopy(
+        params_flat[0]
+    )  # holds the common value for parameters found in all sets (so far)
+    varying_params = (
+        set()
+    )  # set of parameter keys that appear in not all sets or with varying values
 
     for this_params in params_flat[1:]:
         # first, anything that's not in both this dict and the common set is considered varying
@@ -229,10 +232,19 @@ def get_params_diffs(params: Sequence[dict]) -> list[dict]:
                 common_paramset.remove(not_common_key)
 
         # second, look at params in the common set and remove any that differ for this set
-        for key in common_paramset:  # iterate over this set rather than dict itself to avoid issues when deleting entries
-            if not np.array_equal(common_params[key], this_params[key]):  # (should also work for scalars/arbitrary objects)
+        for (
+            key
+        ) in (
+            common_paramset
+        ):  # iterate over this set rather than dict itself to avoid issues when deleting entries
+            if not np.array_equal(
+                common_params[key], this_params[key]
+            ):  # (should also work for scalars/arbitrary objects)
                 varying_params.add(key)
                 del common_params[key]
 
     # gives a list where each item is a dict that has the unique params that correspond to a row
-    return [{key: p[key] if key in p else "<default>" for key in varying_params} for p in params_flat]
+    return [
+        {key: p[key] if key in p else "<default>" for key in varying_params}
+        for p in params_flat
+    ]

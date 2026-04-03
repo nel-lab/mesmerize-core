@@ -36,7 +36,6 @@ import time
 import tifffile
 from copy import deepcopy
 
-
 # don't call "resolve" on these - want to make sure we can handle non-canonical paths correctly
 testdata_dir = Path(os.path.dirname(os.path.abspath(__file__)), "test data")
 tmp_dir = testdata_dir / "tmp"
@@ -1193,21 +1192,26 @@ def test_cache():
     hex1 = hex(id(cache[cache["function"] == "get_output"]["return_val"].item()))
 
     time_stamp1 = cache[cache["function"] == "get_output"]["time_stamp"].item()
-    df.iloc[-1].cnmf.get_temporal("good")  # cache entry 1 (get_good_components) + 2 (get_temporal)
+    df.iloc[-1].cnmf.get_temporal(
+        "good"
+    )  # cache entry 1 (get_good_components) + 2 (get_temporal)
     df.iloc[-1].cnmf.get_contours("good")  # cache entry 3 (get_contours)
     df.iloc[-1].cnmf.get_masks("good")  # cache entry 4 (get_masks)
     df.iloc[-1].cnmf.get_temporal(np.arange(7))  # cache entry 5 (get_temporal)
     df.iloc[-1].cnmf.get_temporal(np.arange(8))  # cache entry 6, 2 gets evicted
-    
-    assert hex(id(cache)) == hex(id(cnmf.cnmf_cache.get_cache())), \
-        "cache object should still be the same after evicting cache items"
+
+    assert hex(id(cache)) == hex(
+        id(cnmf.cnmf_cache.get_cache())
+    ), "cache object should still be the same after evicting cache items"
 
     # after adding enough items for cache to exceed max size, cache should remove least recently used items until
     # size is back under max
     assert len(cache) == 6
 
     output_items = cache[cache["function"] == "get_output"]
-    assert len(output_items) > 0, "output should not be evicted since it's accessed for every other function"
+    assert (
+        len(output_items) > 0
+    ), "output should not be evicted since it's accessed for every other function"
     assert len(output_items) == 1, "output shuould not be duplicated in the cache"
 
     time_stamp2 = output_items["time_stamp"].item()
@@ -1351,18 +1355,38 @@ def test_cache():
 
     # shouldn't matter for comparison whether arguments are passed positionally, by keyword,
     # or by default if their args are the same
-    same1 = df.iloc[1].cnmf.get_temporal("good", return_copy=False)  # add_background=False by default
-    same1_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    same1 = df.iloc[1].cnmf.get_temporal(
+        "good", return_copy=False
+    )  # add_background=False by default
+    same1_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1][
+        "added_time"
+    ]
     same2 = df.iloc[1].cnmf.get_temporal("good", False, return_copy=False)
-    same2_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
-    same3 = df.iloc[1].cnmf.get_temporal("good", add_background=False, return_copy=False)
-    same3_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
-    different = df.iloc[1].cnmf.get_temporal("good", add_background=True, return_copy=False)
-    different_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1]["added_time"]
+    same2_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1][
+        "added_time"
+    ]
+    same3 = df.iloc[1].cnmf.get_temporal(
+        "good", add_background=False, return_copy=False
+    )
+    same3_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1][
+        "added_time"
+    ]
+    different = df.iloc[1].cnmf.get_temporal(
+        "good", add_background=True, return_copy=False
+    )
+    different_time = cache.sort_values(by=["time_stamp"], ascending=True).iloc[-1][
+        "added_time"
+    ]
 
-    assert hex(id(same1)) == hex(id(same2)) and same1_time == same2_time, "Matching default argument should cause hit"
-    assert hex(id(same2)) == hex(id(same3)) and same2_time == same3_time, "Matching keyword/non-keyword arguments should cause hit"
-    assert hex(id(same3)) != hex(id(different)) and same3_time != different_time, "Non-matching arguments should cause miss"
+    assert (
+        hex(id(same1)) == hex(id(same2)) and same1_time == same2_time
+    ), "Matching default argument should cause hit"
+    assert (
+        hex(id(same2)) == hex(id(same3)) and same2_time == same3_time
+    ), "Matching keyword/non-keyword arguments should cause hit"
+    assert (
+        hex(id(same3)) != hex(id(different)) and same3_time != different_time
+    ), "Non-matching arguments should cause miss"
 
 
 def test_backends():
@@ -1379,7 +1403,11 @@ def test_backends():
     print(input_movie_path)
 
     # put backends that can run in the background first to save time
-    backends = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_ASYNC, COMPUTE_BACKEND_LOCAL]
+    backends = [
+        COMPUTE_BACKEND_SUBPROCESS,
+        COMPUTE_BACKEND_ASYNC,
+        COMPUTE_BACKEND_LOCAL,
+    ]
     for backend in backends:
         df.caiman.add_item(
             algo="mcorr",
@@ -1393,7 +1421,7 @@ def test_backends():
     with ensure_server(None) as (dview, _):
         for backend, (_, item) in zip(backends, df.iterrows()):
             procs.append(item.caiman.run(backend=backend, dview=dview, wait=False))
-    
+
     # wait for all to finish
     for proc in procs:
         proc.wait()
@@ -1446,17 +1474,13 @@ def test_seeded_cnmf():
     algo = "cnmf"
     print("Testing seeded cnmf")
     input_movie_path = df.iloc[-1].mcorr.get_output_path()
-    seeded_params = {
-        **test_params[algo],
-        "Ain_path": seed_path,
-        "refit": False
-    }
+    seeded_params = {**test_params[algo], "Ain_path": seed_path, "refit": False}
 
     df.caiman.add_item(
         algo=algo,
         item_name=f"test-seeded-{algo}",
         input_movie_path=input_movie_path,
-        params=seeded_params
+        params=seeded_params,
     )
 
     assert df.iloc[-1]["algo"] == algo
@@ -1533,11 +1557,7 @@ def test_seeded_cnmfe():
     param_name = "cnmfe_full"
     input_movie_path = df.iloc[0].mcorr.get_output_path()
     print(input_movie_path)
-    seeded_params = {
-        **test_params[param_name],
-        "Ain_path": seed_path,
-        "refit": False
-    }
+    seeded_params = {**test_params[param_name], "Ain_path": seed_path, "refit": False}
 
     df.caiman.add_item(
         algo=algo,
@@ -1588,48 +1608,3 @@ def test_seeded_cnmfe():
     numpy.testing.assert_allclose(
         cnmf_temporal_components, cnmf_temporal_components_actual, rtol=1e-2, atol=1e-3
     )
-
-
-def test_backends():
-    """test subprocess, local, and async_local backend"""
-    set_parent_raw_data_path(vid_dir)
-    algo = "mcorr"
-    df, batch_path = _create_tmp_batch()
-    input_movie_path = get_datafile(algo)
-
-    # make small version of movie for quick testing
-    movie = tifffile.imread(input_movie_path)
-    small_movie_path = input_movie_path.parent.joinpath("small_movie.tif")
-    tifffile.imwrite(small_movie_path, movie[:1001])
-    print(input_movie_path)
-
-    # put backends that can run in the background first to save time
-    backends = [COMPUTE_BACKEND_SUBPROCESS, COMPUTE_BACKEND_ASYNC, COMPUTE_BACKEND_LOCAL]
-    for backend in backends:
-        df.caiman.add_item(
-            algo="mcorr",
-            item_name=f"test-{backend}",
-            input_movie_path=small_movie_path,
-            params=test_params["mcorr"],
-        )
-
-    # run using each backend
-    procs = []
-    with ensure_server(None) as (dview, _):
-        for backend, (_, item) in zip(backends, df.iterrows()):
-            procs.append(item.caiman.run(backend=backend, dview=dview, wait=False))
-    
-    # wait for all to finish
-    for proc in procs:
-        proc.wait()
-
-    # compare results
-    df = load_batch(batch_path)
-    for i, item in df.iterrows():
-        output = item.mcorr.get_output()
-
-        if i == 0:
-            # save to compare to other results
-            first_output = output
-        else:
-            numpy.testing.assert_array_equal(output, first_output)
