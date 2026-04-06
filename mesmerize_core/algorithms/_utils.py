@@ -270,7 +270,7 @@ def _save_c_order_mmap_in_chunks_kernel(
             (index using pixel_slice to get mask for this block)
         - add_to_movie: Constant to add to all valid pixels
         - filter_sos: If non-None, use this filter in second-order-sections format to filter
-            across time (typically for high-pass filtering)
+            across time (typically for high-pass filtering). Adds mean back in after filtering.
     """
     valid_pixels = valid_pixel_mask[pixel_slice]
     c_order_chunk = np.zeros_like(Yr_chunk, dtype=np.float32, order="C")  # pixels x time
@@ -280,7 +280,10 @@ def _save_c_order_mmap_in_chunks_kernel(
 
     # filter now that it's in C order
     if filter_sos is not None:
-        c_order_chunk[valid_pixels] = scipy.signal.sosfiltfilt(
+        # take mean to add back in after filtering
+        chunk_mean = np.mean(Yr_chunk[valid_pixels], axis=1, keepdims=True)
+
+        c_order_chunk[valid_pixels] = chunk_mean + scipy.signal.sosfiltfilt(
             filter_sos, c_order_chunk[valid_pixels], axis=1).astype(np.float32)
     
     tot_frames = c_order_chunk.shape[1]
