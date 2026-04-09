@@ -277,8 +277,8 @@ def _save_c_order_mmap_in_chunks_kernel(
     
     # get part of add_to_movie to use
     if isinstance(add_to_movie, np.ndarray):
-        add_pixels = add_to_movie.ravel(order='F')[pixel_slice, np.newaxis].astype(np.float32)
-        add_pixels[~valid_pixels] = 0
+        add_pixels = add_to_movie.ravel(order='F')[pixel_slice]
+        add_pixels = add_pixels[valid_pixels, np.newaxis].astype(np.float32)
     else:
         add_pixels = np.float32(add_to_movie)
 
