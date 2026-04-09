@@ -256,7 +256,7 @@ class ColumnMappingFunction(Generic[R]):
 
 def _save_c_order_mmap_in_chunks_kernel(
     Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str, byte_offset: int,
-    valid_pixel_mask: np.ndarray, add_to_movie: float, filter_sos: Optional[np.ndarray] = None
+    valid_pixel_mask: np.ndarray, add_to_movie: Union[float, np.ndarray], filter_sos: Optional[np.ndarray] = None
 ):
     """
     Alternative to cm.save_memmap that can load from non-mmap files and uses chunks
@@ -268,15 +268,22 @@ def _save_c_order_mmap_in_chunks_kernel(
         - byte_offset: Bytes into the file to start writing the *first* block
         - valid_pixel_mask: Boolean vector of which pixels in the whole movie should be nonzero
             (index using pixel_slice to get mask for this block)
-        - add_to_movie: Constant to add to all valid pixels
+        - add_to_movie: Constant to add to all valid pixels (either scalar or # pixels-length vector)
         - filter_sos: If non-None, use this filter in second-order-sections format to filter
             across time (typically for high-pass filtering). Adds mean back in after filtering.
     """
     valid_pixels = valid_pixel_mask[pixel_slice]
     c_order_chunk = np.zeros_like(Yr_chunk, dtype=np.float32, order="C")  # pixels x time
     
+    # get part of add_to_movie to use
+    if isinstance(add_to_movie, np.ndarray):
+        add_pixels = add_to_movie.ravel(order='F')[pixel_slice, np.newaxis].astype(np.float32)
+        add_pixels[~valid_pixels] = 0
+    else:
+        add_pixels = np.float32(add_to_movie)
+
     # do the transpose by assigning from F-order to C-order
-    c_order_chunk[valid_pixels] = Yr_chunk[valid_pixels] + np.float32(add_to_movie)
+    c_order_chunk[valid_pixels] = Yr_chunk[valid_pixels] + add_pixels
 
     # filter now that it's in C order
     if filter_sos is not None:
@@ -318,7 +325,7 @@ def save_c_order_mmap_parallel(
     dview: Optional[Cluster],
     fr: float,
     var_name_hdf5="mov",
-    add_to_movie=0.0001,
+    add_to_movie: Union[float, np.ndarray] = 0.0001,
     border_pixels: Union[int, Border, np.ndarray] = 0,
     highpass_cutoff: float = 0, # in Hz
     highpass_order=4,
@@ -327,7 +334,9 @@ def save_c_order_mmap_parallel(
 ) -> str:
     """
     Alternative to cm.save_memmap that hopefully does better with memory
-    add_to_movie: constant to add to each pixel; 0.0001 emulates default behavior of save_memmap
+    add_to_movie: constant to add to each frame - either scalar or array with size matching # of pixels,
+        either for whole movie or in the center.
+        (default value of 0.0001 emulates default behavior of save_memmap)
     border_pixels: specifies which pixels should be used vs. set to 0. One of the following types:
         - if an int, exclude this many pixels on the border in each dimension
         - if a mapping conforming to "Border" (with at least "left", "right", "top", "bottom" keys),
@@ -390,6 +399,21 @@ def save_c_order_mmap_parallel(
 
         valid_mask_2d[center_slices] = True
         valid_mask = valid_mask_2d.ravel(order="F")
+
+    # check size of add_to_movie
+    if isinstance(add_to_movie, np.ndarray):
+        if add_to_movie.size == valid_mask.sum():
+            # for just the center (or arbitrary masked pixels) - fill other pixels with zeros
+            add_to_movie_in = add_to_movie
+            add_to_movie = np.zeros(valid_mask.size, dtype=np.float32)
+            add_to_movie[valid_mask] = add_to_movie_in.ravel(order='F')
+        
+        elif add_to_movie.size == valid_mask.size:  # for full frame
+            add_to_movie = add_to_movie.ravel(order='F')
+        elif add_to_movie.size == 1:
+            add_to_movie = add_to_movie.item()
+        else:
+            raise ValueError('add_to_movie must be a scalar or have size equal to movie frame (with or without borders removed)')
 
     # make filter, if needed
     if highpass_cutoff > 0:
