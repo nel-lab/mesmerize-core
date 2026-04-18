@@ -1,12 +1,11 @@
-from datetime import datetime
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 
-CURRENT_BATCH_PATH: Path = None  # only one batch at a time
-PARENT_DATA_PATH: Path = None
+CURRENT_BATCH_PATH: Optional[Path] = None  # only one batch at a time
+PARENT_DATA_PATH: Optional[Path] = None
 
 COMPUTE_BACKEND_SUBPROCESS = "subprocess"  #: subprocess backend
 COMPUTE_BACKEND_SLURM = "slurm"  #: SLURM backend
@@ -54,7 +53,7 @@ def set_parent_raw_data_path(path: Union[Path, str]) -> Path:
     return PARENT_DATA_PATH
 
 
-def get_parent_raw_data_path() -> Path:
+def get_parent_raw_data_path() -> Optional[Path]:
     """
     Get the global `PARENT_DATA_PATH`
 
@@ -65,6 +64,8 @@ def get_parent_raw_data_path() -> Path:
 
     """
     global PARENT_DATA_PATH
+    if PARENT_DATA_PATH is None:
+        return None
     return PARENT_DATA_PATH.resolve()
 
 
@@ -110,13 +111,13 @@ class _BasePathExtensions:
         """
         path = Path(path)
         # check if input movie is within batch dir
-        if self.get_batch_path().parent.joinpath(path).exists():
-            return self.get_batch_path().parent.joinpath(path)
+        if (full_path := self.get_batch_path().parent.joinpath(path)).exists():
+            return full_path
 
         # else check if in parent raw data dir
-        elif get_parent_raw_data_path() is not None:
-            if get_parent_raw_data_path().joinpath(path).exists():
-                return get_parent_raw_data_path().joinpath(path)
+        elif (parent_data_path := get_parent_raw_data_path()) is not None:
+            if (full_path := parent_data_path.joinpath(path)).exists():
+                return full_path
 
         raise FileNotFoundError(f"Could not resolve full path of:\n{path}")
 

@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     Sequence,
     Iterable,
+    Mapping,
     runtime_checkable,
 )
 
@@ -25,7 +26,10 @@ from caiman.summary_images import local_correlations
 from ipyparallel import DirectView
 from multiprocessing.pool import Pool
 import numpy as np
+import scipy.signal
 import scipy.stats
+
+from mesmerize_core.utils import Border
 
 
 def setup_logging(log_level: Union[int, str] = logging.INFO):
@@ -251,31 +255,60 @@ class ColumnMappingFunction(Generic[R]):
 
 
 def _save_c_order_mmap_in_chunks_kernel(
-    Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str, add_to_movie: float
+    Yr_chunk: np.ndarray, pixel_slice: slice, mmap_fname: str, byte_offset: int,
+    valid_pixel_mask: np.ndarray, add_to_movie: Union[float, np.ndarray], filter_sos: Optional[np.ndarray] = None
 ):
     """
     Alternative to cm.save_memmap that can load from non-mmap files and uses chunks
     Based on caiman.mmapping.save_portion
+
+    Saves the pixels x time block Yr_chunk, where the pixels in this block are given by pixel_slice.
+    Other inputs:
+        - mmap_fname: The memmap filename being saved to
+        - byte_offset: Bytes into the file to start writing the *first* block
+        - valid_pixel_mask: Boolean vector of which pixels in the whole movie should be nonzero
+            (index using pixel_slice to get mask for this block)
+        - add_to_movie: Constant to add to all valid pixels (either scalar or # pixels-length vector)
+        - filter_sos: If non-None, use this filter in second-order-sections format to filter
+            across time (typically for high-pass filtering). Adds mean back in after filtering.
     """
-    c_order_copy = np.ascontiguousarray(Yr_chunk, dtype=np.float32) + np.float32(
-        add_to_movie
-    )  # pixels x time
-    tot_frames = c_order_copy.shape[1]
+    valid_pixels = valid_pixel_mask[pixel_slice]
+    c_order_chunk = np.zeros_like(Yr_chunk, dtype=np.float32, order="C")  # pixels x time
+    
+    # get part of add_to_movie to use
+    if isinstance(add_to_movie, np.ndarray):
+        add_pixels = add_to_movie.ravel(order='F')[pixel_slice]
+        add_pixels = add_pixels[valid_pixels, np.newaxis].astype(np.float32)
+    else:
+        add_pixels = np.float32(add_to_movie)
+
+    # do the transpose by assigning from F-order to C-order
+    c_order_chunk[valid_pixels] = Yr_chunk[valid_pixels] + add_pixels
+
+    # filter now that it's in C order
+    if filter_sos is not None:
+        # take mean to add back in after filtering
+        chunk_mean = np.mean(Yr_chunk[valid_pixels], axis=1, keepdims=True)
+
+        c_order_chunk[valid_pixels] = chunk_mean + scipy.signal.sosfiltfilt(
+            filter_sos, c_order_chunk[valid_pixels], axis=1).astype(np.float32)
+    
+    tot_frames = c_order_chunk.shape[1]
 
     with open(mmap_fname, "r+b") as f:
         # seek to the start of the chunk
         # guard against accidental fixed-size integers
         idx_start, idx_end = int(pixel_slice.start), int(pixel_slice.stop)
-        itemsize = int(c_order_copy.dtype.itemsize)  # 4 for float32
+        itemsize = int(c_order_chunk.dtype.itemsize)  # 4 for float32
 
-        f.seek(idx_start * itemsize * tot_frames)
-        f.write(c_order_copy.data)
+        f.seek(byte_offset + idx_start * itemsize * tot_frames)
+        f.write(c_order_chunk.data)
 
-        computed_position = idx_end * itemsize * tot_frames
+        computed_position = byte_offset + idx_end * itemsize * tot_frames
         if f.tell() != computed_position:
             logging.critical(f"Error in mmap portion write: at position {f.tell()}")
             logging.critical(
-                f"But should be at position {idx_end} * {c_order_copy.dtype.itemsize} * {tot_frames} = {computed_position}"
+                f"But should be at position {byte_offset} + {idx_end} * {c_order_chunk.dtype.itemsize} * {tot_frames} = {computed_position}"
             )
             f.close()
             raise Exception(
@@ -290,37 +323,118 @@ def save_c_order_mmap_parallel(
     movie_path: str,
     base_name: str,
     dview: Optional[Cluster],
+    fr: float,
     var_name_hdf5="mov",
-    add_to_movie=0.0001,
+    add_to_movie: Union[float, np.ndarray] = 0.0001,
+    border_pixels: Union[int, Border, np.ndarray] = 0,
+    highpass_cutoff: float = 0, # in Hz
+    highpass_order=4,
+    existing_output_path: Optional[str] = None,
+    existing_output_offset=0
 ) -> str:
     """
     Alternative to cm.save_memmap that hopefully does better with memory
-    add_to_movie=0.0001 emulates default behavior of save_memmap
+    add_to_movie: constant to add to each frame - either scalar or array with size matching # of pixels,
+        either for whole movie or in the center.
+        (default value of 0.0001 emulates default behavior of save_memmap)
+    border_pixels: specifies which pixels should be used vs. set to 0. One of the following types:
+        - if an int, exclude this many pixels on the border in each dimension
+        - if a mapping conforming to "Border" (with at least "left", "right", "top", "bottom" keys),
+          set pixels within this border to 0.
+        - if a boolean ndarray, it should be the same size as the number of pixels, and true values
+          correspond to *valid* pixels; false values will be set to 0.
+    highpass_cutoff: if nonzero, use a zero-phase Butterworth highpass filter with this cutoff in Hz
+        across time while transposing
+    highpass_order: order of the highpass filter, if using.
+    fr: Frame rate of movie (needed to make high-pass filter)
+
+    existing_output_path: If given, the path to an existing file to write to instead of creating a new one
+    existing_output_offset: Bytes offset to start of writing area in existing file
     """
     # get name of mmap file and create it
     dims, tot_frames = get_file_size(movie_path, var_name_hdf5=var_name_hdf5)
     assert isinstance(tot_frames, int)  # non-type-stable interface...
 
-    # use generate_fname_tot to emulate behavior of save_memmap
-    mmap_fname_start = generate_fname_tot(base_name, list(dims), order="C")
-    mmap_fname = f"{mmap_fname_start}_frames_{tot_frames}.mmap"
-    mmap_fname = os.path.join(os.path.split(movie_path)[0], mmap_fname)
-    mmap_fname = fn_relocated(mmap_fname)
-    logging.info(f"Creating mmap file: {mmap_fname}")
+    if existing_output_path is None:
+        # use generate_fname_tot to emulate behavior of save_memmap
+        mmap_fname_start = generate_fname_tot(base_name, list(dims), order="C")
+        mmap_fname = f"{mmap_fname_start}_frames_{tot_frames}.mmap"
+        mmap_fname = os.path.join(os.path.split(movie_path)[0], mmap_fname)
+        mmap_fname = fn_relocated(mmap_fname)
+        logging.info(f"Creating mmap file: {mmap_fname}")
 
-    d = int(np.prod(dims))
-    big_mov = np.memmap(
-        mmap_fname, mode="w+", dtype=np.float32, shape=(d, tot_frames), order="C"
-    )
+        d = int(np.prod(dims))
+        big_mov = np.memmap(
+            mmap_fname, mode="w+", dtype=np.float32, shape=(d, tot_frames), order="C"
+        )
+        output_path = mmap_fname
+        byte_offset = 0
+    else:
+        big_mov = None
+        output_path = existing_output_path
+        byte_offset = existing_output_offset
+
+    # make valid pixel mask
+    if isinstance(border_pixels, np.ndarray):
+        if border_pixels.dtype.kind != 'b':
+            raise TypeError('border_pixels, if passed as an ndarray, must be a boolean mask')
+        if border_pixels.size != np.prod(dims):
+            raise TypeError('border_pixels mask must have the same number of elements as pixels in movie')
+        
+        valid_mask = border_pixels.ravel(order="F")
+    
+    else:
+        valid_mask_2d = np.zeros(dims, dtype=bool)
+        if isinstance(border_pixels, Mapping):
+            center_slices = (
+                slice(border_pixels['top'], dims[0]-border_pixels['bottom']),
+                slice(border_pixels['left'], dims[1]-border_pixels['right'])
+            )
+            if len(dims) > 2:
+                center_slices = center_slices + (
+                    slice(border_pixels.get('z_top', 0), dims[2]-border_pixels.get('z_bottom', 0)),
+                )
+        else:
+            center_slices = tuple(slice(border_pixels, dim-border_pixels) for dim in dims)
+
+        valid_mask_2d[center_slices] = True
+        valid_mask = valid_mask_2d.ravel(order="F")
+
+    # check size of add_to_movie
+    if isinstance(add_to_movie, np.ndarray):
+        if add_to_movie.size == valid_mask.sum():
+            # for just the center (or arbitrary masked pixels) - fill other pixels with zeros
+            add_to_movie_in = add_to_movie
+            add_to_movie = np.zeros(valid_mask.size, dtype=np.float32)
+            add_to_movie[valid_mask] = add_to_movie_in.ravel(order='F')
+        
+        elif add_to_movie.size == valid_mask.size:  # for full frame
+            add_to_movie = add_to_movie.ravel(order='F')
+        elif add_to_movie.size == 1:
+            add_to_movie = add_to_movie.item()
+        else:
+            raise ValueError('add_to_movie must be a scalar or have size equal to movie frame (with or without borders removed)')
+
+    # make filter, if needed
+    if highpass_cutoff > 0:
+        # compute frequency relative to Nyquist
+        nyq = fr / 2
+        highpass_cutoff_nyq = highpass_cutoff / nyq
+        filter_sos = scipy.signal.butter(highpass_order, highpass_cutoff_nyq, btype="highpass", output="sos")
+    elif highpass_cutoff == 0:
+        filter_sos = None
+    else:
+        raise ValueError("Negative or invalid value for highpass_cutoff is not allowed")
 
     # parallel load/save call
     save_c_order_mmap_in_chunks(
-        movie_path, dview, var_name_hdf5, mmap_fname, add_to_movie
+        movie_path, dview, var_name_hdf5,
+        output_path, byte_offset, valid_mask, add_to_movie, filter_sos
     )
 
     # clean up
     del big_mov
-    return mmap_fname
+    return output_path
 
 
 def _make_chunk_projections_kernel(
