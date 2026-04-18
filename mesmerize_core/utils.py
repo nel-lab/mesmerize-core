@@ -251,16 +251,13 @@ def get_params_diffs(params: Sequence[dict]) -> list[dict]:
 
 
 # Specification for motion correction border
-class Border2D(TypedDict):
+class Border(TypedDict):
     left: int
     right: int
     top: int
     bottom: int
 
-class Border(Border2D, total=False):
-    """
-    Dictionary containing size of border (potentially non-symmetric)
-    3D fields are optional.
-    """
+class Border3D(Border):
+    """Dictionary containing size of border (potentially non-symmetric)"""
     z_top: int
     z_bottom: int
