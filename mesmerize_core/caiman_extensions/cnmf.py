@@ -387,7 +387,10 @@ class CNMFExtensions:
         temporal = cnmf_obj.estimates.C[component_indices]
 
         if add_background:
-            temporal += cnmf_obj.estimates.f
+            b = cnmf_obj.estimates.b
+            f = cnmf_obj.estimates.f
+            bg = cnmf_obj.estimates.A[:, component_indices].T.dot(b).dot(f)
+            temporal += bg
 
         if add_residuals:
             temporal += cnmf_obj.estimates.YrA[component_indices]
