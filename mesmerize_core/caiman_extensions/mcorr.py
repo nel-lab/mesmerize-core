@@ -1,10 +1,13 @@
 from pathlib import Path
+from typing import Optional
+from warnings import warn
 
 import numpy as np
 import pandas as pd
 from caiman import load_memmap
 
 from ._utils import validate
+from ..utils import Border
 
 
 @pd.api.extensions.register_series_accessor("mcorr")
@@ -91,7 +94,7 @@ class MCorrExtensions:
         return mc_movie
 
     @validate("mcorr")
-    def get_shifts(self, pw_rigid) -> list[np.ndarray]:
+    def get_shifts(self, pw_rigid: Optional[bool] = None) -> list[np.ndarray]:
         """
         Gets file path to shifts array (.npy file) for item, processes shifts array
         into a list of x and y shifts based on whether rigid or nonrigid
@@ -102,6 +105,8 @@ class MCorrExtensions:
         pw_rigid: bool - flag for whether shifts are for rigid or nonrigid motion correction
             True = Nonrigid (elastic/piecewise)
             False = Rigid
+            This is not necessary to be passed anymore; if it is passed and does not match the saved shifts,
+            a warning will be emitted and the saved data will take precedence.
         Returns:
         --------
         List of Processed X and Y [and Z] shifts arrays
@@ -109,9 +114,13 @@ class MCorrExtensions:
         - For pw_rigid correction, each element is an n_frames x n_patches matrix
         """
         path = self._series.paths.resolve(self._series["outputs"]["shifts"])
-        shifts = np.load(str(path))
+        shifts: np.ndarray = np.load(str(path))
 
-        if pw_rigid:
+        actual_pw_rigid = shifts.ndim == 3
+        if pw_rigid is not None and pw_rigid != actual_pw_rigid:
+            warn(f"pw_rigid passed as {pw_rigid}, but based on the data it is actually {actual_pw_rigid}")
+
+        if actual_pw_rigid:
             shifts_by_dim = list(
                 shifts
             )  # dims-length list of n_frames x n_patches matrices
@@ -121,3 +130,31 @@ class MCorrExtensions:
             )  # dims-length list of n_frames-length vectors
 
         return shifts_by_dim
+
+
+    @validate("mcorr")
+    def get_border(self) -> int:
+        """Get the max shift in either direction (what is called border_to_0 in caiman)"""
+        outputs = self._series["outputs"]
+        try:
+            return int(outputs["border_to_0"])
+        except KeyError:
+            # border_to_0 not saved - infer from shifts the same way caiman does
+            shifts_by_dim = self.get_shifts()
+            return int(np.ceil(np.max(np.abs(np.stack(shifts_by_dim)))))
+        
+    @validate("mcorr")
+    def get_border_each_side(self) -> Border:
+        """Get a dict of the individual shift away from each side, rounded up to the nearest integer"""
+        shifts_by_dim = self.get_shifts()
+        max_top = max(0, int(np.ceil(np.max(shifts_by_dim[0]))))
+        max_bottom = max(0, -int(np.ceil(np.max(-shifts_by_dim[0]))))
+        max_left = max(0, int(np.ceil(np.max(shifts_by_dim[1]))))
+        max_right = max(0, -int(np.ceil(np.max(-shifts_by_dim[1]))))
+        border = Border(top=max_top, bottom=max_bottom, left=max_left, right=max_right)
+
+        if len(shifts_by_dim) > 2:  # 3D
+            border['z_top'] = max(0, int(np.ceil(np.max(shifts_by_dim[2]))))
+            border['z_bottom'] = max(0, -int(np.ceil(np.max(-shifts_by_dim[2]))))
+        
+        return border

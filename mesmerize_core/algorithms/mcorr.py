@@ -1,4 +1,3 @@
-import traceback
 import click
 from caiman.source_extraction.cnmf.params import CNMFParams
 from caiman.motion_correction import MotionCorrect
@@ -7,6 +6,8 @@ from pathlib import Path, PurePosixPath
 import numpy as np
 from shutil import move as move_file
 import time
+import traceback
+from typing import Optional
 
 # prevent circular import
 if __name__ in ["__main__", "__mp_main__"]:  # when running in subprocess
@@ -27,11 +28,14 @@ else:  # when running with local backend
     )
 
 
-def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None):
+def run_algo(batch_path, uuid, data_path: Optional[str] = None, dview=None, log_level=None):
+    algo_start = time.time()
+
     if log_level is not None:
         setup_logging(log_level)
-    algo_start = time.time()
-    set_parent_raw_data_path(data_path)
+    
+    if data_path is not None:
+        set_parent_raw_data_path(data_path)
 
     batch_path = Path(batch_path)
     df = load_batch(batch_path)
@@ -127,6 +131,7 @@ def run_algo(batch_path, uuid, data_path: str = None, dview=None, log_level=None
                     "mcorr-output-path": mcorr_memmap_path,
                     "corr-img-path": cn_path,
                     "shifts": shift_path,
+                    "border": mc.border_to_0,
                     "success": True,
                     "traceback": None,
                 }
