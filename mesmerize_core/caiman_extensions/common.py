@@ -1,6 +1,6 @@
 import os
 import shutil
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import psutil
 from subprocess import Popen, CalledProcessError
 from typing import *
@@ -129,7 +129,7 @@ class CaimanDataFrameExtensions:
             {
                 "algo": algo,
                 "item_name": item_name,
-                "input_movie_path": str(input_movie_path),
+                "input_movie_path": str(PurePosixPath(input_movie_path)),
                 "params": params,
                 "outputs": None,  # to store dict of output information, such as output file paths
                 "added_time": datetime.now().isoformat(timespec="seconds", sep="T"),
