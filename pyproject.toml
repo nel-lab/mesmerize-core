@@ -1,3 +1,52 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
+[project]
+name = "mesmerize-core"
+authors = [
+    { name = "Kushal Kolar" },
+    { name = "Caitlin Lewis" },
+    { name = "Arjun Putcha" },
+    { name = "Ethan Blackwood" }
+]
+description = "High level pandas-based API for batch analysis of Calcium Imaging data using CaImAn"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.9"
+license = "LicenseRef-BSD-3-Clause-Noncommercial"
+license-files = ["LICENSE"]
+urls = { Repository = "https://github.com/nel-lab/mesmerize-core" }
+dynamic = ["version"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Intended Audience :: Science/Research",
+]
+
+dependencies = [
+    "caiman>=1.11.2",
+    "click",
+    "filelock>=3.15.1",
+    "jupyterlab",
+    "matplotlib",
+    "mslex",
+    "numpy",
+    "pandas>=1.5.0",
+    "psutil",
+    "pytest",
+    "requests",
+    "tqdm",
+]
+
+
+[tool.setuptools.packages.find]
+include = ["mesmerize_core*"]
+
+[tool.setuptools.dynamic]
+version = { file = "mesmerize_core/VERSION" }
